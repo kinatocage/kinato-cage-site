@@ -44,8 +44,8 @@ try {
           {types.map(type => (
             <a href={`/types/${type.id}`} class="type-card card-base">
               <div class="type-image-wrapper">
-                {type.mainImage ? (
-                  <img src={type.mainImage.url} alt={type.title} class="type-image" loading="lazy" />
+                {type.image && type.image.length > 0 ? (
+                  <img src={type.image[0].url} alt={type.title} class="type-image" loading="lazy" />
                 ) : (
                   <img src="/assets/acrylic_cage.png" alt="No image available" class="type-image placeholder-fallback" loading="lazy" />
                 )}

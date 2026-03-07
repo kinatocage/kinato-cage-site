@@ -27,8 +27,8 @@ export type TypeData = {
     title: string;
     /** タイプの詳細説明文。SEOや概要として利用する。 */
     description: string;
-    /** メインビジュアル。未設定の場合はプレースホルダー画像(`acrylic_cage`等)を使用する。 */
-    mainImage?: { url: string };
+    /** メイン画像（複数画像フィールド）。未設定の場合はプレースホルダー画像(`acrylic_cage`等)を使用する。 */
+    image?: { url: string }[];
     /** このタイプを代表する、またはおすすめの製作事例リスト。 */
     pinnedWorks?: Work[];
 };

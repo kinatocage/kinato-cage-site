@@ -60,10 +60,10 @@ const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(r
       <div class="container">
         <div class="hero-inner">
           <div class="hero-image-col">
-            {type.mainImage ? (
-              <img src={type.mainImage.url} alt={type.title} class="hero-image" />
+            {type.image && type.image.length > 0 ? (
+              <img src={type.image[0].url} alt={type.title} class="hero-image" />
             ) : (
-              <div class="placeholder-image hero-placeholder">No Image</div>
+              <img src="/assets/acrylic_cage.png" alt="No image available" class="hero-image placeholder-fallback" />
             )}
           </div>
           <div class="hero-text-col">
