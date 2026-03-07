@@ -26,6 +26,13 @@ const { title } = Astro.props;
 					<span class="logo-text">きなとのケージ屋さん</span>
 				</a>
 			</div>
+			<nav class="global-nav">
+				<ul class="nav-list">
+					<li><a href="/#types" class="nav-link">Cage Types</a></li>
+					<li><a href="/#works" class="nav-link">製作事例紹介</a></li>
+					<li><a href="/options" class="nav-link">オプション類</a></li>
+				</ul>
+			</nav>
 		</header>
 		<slot />
 		<footer class="site-footer">
@@ -100,7 +107,6 @@ const { title } = Astro.props;
 	/* 共通レイアウトコンポーネント */
 	.site-header {
 		background-color: var(--color-surface);
-		padding: 1rem 0;
 		position: sticky;
 		top: 0;
 		z-index: 100;
@@ -110,10 +116,11 @@ const { title } = Astro.props;
 	.header-inner {
 		max-width: 1100px;
 		margin: 0 auto;
-		padding: 0 1.5rem;
+		padding: 1rem 1.5rem;
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		border-bottom: 1px solid var(--color-surface-hover);
 	}
 
 	.site-title {
@@ -129,6 +136,70 @@ const { title } = Astro.props;
 
 	.site-title:hover {
 		opacity: 0.8;
+	}
+
+	/* Navigation (Interaction Architect方針：横スクロール対応) */
+	.global-nav {
+		background-color: var(--color-surface);
+		overflow-x: auto;
+		scrollbar-width: none; /* Firefox */
+	}
+	
+	.global-nav::-webkit-scrollbar {
+		display: none; /* Chrome, Safari, Edge */
+	}
+
+	.nav-list {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		max-width: 1100px;
+		margin: 0 auto;
+		padding: 0 1rem;
+		white-space: nowrap;
+	}
+
+	.nav-link {
+		display: block;
+		padding: 0.8rem 1.5rem;
+		font-family: var(--font-heading);
+		font-weight: 600;
+		color: var(--color-text);
+		font-size: 0.95rem;
+		position: relative;
+		transition: color 0.3s ease;
+	}
+
+	.nav-link::after {
+		content: '';
+		position: absolute;
+		bottom: 0;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 0;
+		height: 3px;
+		background-color: var(--color-primary);
+		transition: width 0.3s ease;
+		border-radius: 3px 3px 0 0;
+	}
+
+	.nav-link:hover {
+		color: var(--color-primary-dark);
+	}
+
+	.nav-link:hover::after {
+		width: 80%;
+	}
+
+	@media (max-width: 768px) {
+		.nav-list {
+			justify-content: flex-start; /* スマホ時は左寄せで横スクロール */
+			padding: 0 0.5rem;
+		}
+		.nav-link {
+			padding: 0.75rem 1rem;
+			font-size: 0.9rem;
+		}
 	}
 
 	.site-footer {

@@ -22,4 +22,11 @@
     `README.md` に最新のセットアップ・運用手順を追記し、コミット案を作成する。
 
 ## Next Phase: 実装・検証 (Phase 2)
-上記タスクを順次実行し、ビルドエラーやUIの崩れがないかをQAがテストします。完成後、LibrarianがGitコミットを行います。
+上記タスクを実行し、UI改善とコードの自己文書化を完了しました。
+
+## Current Phase: ナビゲーション強化・Options追加 (Phase 3)
+### 実行予定タスク
+1.  **microCMSスキーマの修正**: `options` エンドポイントが持つ実際のフィールド構成（`name`, `images`, `details`, `category`, `price`, `applicableTypes`）に合わせて `src/lib/microcms.ts` の型を修正。
+2.  **Options一覧ページの作成**: `src/pages/options.astro` を新設し、カテゴリ付きでオプションを一覧表示する画面を構築する。
+3.  **グローバルナビゲーションの追加**: `Layout.astro` のヘッダーを拡張し、「Cage Types」「製作事例紹介」「オプション類」へのリンクを配置。スマホ（モバイル）環境では横スクロールで素早くアクセスできるUIにする。
+4.  **トップページの文言修正**: "Latest Works" を "製作事例紹介" に変更する。

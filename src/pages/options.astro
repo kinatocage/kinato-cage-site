@@ -1,0 +1,257 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getOptions } from '../lib/microcms';
+
+let options: any[] = [];
+let categories: string[] = [];
+
+try {
+  const optionsResponse = await getOptions({ limit: 100 });
+  options = optionsResponse.contents || [];
+
+  // 存在するカテゴリの一覧を抽出（重複除去）
+  const categorySet = new Set<string>();
+  options.forEach((opt: any) => {
+    if (opt.category) {
+      categorySet.add(opt.category);
+    }
+  });
+  categories = Array.from(categorySet);
+  // カテゴリ未設定のものが一つでもあれば 'その他'カテゴリを追加
+  if (options.some((opt: any) => !opt.category)) {
+      categories.push('その他');
+  }
+
+} catch (err) {
+  console.error("オプションデータの取得に失敗しました:", err);
+}
+
+// カテゴリごとにオプションをグループ化
+const groupedOptions = categories.map(cat => {
+  return {
+    categoryName: cat,
+    items: options.filter((opt: any) => {
+      if (cat === 'その他') return !opt.category;
+      return opt.category === cat;
+    })
+  };
+}).filter(group => group.items.length > 0); // 空のカテゴリは除外
+---
+
+<Layout title="オプション類 | きなとのケージ屋さん">
+  <main class="options-page">
+    <div class="page-header">
+      <div class="container">
+        <h1 class="page-title">オプション類</h1>
+        <p class="page-subtitle">ケージをもっと便利に、もっと快適に拡張できるカスタマイズパーツ</p>
+      </div>
+    </div>
+
+    <div class="container section">
+      {groupedOptions.length > 0 ? (
+        <div class="options-container">
+          {groupedOptions.map(group => (
+            <div class="category-section">
+              <h2 class="category-title">{group.categoryName}</h2>
+              <div class="options-grid">
+                {group.items.map((opt: any) => (
+                  <article class="option-card card-base">
+                    {opt.images && opt.images.length > 0 ? (
+                      <div class="option-image-wrapper">
+                         <img src={opt.images[0].url} alt={opt.name} class="option-image" loading="lazy" />
+                      </div>
+                    ) : (
+                       <div class="option-image-wrapper">
+                          <img src="/assets/acrylic_cage.png" alt="No image available" class="option-image placeholder-fallback" loading="lazy" />
+                       </div>
+                    )}
+                    <div class="option-content">
+                      <h3 class="option-name">{opt.name}</h3>
+                      
+                      {/* 対象Typeのバッジ表示 */}
+                      {opt.applicableTypes && opt.applicableTypes.length > 0 ? (
+                        <div class="applicable-types">
+                           {opt.applicableTypes.map((type: any) => (
+                             <span class="badge type-badge">{type.title}専用</span>
+                           ))}
+                        </div>
+                      ) : (
+                        <div class="applicable-types">
+                           <span class="badge common-badge">全ケージ共通</span>
+                        </div>
+                      )}
+
+                      {opt.details && <p class="option-details">{opt.details}</p>}
+                      
+                      <div class="option-price">
+                        {opt.price ? `+ ¥${Number(opt.price).toLocaleString()}` : "サイズにより変動（お見積もり）"}
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div class="empty-state">
+          <p>現在ご案内できるオプション情報がありません。<br/>データを追加してください。</p>
+        </div>
+      )}
+    </div>
+  </main>
+</Layout>
+
+<style>
+  .options-page {
+    background-color: var(--color-bg);
+    min-height: 80vh;
+  }
+
+  .page-header {
+    background-color: var(--color-surface);
+    padding: 4rem 0;
+    text-align: center;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 3rem;
+    box-shadow: 0 4px 20px rgba(138, 154, 134, 0.05);
+  }
+
+  .page-title {
+    font-size: 2.5rem;
+    font-family: var(--font-heading);
+    color: var(--color-primary-dark);
+    margin-bottom: 1rem;
+  }
+
+  .page-subtitle {
+    color: var(--color-text-light);
+    font-size: 1.1rem;
+  }
+
+  .options-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4rem;
+  }
+
+  .category-section {
+    background: transparent;
+  }
+
+  .category-title {
+    font-size: 1.75rem;
+    font-family: var(--font-heading);
+    color: var(--color-text);
+    margin-bottom: 2rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--color-primary-light);
+    display: inline-block;
+  }
+
+  .options-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 2rem;
+  }
+
+  .option-card {
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+    gap: 1.25rem;
+    border: 1px solid var(--color-surface-hover);
+  }
+
+  .option-image-wrapper {
+    width: 100%;
+    aspect-ratio: 16/9;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  }
+
+  .option-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+
+  .option-card:hover .option-image {
+    transform: scale(1.05);
+  }
+
+  .placeholder-fallback {
+    opacity: 0.7;
+    mix-blend-mode: multiply;
+  }
+
+  .option-content {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+  }
+
+  .option-name {
+    font-size: 1.25rem;
+    color: var(--color-primary-dark);
+    margin-bottom: 0.75rem;
+    font-family: var(--font-heading);
+  }
+
+  .applicable-types {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: bold;
+  }
+
+  .type-badge {
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+  }
+
+  .common-badge {
+    background-color: rgba(138, 154, 134, 0.15); /* primaryの透過 */
+    color: var(--color-primary-dark);
+  }
+
+  .option-details {
+    font-size: 0.9rem;
+    color: var(--color-text-light);
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+    white-space: pre-wrap; /* 改行を反映 */
+  }
+
+  .option-price {
+    margin-top: auto;
+    font-weight: 700;
+    color: var(--color-accent);
+    background: rgba(232, 178, 126, 0.1);
+    padding: 0.75rem;
+    border-radius: var(--radius-sm);
+    text-align: center;
+    font-size: 1rem;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 5rem 2rem;
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    border: 2px dashed var(--color-border);
+    color: var(--color-text-light);
+    font-size: 1.1rem;
+    line-height: 1.8;
+  }
+</style>

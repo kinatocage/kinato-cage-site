@@ -40,16 +40,18 @@ export type TypeData = {
 export type OptionData = {
     /** オプションの一意な識別子 */
     id: string;
-    /** オプションの表示名（例: "鍵付きスライドドア"） */
-    title: string;
-    /** 機能や効果の詳細説明 */
-    description?: string;
+    /** オプションの表示名（例: "スライド扉鍵"） */
+    name: string;
+    /** 機能や効果の詳細解説（リッチエディタまたはテキスト） */
+    details?: string;
     /** 追加料金。空文字または未設定の場合は「サイズにより変動（お見積もり）」として扱う。 */
-    price?: number | string;
-    /** このオプションを選択できるケージの配列。空配列の場合は「全ケージ共通オプション」を意味する。 */
+    price?: string;
+    /** 特定のカテゴリ名（例: "基本オプション"、"快適拡張"など） */
+    category?: string;
+    /** このオプションを選択できるケージの配列。空配列の場合は「全ケージ共通」 */
     applicableTypes?: TypeData[];
-    /** オプションの参考画像。未設定の場合はUI上で非表示とする。 */
-    image?: { url: string };
+    /** オプションの参考画像（複数画像対応） */
+    images?: { url: string }[];
 };
 
 /**
