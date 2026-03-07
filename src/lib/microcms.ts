@@ -16,6 +16,23 @@ export const client = createClient({
     apiKey: apiKey || '',
 });
 
+export type TypeData = {
+    id: string;
+    title: string;
+    description: string;
+    mainImage?: { url: string };
+    pinnedWorks?: Work[];
+};
+
+export type OptionData = {
+    id: string;
+    title: string;
+    description?: string;
+    price?: number | string; // 価格
+    applicableTypes?: TypeData[]; // 対応するType（空なら共通）
+    image?: { url: string };
+};
+
 export type Work = {
     id: string;
     title: string;
@@ -24,8 +41,18 @@ export type Work = {
     features?: string;
     images?: { url: string }[];
     content: string;
+    customerComment?: string;
+    cageType?: TypeData;
 };
 
 export const getWorks = async (queries?: any) => {
     return await client.get({ endpoint: "works", queries });
+};
+
+export const getTypes = async (queries?: any) => {
+    return await client.get({ endpoint: "types", queries });
+};
+
+export const getOptions = async (queries?: any) => {
+    return await client.get({ endpoint: "options", queries });
 };

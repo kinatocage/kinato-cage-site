@@ -1,0 +1,470 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getTypes, getWorks, getOptions } from '../../lib/microcms';
+
+export async function getStaticPaths() {
+  try {
+    const typesResponse = await getTypes({ limit: 100 });
+    const types = typesResponse.contents || [];
+    
+    return types.map((type: any) => ({
+      params: { id: type.id },
+      props: { type },
+    }));
+  } catch (err) {
+    console.error("getStaticPaths の実行中にエラーが発生しました:", err);
+    return [];
+  }
+}
+
+const { type } = Astro.props;
+
+// 追加データのフェッチ
+let relatedWorks: any[] = [];
+let applicableOptions: any[] = [];
+
+try {
+  // そのTypeに紐付く製作事例
+  const worksResponse = await getWorks({ 
+    filters: `cageType[equals]${type.id}`, 
+    limit: 20,
+    orders: '-publishedAt'
+  });
+  relatedWorks = worksResponse.contents || [];
+
+  // 全オプションを取得し、対象Typeに適合するものをフィルタリング
+  const optionsResponse = await getOptions({ limit: 100 });
+  const allOptions = optionsResponse.contents || [];
+  
+  applicableOptions = allOptions.filter((opt: any) => 
+    !opt.applicableTypes || 
+    opt.applicableTypes.length === 0 || 
+    opt.applicableTypes.some((appType: any) => appType.id === type.id)
+  );
+} catch (err) {
+  console.error("詳細ページデータの取得中にエラーが発生しました:", err);
+}
+
+// ピン留め事例 (あれば)
+const pinnedWorks = type.pinnedWorks || [];
+
+// ピン留めされている事例IDを抽出し、関連事例リストから重複を除外する
+const pinnedWorkIds = pinnedWorks.map((pw: any) => pw.id);
+const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(rw.id));
+---
+
+<Layout title={`${type.title} | きなとのケージ屋さん`}>
+  <main class="type-detail-page">
+    <!-- Type Hero -->
+    <section class="type-hero">
+      <div class="container">
+        <div class="hero-inner">
+          <div class="hero-image-col">
+            {type.mainImage ? (
+              <img src={type.mainImage.url} alt={type.title} class="hero-image" />
+            ) : (
+              <div class="placeholder-image hero-placeholder">No Image</div>
+            )}
+          </div>
+          <div class="hero-text-col">
+            <a href="/#types" class="back-link">← Type一覧へ戻る</a>
+            <h1 class="type-title">{type.title}</h1>
+            <p class="type-description">{type.description}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pinned Works (イチオシ・代表事例) -->
+    {pinnedWorks.length > 0 && (
+      <section class="section pinned-works-section">
+        <div class="container">
+          <div class="section-header">
+            <h2>代表的な製作事例</h2>
+            <p>このTypeでおすすめのイチオシ事例</p>
+          </div>
+          <div class="pinned-grid">
+            {pinnedWorks.map((work: any) => (
+              <article class="pinned-card">
+                <div class="pinned-image-wrapper">
+                  {work.images && work.images.length > 0 ? (
+                    <img src={work.images[0].url} alt={work.title} class="pinned-image" loading="lazy" />
+                  ) : (
+                    <div class="placeholder-image">No Image</div>
+                  )}
+                </div>
+                <div class="pinned-content">
+                  <h3>{work.title}</h3>
+                  <div class="work-meta">
+                    {work.species && (
+                      <span class="badge species-badge">
+                        {Array.isArray(work.species) ? work.species.join(', ') : work.species}
+                      </span>
+                    )}
+                  </div>
+                  {work.customerComment && (
+                    <div class="customer-voice highlight-voice">
+                      <div class="voice-icon">💬</div>
+                      <p class="voice-text">{work.customerComment}</p>
+                    </div>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+    )}
+
+    <!-- Options (対応オプション) -->
+    <section class="section options-section">
+      <div class="container">
+        <div class="section-header">
+          <h2>対応オプション</h2>
+          <p>このケージに追加できる便利なパーツや仕様</p>
+        </div>
+        
+        {applicableOptions.length > 0 ? (
+          <div class="options-grid">
+            {applicableOptions.map((opt: any) => (
+              <div class="option-card">
+                {opt.image && (
+                  <div class="option-image-wrapper">
+                    <img src={opt.image.url} alt={opt.title} class="option-image" loading="lazy" />
+                  </div>
+                )}
+                <div class="option-content">
+                  <h3 class="option-title">{opt.title}</h3>
+                  {opt.description && <p class="option-desc">{opt.description}</p>}
+                  <div class="option-price">
+                    {opt.price ? `+ ¥${opt.price.toLocaleString()}` : "サイズにより変動（お見積もり）"}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p class="empty-state">現在ご案内できるオプションはありません。</p>
+        )}
+      </div>
+    </section>
+
+    <!-- Related Works (紐付く事例一覧) -->
+    <section class="section related-works-section">
+      <div class="container">
+        <div class="section-header">
+          <h2>その他の製作事例</h2>
+          <p>「{type.title}」をベースにしたお客様のケージたち</p>
+        </div>
+
+        {filteredRelatedWorks.length > 0 ? (
+          <div class="works-grid">
+            {filteredRelatedWorks.map(work => (
+              <article class="work-card">
+                <div class="work-image-wrapper">
+                  {work.images && work.images.length > 0 ? (
+                    <img src={work.images[0].url} alt={work.title} class="work-image" loading="lazy" />
+                  ) : (
+                    <div class="placeholder-image">No Image</div>
+                  )}
+                </div>
+                <div class="work-content">
+                  <h3 class="work-title-small">{work.title}</h3>
+                  <div class="work-meta">
+                    {work.species && (
+                      <span class="badge species-badge">
+                        {Array.isArray(work.species) ? work.species.join(', ') : work.species}
+                      </span>
+                    )}
+                  </div>
+                  {work.features && <p class="work-features">{work.features}</p>}
+                  {work.customerComment && (
+                    <div class="customer-voice">
+                      <div class="voice-icon">💬</div>
+                      <p class="voice-text text-small">{work.customerComment}</p>
+                    </div>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p class="empty-state">その他の事例はまだありません。</p>
+        )}
+      </div>
+    </section>
+  </main>
+</Layout>
+
+<style>
+  .type-detail-page {
+    background-color: var(--color-bg);
+  }
+
+  /* Type Hero */
+  .type-hero {
+    background-color: var(--color-surface);
+    padding: 3rem 0;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    box-shadow: 0 4px 20px rgba(138, 154, 134, 0.05);
+    margin-bottom: 3rem;
+  }
+
+  .hero-inner {
+    display: flex;
+    gap: 3rem;
+    align-items: center;
+  }
+
+  .hero-image-col {
+    flex: 1;
+    max-width: 50%;
+  }
+
+  .hero-image {
+    width: 100%;
+    border-radius: var(--radius-md);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  }
+
+  .hero-placeholder {
+    aspect-ratio: 4/3;
+    border-radius: var(--radius-md);
+  }
+
+  .hero-text-col {
+    flex: 1;
+  }
+
+  .back-link {
+    display: inline-block;
+    color: var(--color-primary);
+    font-weight: bold;
+    margin-bottom: 1rem;
+    transition: color 0.2s;
+  }
+
+  .back-link:hover {
+    color: var(--color-primary-dark);
+    text-decoration: underline;
+  }
+
+  .type-title {
+    font-size: 2.5rem;
+    font-family: var(--font-heading);
+    color: var(--color-primary-dark);
+    margin-bottom: 1.5rem;
+  }
+
+  .type-description {
+    font-size: 1.1rem;
+    color: var(--color-text);
+    line-height: 1.8;
+  }
+
+  @media (max-width: 768px) {
+    .hero-inner {
+      flex-direction: column;
+      gap: 2rem;
+    }
+    .hero-image-col {
+      max-width: 100%;
+    }
+    .type-title {
+      font-size: 2rem;
+    }
+  }
+
+  /* Shared Grid Configs */
+  .works-grid, .pinned-grid, .options-grid {
+    display: grid;
+    gap: 1.5rem;
+  }
+
+  .works-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .pinned-grid { grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); }
+  .options-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+
+  @media (max-width: 600px) {
+    .pinned-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Pinned Cards (大きく表示) */
+  .pinned-card {
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(138, 154, 134, 0.1);
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--color-border);
+  }
+
+  .pinned-image-wrapper {
+    aspect-ratio: 16/9;
+  }
+
+  .pinned-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .pinned-content {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+  }
+
+  .pinned-content h3 {
+    font-family: var(--font-heading);
+    color: var(--color-text);
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .highlight-voice {
+    background-color: var(--color-bg);
+    border-color: var(--color-primary-light);
+  }
+
+  /* Work Cards (標準表示) */
+  .work-card {
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+    transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .work-card:hover { transform: translateY(-3px); }
+
+  .work-image-wrapper {
+    aspect-ratio: 16/9;
+  }
+
+  .work-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .work-content {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+  }
+
+  .work-title-small {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    color: var(--color-text);
+  }
+
+  .work-features {
+    font-size: 0.875rem;
+    color: var(--color-text-light);
+    margin-bottom: 1rem;
+  }
+
+  /* Option Cards */
+  .options-section {
+    background-color: var(--color-surface);
+    border-top: 1px dashed var(--color-border);
+    border-bottom: 1px dashed var(--color-border);
+    padding: 4rem 0;
+  }
+
+  .option-card {
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    border: 1px solid var(--color-border);
+  }
+
+  .option-image-wrapper {
+    width: 100%;
+    aspect-ratio: 16/9;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+
+  .option-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .option-content {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+  }
+
+  .option-title {
+    font-size: 1.1rem;
+    color: var(--color-primary-dark);
+    margin-bottom: 0.5rem;
+  }
+
+  .option-desc {
+    font-size: 0.875rem;
+    color: var(--color-text-light);
+    margin-bottom: 1rem;
+  }
+
+  .option-price {
+    margin-top: auto;
+    font-weight: bold;
+    color: var(--color-accent);
+    background: rgba(232, 178, 126, 0.1);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    text-align: center;
+    font-size: 0.9rem;
+  }
+
+  /* Utils (バッジ、声、EmptyState周り) */
+  .badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: bold;
+  }
+
+  .species-badge {
+    background-color: var(--color-accent);
+    color: white;
+    margin-bottom: 0.5rem;
+  }
+
+  .customer-voice {
+    margin-top: auto;
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    display: flex;
+    gap: 0.5rem;
+    border: 1px dashed var(--color-border);
+  }
+
+  .voice-icon { font-size: 1.25rem; }
+  .voice-text { font-size: 0.875rem; color: var(--color-text-light); font-style: italic; margin: 0; }
+  .text-small { font-size: 0.8rem; }
+
+  .empty-state {
+    text-align: center;
+    color: var(--color-text-light);
+    padding: 3rem;
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
+    border: 2px dashed var(--color-border);
+  }
+</style>
