@@ -1,7 +1,7 @@
 import { createClient } from 'microcms-js-sdk';
 
 export const client = createClient({
-    // PUBLIC_ を付けることで、ビルド時にも正しく読み込まれるようになります
+    // 必ず PUBLIC_ が付いた名前を使います
     serviceDomain: import.meta.env.PUBLIC_MICROCMS_SERVICE_DOMAIN,
     apiKey: import.meta.env.PUBLIC_MICROCMS_API_KEY,
 });
