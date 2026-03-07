@@ -15,3 +15,10 @@ export type Work = {
     images?: { url: string }[];
     content: string;
 };
+
+// ...（既存の client や Work の定義はそのままで）
+
+// 作品一覧を取得するための関数を追加します
+export const getWorks = async (queries?: any) => {
+    return await client.get({ endpoint: "works", queries });
+};
