@@ -1,34 +1,28 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { getTypes, getWorks, getOptions } from '../../lib/microcms';
+import { client } from '../../lib/microcms';
+import { getWorks, getOptions } from '../../lib/microcms';
 
-export async function getStaticPaths() {
-  try {
-    const typesResponse = await getTypes({ limit: 100 });
-    const types = typesResponse.contents || [];
-    
-    return types.map((type: any) => ({
-      params: { id: type.id },
-      props: { type },
-    }));
-  } catch (err) {
-    console.error("getStaticPaths の実行中にエラーが発生しました:", err);
-    return [];
-  }
-}
+// SSRモード: URLパラメータからIDを取得し、APIへ直接問い合わせる
+const { id } = Astro.params;
 
-const { type } = Astro.props;
-
-// 追加データのフェッチ
+let type: any = null;
 let relatedWorks: any[] = [];
 let applicableOptions: any[] = [];
+
+try {
+  // 指定IDのTypeデータを取得
+  type = await client.get({ endpoint: 'types', contentId: id as string });
+} catch (err) {
+  console.error("Typeデータの取得に失敗しました:", err);
+  return Astro.redirect('/');
+}
 
 try {
   // そのTypeに紐付く製作事例
   const worksResponse = await getWorks({ 
     filters: `cageType[equals]${type.id}`, 
-    limit: 20,
-    orders: '-publishedAt'
+    limit: 20
   });
   relatedWorks = worksResponse.contents || [];
 
