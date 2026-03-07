@@ -2,7 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import { getTypes, getWorks } from '../lib/microcms';
 
-// データの取得 (エラーハンドリングを追加してローカルテストしやすくする)
+// データの取得
 let types: any[] = [];
 let works: any[] = [];
 
@@ -15,27 +15,91 @@ try {
 } catch (err) {
   console.error("データの取得に失敗しました。スキーマやAPIキーを確認してください:", err);
 }
+
+// beautiful_image の全画像リスト（横スクロールギャラリー用）
+const galleryImages = [
+  { src: '/assets/beautiful_image/img (1).JPG', alt: '作例1' },
+  { src: '/assets/beautiful_image/img (2).JPG', alt: '作例2' },
+  { src: '/assets/beautiful_image/img (3).jpeg', alt: '作例3' },
+  { src: '/assets/beautiful_image/img (4).jpg', alt: '作例4' },
+  { src: '/assets/beautiful_image/img (5).JPG', alt: '作例5' },
+  { src: '/assets/beautiful_image/img (6).JPG', alt: '作例6' },
+  { src: '/assets/beautiful_image/img (7).jpg', alt: '作例7' },
+  { src: '/assets/beautiful_image/img (8).JPG', alt: '作例8' },
+  { src: '/assets/beautiful_image/img (9).JPG', alt: '作例9' },
+  { src: '/assets/beautiful_image/img (10).JPG', alt: '作例10' },
+  { src: '/assets/beautiful_image/img (11).JPG', alt: '作例11' },
+  { src: '/assets/beautiful_image/img (12).JPG', alt: '作例12' },
+  { src: '/assets/beautiful_image/img (13).jpg', alt: '作例13' },
+  { src: '/assets/beautiful_image/img (14).jpg', alt: '作例14' },
+  { src: '/assets/beautiful_image/img (15).JPG', alt: '作例15' },
+  { src: '/assets/beautiful_image/img (1).jpeg', alt: '作例16' },
+  { src: '/assets/beautiful_image/img (2).jpeg', alt: '作例17' },
+  { src: '/assets/beautiful_image/img (3).jpg', alt: '作例18' },
+];
 ---
 
 <Layout title="きなとのケージ屋さん - ペットに優しいおしゃれなケージ">
   <main>
-    <!-- Hero Section -->
+    <!-- ===== Hero Section ===== -->
     <section class="hero">
-      <div class="hero-bg" style="background-image: url('/assets/hero_interior.png'); mix-blend-mode: multiply; opacity: 0.15; z-index: 0;"></div>
+      <!-- 装飾バブル -->
+      <div class="hero-bubble b1"></div>
+      <div class="hero-bubble b2"></div>
+      <div class="hero-bubble b3"></div>
       <div class="hero-content">
         <h1 class="hero-title">
           ペットと暮らす、<br />
           もっとおしゃれで<br class="sp-only" />優しい時間。
         </h1>
         <p class="hero-subtitle">インテリアに溶け込む、爬虫類・小動物のためのオーダーメイドケージ</p>
-        <a href="#types" class="btn-primary">ケージの種類を見る</a>
+        <div class="hero-tags">
+          <span class="hero-tag">🦎 爬虫類</span>
+          <span class="hero-tag">🐿️ 小動物</span>
+          <span class="hero-tag">🏠 オーダーメイド</span>
+        </div>
+      </div>
+      <!-- キャラクター装飾 -->
+      <div class="hero-character">
+        <img src="/assets/characters/charactor.png" alt="きなとちゃん" class="hero-char-img" />
       </div>
     </section>
 
-    <!-- Types Section -->
+    <!-- ===== 横スクロールギャラリー ===== -->
+    <section id="gallery" class="gallery-section section">
+      <div class="section-header">
+        <h2>作例ギャラリー</h2>
+        <p>職人が丁寧に仕上げた、こだわりのケージたち</p>
+      </div>
+      <div class="gallery-outer">
+        <!-- 自動スクロール：同じリストを2回並べて無限ループ -->
+        <div class="gallery-marquee-track">
+          <div class="gallery-marquee-inner">
+            {galleryImages.map((img) => (
+              <div class="gallery-card">
+                <img src={img.src} alt={img.alt} class="gallery-img" loading="lazy" />
+                <div class="gallery-card-shine"></div>
+              </div>
+            ))}
+            {/* ループのためにもう1セット複製 */}
+            {galleryImages.map((img) => (
+              <div class="gallery-card">
+                <img src={img.src} alt={img.alt} class="gallery-img" loading="lazy" />
+                <div class="gallery-card-shine"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <!-- 両端フェード -->
+        <div class="gallery-fade-left"></div>
+        <div class="gallery-fade-right"></div>
+      </div>
+    </section>
+
+    <!-- ===== Types Section ===== -->
     <section id="types" class="container section">
       <div class="section-header">
-        <h2>Cage Types</h2>
+        <h2>ケージの種類</h2>
         <p>お部屋の雰囲気や生体に合わせて選べるバリエーション</p>
       </div>
       
@@ -47,7 +111,7 @@ try {
                 {type.image && type.image.length > 0 ? (
                   <img src={type.image[0].url} alt={type.title} class="type-image" loading="lazy" />
                 ) : (
-                  <img src="/assets/acrylic_cage.png" alt="No image available" class="type-image placeholder-fallback" loading="lazy" />
+                  <div class="placeholder-image" aria-label="画像なし">🐾</div>
                 )}
                 <div class="type-overlay">
                   <span class="view-more">詳しく見る →</span>
@@ -65,7 +129,7 @@ try {
       )}
     </section>
 
-    <!-- Works Section -->
+    <!-- ===== Works Section ===== -->
     <section id="works" class="section works-section">
       <div class="container">
         <div class="section-header">
@@ -115,79 +179,230 @@ try {
 </Layout>
 
 <style>
-  /* --- Hero Session --- */
+  /* ===== Hero ===== */
   .hero {
     position: relative;
-    padding: 6rem 1.5rem;
+    padding: 2.5rem 1.5rem 5rem;
     text-align: center;
     overflow: hidden;
-    background-color: var(--color-surface);
-    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-    box-shadow: 0 10px 30px rgba(138, 154, 134, 0.05);
-    margin-bottom: 3rem;
+    background: linear-gradient(160deg, #FFF8F5 0%, #FDE8EE 40%, #FFF4E6 100%);
   }
 
-  .hero-bg {
+  /* 装飾バブル */
+  .hero-bubble {
     position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
+    border-radius: 50%;
+    opacity: 0.18;
+  }
+  .b1 {
+    width: 300px; height: 300px;
+    background: var(--color-accent);
+    top: -80px; left: -80px;
+    animation: bubble-drift 8s ease-in-out infinite;
+  }
+  .b2 {
+    width: 200px; height: 200px;
+    background: var(--color-accent-warm);
+    bottom: -60px; right: -40px;
+    animation: bubble-drift 10s ease-in-out infinite reverse;
+  }
+  .b3 {
+    width: 140px; height: 140px;
+    background: var(--color-primary-light);
+    top: 30%; right: 10%;
+    animation: bubble-drift 7s ease-in-out infinite 2s;
+  }
+
+  @keyframes bubble-drift {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(12px, -16px); }
   }
 
   .hero-content {
     position: relative;
     z-index: 1;
-    max-width: 800px;
+    max-width: 700px;
     margin: 0 auto;
   }
 
   .hero-title {
-    font-size: 2.5rem;
+    font-size: 2.6rem;
     font-weight: 700;
     color: var(--color-primary-dark);
-    line-height: 1.4;
-    margin-bottom: 1.5rem;
+    line-height: 1.45;
+    margin-bottom: 1.25rem;
     font-family: var(--font-heading);
   }
 
   .hero-subtitle {
-    font-size: 1.125rem;
+    font-size: 1.05rem;
     color: var(--color-text-light);
-    margin-bottom: 2.5rem;
+    margin-bottom: 2rem;
   }
 
-  .btn-primary {
-    display: inline-block;
-    background-color: var(--color-primary);
-    color: white;
-    padding: 1rem 2.5rem;
+  /* タグ */
+  .hero-tags {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .hero-tag {
+    background: white;
+    border: 2px solid var(--color-accent);
+    color: var(--color-primary-dark);
+    padding: 0.4rem 1.1rem;
     border-radius: var(--radius-full);
-    font-weight: bold;
-    font-size: 1.125rem;
-    box-shadow: 0 4px 15px rgba(138, 154, 134, 0.3);
-    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    box-shadow: 0 3px 10px rgba(244, 167, 185, 0.2);
+    transition: transform 0.2s ease;
   }
 
-  .btn-primary:hover {
-    background-color: var(--color-primary-dark);
+  .hero-tag:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(138, 154, 134, 0.4);
   }
 
-  .sp-only {
-    display: none;
+  /* ヒーローキャラクター */
+  .hero-character {
+    position: absolute;
+    bottom: -10px;
+    right: 4%;
+    z-index: 2;
+    pointer-events: none;
   }
+
+  .hero-char-img {
+    width: 160px;
+    height: auto;
+    filter: drop-shadow(0 10px 24px rgba(244, 167, 185, 0.3));
+    animation: hero-char-float 5s ease-in-out infinite;
+  }
+
+  @keyframes hero-char-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-14px); }
+  }
+
+  .sp-only { display: none; }
 
   @media (max-width: 768px) {
     .sp-only { display: block; }
-    .hero-title { font-size: 1.75rem; }
-    .hero { padding: 4rem 1.5rem; }
+    .hero-title { font-size: 1.8rem; }
+    .hero { padding: 4rem 1.5rem 5rem; }
+    .hero-character { display: none; }
+    .hero-logo { width: 70px; height: 70px; }
   }
 
-  /* --- Types Grid --- */
+  /* ===== 横スクロールギャラリー（自動マーキー） ===== */
+  .gallery-section {
+    overflow: visible;
+  }
+
+  .gallery-outer {
+    position: relative;
+    overflow: hidden;
+    height: 260px; /* カード高さ220px + 上下余白 */
+  }
+
+  /* マーキーラッパー：クリップ用 */
+  .gallery-marquee-track {
+    overflow: hidden;
+    padding: 1rem 0;
+    height: 240px;
+  }
+
+  /* 無限スクロールの内側コンテナ */
+  .gallery-marquee-inner {
+    display: flex;
+    gap: 1.25rem;
+    width: max-content;
+    animation: marquee-scroll 120s linear infinite;
+  }
+
+  /* ホバー中は一時停止 */
+  .gallery-marquee-track:hover .gallery-marquee-inner {
+    animation-play-state: paused;
+  }
+
+  @keyframes marquee-scroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* ギャラリーカード */
+  .gallery-card {
+    flex: 0 0 300px;
+    width: 300px;
+    height: 220px !important;
+    max-height: 220px;
+    min-height: 220px;
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 6px 20px rgba(244, 167, 185, 0.15);
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
+  }
+
+  .gallery-card:hover {
+    transform: translateY(-8px) scale(1.08);
+    box-shadow: 0 20px 50px rgba(244, 167, 185, 0.4);
+    z-index: 10;
+  }
+
+  .gallery-img {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none;
+    object-fit: cover;
+    display: block;
+    filter: brightness(1.03) saturate(1.08);
+    transition: filter 0.4s ease;
+  }
+
+  .gallery-card:hover .gallery-img {
+    filter: brightness(1.07) saturate(1.15);
+  }
+
+  /* 光沢オーバーレイ */
+  .gallery-card-shine {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      135deg,
+      rgba(255,255,255,0.15) 0%,
+      transparent 60%
+    );
+    border-radius: 20px;
+    pointer-events: none;
+  }
+
+  /* 両端フェードグラデーション */
+  .gallery-fade-left,
+  .gallery-fade-right {
+    position: absolute;
+    top: 0;
+    height: 240px;
+    width: 100px;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .gallery-fade-left {
+    left: 0;
+    background: linear-gradient(to right, #FFF8F5 0%, transparent 100%);
+  }
+
+  .gallery-fade-right {
+    right: 0;
+    background: linear-gradient(to left, #FFF8F5 0%, transparent 100%);
+  }
+
+
+
+  /* ===== Types Grid ===== */
   .types-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -199,18 +414,19 @@ try {
     flex-direction: column;
     text-decoration: none;
     color: inherit;
-    /* card-base で基本のshadowとtransitionを管理しているため個別指定は最小限に */
     border: 2px solid transparent;
+    transition: border-color 0.3s ease;
   }
 
   .type-card:hover {
-    border-color: var(--color-primary-light);
+    border-color: var(--color-accent);
   }
 
   .type-image-wrapper {
     position: relative;
     aspect-ratio: 4/3;
     overflow: hidden;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
   }
 
   .type-image {
@@ -218,16 +434,17 @@ try {
     height: 100%;
     object-fit: cover;
     transition: transform 0.5s ease;
+    filter: brightness(1.02) saturate(1.05);
   }
 
   .type-card:hover .type-image {
-    transform: scale(1.05);
+    transform: scale(1.06);
   }
 
   .type-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(107, 126, 102, 0.2); /* primary-dark 色の半透明 */
+    background: rgba(244, 167, 185, 0.25);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -240,13 +457,16 @@ try {
   }
 
   .view-more {
-    background: var(--color-surface);
+    background: white;
     color: var(--color-primary-dark);
     padding: 0.5rem 1.5rem;
     border-radius: var(--radius-full);
     font-weight: bold;
+    font-family: var(--font-heading);
+    font-size: 0.9rem;
     transform: translateY(10px);
     transition: transform 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   }
 
   .type-card:hover .view-more {
@@ -254,14 +474,15 @@ try {
   }
 
   .type-content {
-    padding: 1.5rem;
+    padding: 1.4rem;
   }
 
   .type-content h3 {
-    font-size: 1.25rem;
+    font-size: 1.2rem;
     color: var(--color-primary-dark);
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.4rem;
     font-family: var(--font-heading);
+    font-weight: 700;
   }
 
   .type-content p {
@@ -273,9 +494,9 @@ try {
     overflow: hidden;
   }
 
-  /* --- Works Grid --- */
+  /* ===== Works Section ===== */
   .works-section {
-    background-color: var(--color-surface);
+    background: linear-gradient(180deg, var(--color-bg) 0%, #FDE8EE22 100%);
     border-radius: var(--radius-lg);
     margin: 0 1rem;
   }
@@ -294,12 +515,14 @@ try {
   .work-image-wrapper {
     position: relative;
     aspect-ratio: 16/9;
+    overflow: hidden;
   }
 
   .work-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    filter: brightness(1.02) saturate(1.05);
   }
 
   .badge {
@@ -314,7 +537,7 @@ try {
   .type-badge {
     top: 1rem;
     right: 1rem;
-    background-color: var(--color-surface);
+    background-color: white;
     color: var(--color-primary-dark);
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   }
@@ -322,7 +545,7 @@ try {
   .species-badge {
     position: static;
     display: inline-block;
-    background-color: var(--color-accent);
+    background: linear-gradient(135deg, var(--color-accent), var(--color-accent-warm));
     color: white;
     margin-bottom: 0.5rem;
   }
@@ -335,25 +558,24 @@ try {
   }
 
   .work-title {
-    font-size: 1.125rem;
+    font-size: 1.1rem;
     margin-bottom: 0.5rem;
     font-family: var(--font-heading);
     color: var(--color-text);
+    font-weight: 700;
   }
 
   .customer-voice {
     margin-top: auto;
-    background-color: var(--color-surface);
-    padding: 1rem;
+    background: var(--color-pink-light);
+    padding: 0.9rem;
     border-radius: var(--radius-sm);
     display: flex;
     gap: 0.5rem;
-    border: 1px dashed var(--color-border);
+    border: 1px dashed var(--color-accent);
   }
 
-  .voice-icon {
-    font-size: 1.25rem;
-  }
+  .voice-icon { font-size: 1.1rem; }
 
   .voice-text {
     font-size: 0.875rem;
