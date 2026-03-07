@@ -16,32 +16,64 @@ export const client = createClient({
     apiKey: apiKey || '',
 });
 
+/**
+ * @typedef {Object} TypeData
+ * @description ケージの基本タイプ（種類）を定義するスキーマ
+ */
 export type TypeData = {
+    /** タイプの一意な識別子（例: "acrylic-standard"） */
     id: string;
+    /** 一般公開用タイトル（例: "アクリルケージ スタンダード"） */
     title: string;
+    /** タイプの詳細説明文。SEOや概要として利用する。 */
     description: string;
+    /** メインビジュアル。未設定の場合はプレースホルダー画像(`acrylic_cage`等)を使用する。 */
     mainImage?: { url: string };
+    /** このタイプを代表する、またはおすすめの製作事例リスト。 */
     pinnedWorks?: Work[];
 };
 
+/**
+ * @typedef {Object} OptionData
+ * @description 各ケージに対し追加可能なオプションパーツを定義するスキーマ
+ */
 export type OptionData = {
+    /** オプションの一意な識別子 */
     id: string;
+    /** オプションの表示名（例: "鍵付きスライドドア"） */
     title: string;
+    /** 機能や効果の詳細説明 */
     description?: string;
-    price?: number | string; // 価格
-    applicableTypes?: TypeData[]; // 対応するType（空なら共通）
+    /** 追加料金。空文字または未設定の場合は「サイズにより変動（お見積もり）」として扱う。 */
+    price?: number | string;
+    /** このオプションを選択できるケージの配列。空配列の場合は「全ケージ共通オプション」を意味する。 */
+    applicableTypes?: TypeData[];
+    /** オプションの参考画像。未設定の場合はUI上で非表示とする。 */
     image?: { url: string };
 };
 
+/**
+ * @typedef {Object} Work
+ * @description 納品済みの製作事例（ポートフォリオ）データを定義するスキーマ
+ */
 export type Work = {
+    /** 事例の一意な識別子 */
     id: string;
+    /** 事例のタイトル（例: "フトアゴヒゲトカゲ用 木製ケージ"） */
     title: string;
+    /** 飼育対象の生体名。単一または複数設定可能。 */
     species: string | string[];
+    /** ケージの寸法（例: "W900×D450×H450"） */
     size: string;
+    /** ケージの主な特徴やアピールポイント（フリーテキスト） */
     features?: string;
+    /** 製作事例のギャラリー画像リスト */
     images?: { url: string }[];
+    /** 事例の詳細本文（リッチエディタによるHTMLコンテンツ） */
     content: string;
+    /** 納品後のお客様からのフィードバック・感想文 */
     customerComment?: string;
+    /** ベースとなったケージタイプの情報 */
     cageType?: TypeData;
 };
 

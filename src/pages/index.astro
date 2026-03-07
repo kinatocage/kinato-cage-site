@@ -21,7 +21,7 @@ try {
   <main>
     <!-- Hero Section -->
     <section class="hero">
-      <div class="hero-bg"></div>
+      <div class="hero-bg" style="background-image: url('/assets/hero_interior.png'); mix-blend-mode: multiply; opacity: 0.15; z-index: 0;"></div>
       <div class="hero-content">
         <h1 class="hero-title">
           ペットと暮らす、<br />
@@ -42,12 +42,12 @@ try {
       {types.length > 0 ? (
         <div class="types-grid">
           {types.map(type => (
-            <a href={`/types/${type.id}`} class="type-card">
+            <a href={`/types/${type.id}`} class="type-card card-base">
               <div class="type-image-wrapper">
                 {type.mainImage ? (
                   <img src={type.mainImage.url} alt={type.title} class="type-image" loading="lazy" />
                 ) : (
-                  <div class="placeholder-image">No Image</div>
+                  <img src="/assets/acrylic_cage.png" alt="No image available" class="type-image placeholder-fallback" loading="lazy" />
                 )}
                 <div class="type-overlay">
                   <span class="view-more">詳しく見る →</span>
@@ -76,12 +76,12 @@ try {
         {works.length > 0 ? (
           <div class="works-grid">
             {works.map(work => (
-              <article class="work-card">
+              <article class="work-card card-base">
                 <div class="work-image-wrapper">
                   {work.images && work.images.length > 0 ? (
                     <img src={work.images[0].url} alt={work.title} class="work-image" loading="lazy" />
                   ) : (
-                    <div class="placeholder-image">No Image</div>
+                    <div class="placeholder-image" aria-label="画像読み込み中"></div>
                   )}
                   {work.cageType && (
                     <span class="badge type-badge">{work.cageType.title}</span>
@@ -129,13 +129,12 @@ try {
 
   .hero-bg {
     position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle at center, var(--color-bg) 0%, var(--color-surface) 50%);
-    opacity: 0.5;
-    z-index: 0;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
   }
 
   .hero-content {
@@ -198,18 +197,14 @@ try {
   .type-card {
     display: flex;
     flex-direction: column;
-    background: var(--color-surface);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-    transition: all 0.3s ease;
+    text-decoration: none;
+    color: inherit;
+    /* card-base で基本のshadowとtransitionを管理しているため個別指定は最小限に */
     border: 2px solid transparent;
   }
 
   .type-card:hover {
-    transform: translateY(-5px);
     border-color: var(--color-primary-light);
-    box-shadow: 0 10px 25px rgba(138, 154, 134, 0.15);
   }
 
   .type-image-wrapper {
@@ -292,16 +287,8 @@ try {
   }
 
   .work-card {
-    background: var(--color-bg);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    transition: transform 0.3s ease;
     display: flex;
     flex-direction: column;
-  }
-
-  .work-card:hover {
-    transform: translateY(-4px);
   }
 
   .work-image-wrapper {
