@@ -30,3 +30,19 @@
 2.  **Options一覧ページの作成**: `src/pages/options.astro` を新設し、カテゴリ付きでオプションを一覧表示する画面を構築する。
 3.  **グローバルナビゲーションの追加**: `Layout.astro` のヘッダーを拡張し、「Cage Types」「製作事例紹介」「オプション類」へのリンクを配置。スマホ（モバイル）環境では横スクロールで素早くアクセスできるUIにする。
 4.  **トップページの文言修正**: "Latest Works" を "製作事例紹介" に変更する。
+
+## Current Phase: ローカル管理ツール(Streamlit)の実装 (Phase 4)
+### 実行予定タスク
+1.  **Python環境の構築**: `Web` ディレクトリと同階層に `admin-tools` フォルダを作成。`requirements.txt` に `streamlit`, `requests`, `python-dotenv` を定義し、`venv` 環境を整備する。
+2.  **API通信モジュールの作成**: `microcms_api.py` などを設け、GET/POST/PATCHリクエスト、および `/media` エンドポイント経由での画像アップロード(Multipart FormData送信)のロジックを一元化する。
+3.  **Streamlitアプリの構築 (`app.py`)**: 
+    - サイドバー: 「新規登録 / 既存データの編集」および「Types / Works / Options」の切り替えナビゲーション。
+    - メイン領域: 各種入力・編集フォーム。参照フィールド（`cageType` や `applicableTypes`など）は事前にGETした各リストからSelectBox/MultiSelectで選べるようにする。
+4.  **編集（PATCH）機能実装**: 一覧から対象を選択しフォームに現在値をロード。修正後に更新できるよう組む。
+
+## Current Phase: AstroのSSR化と本番環境同期 (Phase 5)
+### 実行予定タスク
+1.  **Cloudflare Adapter導入**: `Web` ディレクトリで `npx astro add cloudflare` (または手動インストール) を行い、`dependencies` に追加する。
+2.  **Astro Config修正**: `astro.config.mjs` の設定を更新し、`output: 'server'` と `adapter: cloudflare()` を適用する。
+3.  **Type Check**: SSR化によりAstroのビルド構成が変わるため、事前に `npm run build` を実行してエラーがないか確認する。
+4.  **本番反映とテスト**: 構成完了後、GitHubへプッシュすることでCloudflareに自動ビルドを走らせ、本番URLでリアルタイムにmicroCMSのデータが反映されるか検証する。
