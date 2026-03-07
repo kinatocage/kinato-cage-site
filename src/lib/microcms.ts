@@ -1,9 +1,9 @@
 import { createClient } from 'microcms-js-sdk';
 
-// import.meta.env（ローカル用）と process.env（Cloudflare用）の両方を確認するようにします
 export const client = createClient({
-    serviceDomain: import.meta.env.MICROCMS_SERVICE_DOMAIN || process.env.MICROCMS_SERVICE_DOMAIN || '',
-    apiKey: import.meta.env.MICROCMS_API_KEY || process.env.MICROCMS_API_KEY || '',
+    // PUBLIC_ を付けることで、ビルド時にも正しく読み込まれるようになります
+    serviceDomain: import.meta.env.PUBLIC_MICROCMS_SERVICE_DOMAIN,
+    apiKey: import.meta.env.PUBLIC_MICROCMS_API_KEY,
 });
 
 import type { MicroCMSQueries, MicroCMSImage, MicroCMSDate } from "microcms-js-sdk";
