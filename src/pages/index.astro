@@ -7,10 +7,10 @@ let types: any[] = [];
 let works: any[] = [];
 
 try {
-  const typesResponse = await getTypes({ limit: 10 });
+  const typesResponse = await getTypes({ limit: 10, orders: 'createdAt' });
   types = typesResponse.contents || [];
   
-  const worksResponse = await getWorks({ limit: 6, orders: '-publishedAt' });
+  const worksResponse = await getWorks({ limit: 6, orders: 'createdAt' });
   works = worksResponse.contents || [];
 } catch (err) {
   console.error("データの取得に失敗しました。スキーマやAPIキーを確認してください:", err);

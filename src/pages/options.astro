@@ -6,7 +6,7 @@ let options: any[] = [];
 let categories: string[] = [];
 
 try {
-  const optionsResponse = await getOptions({ limit: 100 });
+  const optionsResponse = await getOptions({ limit: 100, orders: 'createdAt' });
   options = optionsResponse.contents || [];
 
   // 存在するカテゴリの一覧を抽出（重複除去）
