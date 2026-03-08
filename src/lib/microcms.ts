@@ -31,6 +31,8 @@ export type TypeData = {
     image?: { url: string }[];
     /** このタイプを代表する、またはおすすめの製作事例リスト。 */
     pinnedWorks?: Work[];
+    /** 表示順序を制御するための数値 */
+    order?: number;
 };
 
 /**
@@ -52,6 +54,8 @@ export type OptionData = {
     applicableTypes?: TypeData[];
     /** オプションの参考画像（複数画像対応） */
     images?: { url: string }[];
+    /** 表示順序を制御するための数値 */
+    order?: number;
 };
 
 /**
@@ -77,16 +81,18 @@ export type Work = {
     customerComment?: string;
     /** ベースとなったケージタイプの情報 */
     cageType?: TypeData;
+    /** 表示順序を制御するための数値 */
+    order?: number;
 };
 
 export const getWorks = async (queries?: any) => {
-    return await client.get({ endpoint: "works", queries });
+    return await client.get({ endpoint: "works", queries: { orders: 'order', ...queries } });
 };
 
 export const getTypes = async (queries?: any) => {
-    return await client.get({ endpoint: "types", queries });
+    return await client.get({ endpoint: "types", queries: { orders: 'order', ...queries } });
 };
 
 export const getOptions = async (queries?: any) => {
-    return await client.get({ endpoint: "options", queries });
+    return await client.get({ endpoint: "options", queries: { orders: 'order', ...queries } });
 };
