@@ -79,13 +79,16 @@ const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(r
           </div>
           <div class="pinned-grid">
             {pinnedWorks.map((work: any) => (
-              <article class="pinned-card card-base">
+              <a href={`/works/${work.id}`} class="pinned-card card-base">
                 <div class="pinned-image-wrapper">
                   {work.images && work.images.length > 0 ? (
                     <img src={work.images[0].url} alt={work.title} class="pinned-image" loading="lazy" />
                   ) : (
                     <div class="placeholder-image" aria-label="画像読み込み中"></div>
                   )}
+                  <div class="work-overlay">
+                    <span class="view-more">詳しく見る →</span>
+                  </div>
                 </div>
                 <div class="pinned-content">
                   <h3>{work.title}</h3>
@@ -103,7 +106,7 @@ const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(r
                     </div>
                   )}
                 </div>
-              </article>
+              </a>
             ))}
           </div>
         </div>
@@ -158,13 +161,16 @@ const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(r
         {filteredRelatedWorks.length > 0 ? (
           <div class="works-grid">
             {filteredRelatedWorks.map(work => (
-              <article class="work-card card-base">
+              <a href={`/works/${work.id}`} class="work-card card-base">
                 <div class="work-image-wrapper">
                   {work.images && work.images.length > 0 ? (
                     <img src={work.images[0].url} alt={work.title} class="work-image" loading="lazy" />
                   ) : (
                     <div class="placeholder-image" aria-label="画像読み込み中"></div>
                   )}
+                  <div class="work-overlay">
+                    <span class="view-more">詳しく見る →</span>
+                  </div>
                 </div>
                 <div class="work-content">
                   <h3 class="work-title-small">{work.title}</h3>
@@ -183,7 +189,7 @@ const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(r
                     </div>
                   )}
                 </div>
-              </article>
+              </a>
             ))}
           </div>
         ) : (
@@ -292,16 +298,68 @@ const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(r
     display: flex;
     flex-direction: column;
     border: 1px solid var(--color-border);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .pinned-card:hover {
+    border-color: var(--color-accent);
+    transform: translateY(-4px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
   }
 
   .pinned-image-wrapper {
     aspect-ratio: 16/9;
+    position: relative;
+    overflow: hidden;
+    background-color: #f7f7f7;
   }
 
   .pinned-image {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    transition: transform 0.5s ease;
+  }
+
+  .pinned-card:hover .pinned-image {
+    transform: scale(1.05);
+  }
+
+  /* Work Overlay */
+  .work-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(244, 167, 185, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .view-more {
+    background: white;
+    color: var(--color-primary-dark);
+    padding: 0.5rem 1.5rem;
+    border-radius: var(--radius-full);
+    font-weight: bold;
+    font-family: var(--font-heading);
+    font-size: 0.9rem;
+    transform: translateY(10px);
+    transition: transform 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+
+  .pinned-card:hover .work-overlay,
+  .work-card:hover .work-overlay {
+    opacity: 1;
+  }
+
+  .pinned-card:hover .view-more,
+  .work-card:hover .view-more {
+    transform: translateY(0);
   }
 
   .pinned-content {
@@ -327,16 +385,32 @@ const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(r
   .work-card {
     display: flex;
     flex-direction: column;
+    text-decoration: none;
+    color: inherit;
+    border: 1px solid var(--color-border);
+    transition: border-color 0.3s ease;
+  }
+
+  .work-card:hover {
+    border-color: var(--color-accent);
   }
 
   .work-image-wrapper {
-    aspect-ratio: 16/9;
+    aspect-ratio: 4/3;
+    position: relative;
+    overflow: hidden;
+    background-color: #f7f7f7;
   }
 
   .work-image {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    transition: transform 0.5s ease;
+  }
+
+  .work-card:hover .work-image {
+    transform: scale(1.05);
   }
 
   .work-content {
@@ -376,15 +450,16 @@ const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(r
 
   .option-image-wrapper {
     width: 100%;
-    aspect-ratio: 16/9;
+    aspect-ratio: 4/3;
     border-radius: var(--radius-sm);
     overflow: hidden;
+    background-color: #f7f7f7;
   }
 
   .option-image {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
   }
 
   .option-content {

@@ -1,0 +1,50 @@
+﻿[dotenv@17.3.1] injecting env (2) from .env -- tip: 笞呻ｸ・ override existing env vars with { override: true }
+Starting migration... Dry Run: false
+Fetching all type IDs from microCMS...
+Loaded 12 type IDs to use for applicableTypes.
+Fetching list page: https://ameblo.jp/kinatocage/theme-10110834286.html
+Fetching list page: https://ameblo.jp/kinatocage/theme2-10110834286.html
+Fetching list page: https://ameblo.jp/kinatocage/theme3-10110834286.html
+Fetching list page: https://ameblo.jp/kinatocage/theme4-10110834286.html
+Fetching list page: https://ameblo.jp/kinatocage/theme5-10110834286.html
+Fetching list page: https://ameblo.jp/kinatocage/theme6-10110834286.html
+Fetching list page: https://ameblo.jp/kinatocage/theme7-10110834286.html
+Fetching list page: https://ameblo.jp/kinatocage/theme8-10110834286.html
+Fetching list page: https://ameblo.jp/kinatocage/theme9-10110834286.html
+Fetching list page: https://ameblo.jp/kinatocage/theme10-10110834286.html
+Fetching list page: https://ameblo.jp/kinatocage/theme11-10110834286.html
+Fetching list page: https://ameblo.jp/kinatocage/theme12-10110834286.html
+Total URLs to process: 1
+Fetching article: https://ameblo.jp/kinatocage/entry-12951683019.html?frm=theme
+
+--- Article ---
+URL  : https://ameblo.jp/kinatocage/entry-12951683019.html?frm=theme
+Name : TypeF驥醍ｶｲ縺吶・縺・Images: 1
+Downloading image: https://stat.ameba.jp/user_images/20251229/22/kinatocage/4c/06/p/o1920144015735319239.png?caw=800
+Uploading to microCMS Management API...
+Mgmt API response: {"url":"https://images.microcms-assets.io/assets/3725efedf6e84d2f89593a6f6d3da1c7/cc48fd59000f482ebc2cd3ce699bde97/o1920144015735319239.png"}
+Uploaded successfully: https://images.microcms-assets.io/assets/3725efedf6e84d2f89593a6f6d3da1c7/cc48fd59000f482ebc2cd3ce699bde97/o1920144015735319239.png
+node : Error processing article https://ameblo.jp
+/kinatocage/entry-12951683019.html?frm=theme: Err
+or: Failed to create option in microCMS: 400 {"me
+ssage":"'images[0]' field invalid. Please set a v
+alid image URL."}
+発生場所 行:1 文字:1
++ node tools/migrate_ameblo_options.js > tools/te
+st_log.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Err 
+   or processin...id image URL."}:String) [], R  
+  emoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    at createOptionArticle (file:///C:/Users/owne
+r/OneDrive/Desktop/Web/tools/migrate_ameblo_optio
+ns.js:182:15)
+    at process.processTicksAndRejections (node:in
+ternal/process/task_queues:103:5)
+    at async main (file:///C:/Users/owner/OneDriv
+e/Desktop/Web/tools/migrate_ameblo_options.js:272
+:30)
+Creating option in microCMS: TypeF驥醍ｶｲ縺吶・縺・Migration finished.

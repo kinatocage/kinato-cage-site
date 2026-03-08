@@ -1,0 +1,28 @@
+﻿[dotenv@17.3.1] injecting env (2) from .env -- tip: 屏・・ run anywhere with `dotenvx run -- yourcommand`
+Starting migration... Dry Run: false
+Fetching all type IDs from microCMS...
+Loaded 12 type IDs to use for applicableTypes.
+Fetching list page: https://ameblo.jp/kinatocage/theme-10110834286.html
+Fetching list page: https://ameblo.jp/kinatocage/theme2-10110834286.html
+Fetching list page: https://ameblo.jp/kinatocage/theme3-10110834286.html
+Fetching list page: https://ameblo.jp/kinatocage/theme4-10110834286.html
+Fetching list page: https://ameblo.jp/kinatocage/theme5-10110834286.html
+Fetching list page: https://ameblo.jp/kinatocage/theme6-10110834286.html
+Fetching list page: https://ameblo.jp/kinatocage/theme7-10110834286.html
+Fetching list page: https://ameblo.jp/kinatocage/theme8-10110834286.html
+Fetching list page: https://ameblo.jp/kinatocage/theme9-10110834286.html
+Fetching list page: https://ameblo.jp/kinatocage/theme10-10110834286.html
+Fetching list page: https://ameblo.jp/kinatocage/theme11-10110834286.html
+Fetching list page: https://ameblo.jp/kinatocage/theme12-10110834286.html
+Total URLs to process: 1
+Fetching article: https://ameblo.jp/kinatocage/entry-12951683019.html?frm=theme
+
+--- Article ---
+URL  : https://ameblo.jp/kinatocage/entry-12951683019.html?frm=theme
+Name : TypeF驥醍ｶｲ縺吶・縺・Images: 1
+Downloading image: https://stat.ameba.jp/user_images/20251229/22/kinatocage/4c/06/p/o1920144015735319239.png?caw=800
+Uploading to microCMS Management API...
+Mgmt API response: {"url":"https://images.microcms-assets.io/assets/3725efedf6e84d2f89593a6f6d3da1c7/f8b377db7b80439b8afbea910c46ba27/o1920144015735319239.png"}
+Uploaded successfully: https://images.microcms-assets.io/assets/3725efedf6e84d2f89593a6f6d3da1c7/f8b377db7b80439b8afbea910c46ba27/o1920144015735319239.png
+Creating option in microCMS: TypeF驥醍ｶｲ縺吶・縺・Successfully migrated -> microCMS ID: v1-t5aqokf
+Migration finished.

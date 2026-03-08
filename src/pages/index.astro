@@ -7,7 +7,7 @@ let types: any[] = [];
 let works: any[] = [];
 
 try {
-  const typesResponse = await getTypes({ limit: 10 });
+  const typesResponse = await getTypes({ limit: 100 });
   types = typesResponse.contents || [];
   
   const worksResponse = await getWorks({ limit: 6 });
@@ -140,7 +140,7 @@ const galleryImages = [
         {works.length > 0 ? (
           <div class="works-grid">
             {works.map(work => (
-              <article class="work-card card-base">
+              <a href={`/works/${work.id}`} class="work-card card-base">
                 <div class="work-image-wrapper">
                   {work.images && work.images.length > 0 ? (
                     <img src={work.images[0].url} alt={work.title} class="work-image" loading="lazy" />
@@ -150,6 +150,9 @@ const galleryImages = [
                   {work.cageType && (
                     <span class="badge type-badge">{work.cageType.title}</span>
                   )}
+                  <div class="work-overlay">
+                    <span class="view-more">詳しく見る →</span>
+                  </div>
                 </div>
                 <div class="work-content">
                   <h3 class="work-title">{work.title}</h3>
@@ -167,7 +170,7 @@ const galleryImages = [
                     </div>
                   )}
                 </div>
-              </article>
+              </a>
             ))}
           </div>
         ) : (
@@ -309,9 +312,22 @@ const galleryImages = [
 
   /* マーキーラッパー：クリップ用 */
   .gallery-marquee-track {
-    overflow: hidden;
+    overflow-x: auto;
     padding: 1rem 0;
     height: 240px;
+    display: flex;
+    cursor: grab;
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .gallery-marquee-track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .gallery-marquee-track:active,
+  .gallery-marquee-track.active {
+    cursor: grabbing;
   }
 
   /* 無限スクロールの内側コンテナ */
@@ -319,17 +335,7 @@ const galleryImages = [
     display: flex;
     gap: 1.25rem;
     width: max-content;
-    animation: marquee-scroll 120s linear infinite;
-  }
-
-  /* ホバー中は一時停止 */
-  .gallery-marquee-track:hover .gallery-marquee-inner {
-    animation-play-state: paused;
-  }
-
-  @keyframes marquee-scroll {
-    0%   { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
+    padding-right: 1.25rem;
   }
 
   /* ギャラリーカード */
@@ -342,6 +348,7 @@ const galleryImages = [
     border-radius: 20px;
     overflow: hidden;
     position: relative;
+    background-color: #f7f7f7;
     box-shadow: 0 6px 20px rgba(244, 167, 185, 0.15);
     transition: transform 0.4s ease, box-shadow 0.4s ease;
   }
@@ -356,7 +363,7 @@ const galleryImages = [
     width: 100% !important;
     height: 100% !important;
     max-width: none;
-    object-fit: cover;
+    object-fit: contain;
     display: block;
     filter: brightness(1.03) saturate(1.08);
     transition: filter 0.4s ease;
@@ -424,15 +431,16 @@ const galleryImages = [
 
   .type-image-wrapper {
     position: relative;
-    aspect-ratio: 4/3;
+    aspect-ratio: 1/1;
     overflow: hidden;
+    background-color: #f7f7f7;
     border-radius: var(--radius-md) var(--radius-md) 0 0;
   }
 
   .type-image {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     transition: transform 0.5s ease;
     filter: brightness(1.02) saturate(1.05);
   }
@@ -510,19 +518,53 @@ const galleryImages = [
   .work-card {
     display: flex;
     flex-direction: column;
+    text-decoration: none;
+    color: inherit;
+    border: 2px solid transparent;
+    transition: border-color 0.3s ease;
+  }
+
+  .work-card:hover {
+    border-color: var(--color-accent);
   }
 
   .work-image-wrapper {
     position: relative;
-    aspect-ratio: 16/9;
+    aspect-ratio: 4/3;
     overflow: hidden;
+    background-color: #f7f7f7;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
   }
 
   .work-image {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    transition: transform 0.5s ease;
     filter: brightness(1.02) saturate(1.05);
+  }
+
+  .work-card:hover .work-image {
+    transform: scale(1.06);
+  }
+
+  .work-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(244, 167, 185, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .work-card:hover .work-overlay {
+    opacity: 1;
+  }
+
+  .work-card:hover .view-more {
+    transform: translateY(0);
   }
 
   .badge {
@@ -593,3 +635,69 @@ const galleryImages = [
     border: 2px dashed var(--color-border);
   }
 </style>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const track = document.querySelector('.gallery-marquee-track');
+    if (!track) return;
+
+    let isDown = false;
+    let startX = 0;
+    let scrollLeft = 0;
+    let animationId = 0;
+    let isHovering = false;
+
+    // スクロール速度 (ピクセル/フレーム)
+    const autoScrollSpeed = 0.5;
+
+    const autoScroll = () => {
+      // ユーザーがドラッグ中・タッチ中・ホバー中ではない場合のみ自動スクロール
+      if (!isDown && !isHovering) {
+        track.scrollLeft += autoScrollSpeed;
+        
+        // ギャラリーの画像リストは2セット（同じもの）並んでいる前提
+        // 1セット目(全体の半分)をスクロールし終えたら、scrollLeftを0にリセットしてループさせる
+        if (track.scrollLeft >= track.scrollWidth / 2) {
+          track.scrollLeft -= track.scrollWidth / 2;
+        } else if (track.scrollLeft <= 0 && autoScrollSpeed < 0) { 
+          // もし逆にスクロールした場合の処理(念の為)
+          track.scrollLeft += track.scrollWidth / 2;
+        }
+      }
+      animationId = requestAnimationFrame(autoScroll);
+    };
+
+    animationId = requestAnimationFrame(autoScroll);
+
+    // ホバー・タッチで一時停止
+    track.addEventListener('mouseenter', () => isHovering = true);
+    track.addEventListener('mouseleave', () => {
+      isHovering = false;
+      isDown = false;
+      track.classList.remove('active');
+    });
+    track.addEventListener('touchstart', () => isHovering = true, { passive: true });
+    track.addEventListener('touchend', () => isHovering = false);
+
+    // マウスドラッグで横スクロール
+    track.addEventListener('mousedown', (e) => {
+      isDown = true;
+      track.classList.add('active');
+      startX = e.pageX - track.offsetLeft;
+      scrollLeft = track.scrollLeft;
+    });
+
+    track.addEventListener('mouseup', () => {
+      isDown = false;
+      track.classList.remove('active');
+    });
+
+    track.addEventListener('mousemove', (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - track.offsetLeft;
+      const walk = (x - startX) * 1.5; // スクロール感度
+      track.scrollLeft = scrollLeft - walk;
+    });
+  });
+</script>

@@ -8,7 +8,7 @@ const works = response.contents;
 
 <div class="works-grid">
   {works.map((work) => (
-    <article class="work-card">
+    <a href={`/works/${work.id}`} class="work-card">
       <div class="work-card-image-wrapper">
         {work.images && work.images.length > 0 ? (
           <img 
@@ -33,7 +33,7 @@ const works = response.contents;
           <p class="work-card-features">{work.features}</p>
         )}
       </div>
-    </article>
+    </a>
   ))}
 </div>
 
@@ -54,6 +54,8 @@ const works = response.contents;
     transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
     display: flex;
     flex-direction: column;
+    text-decoration: none;
+    color: inherit;
   }
 
   .work-card:hover {
@@ -62,16 +64,18 @@ const works = response.contents;
   }
 
   .work-card-image-wrapper {
-    aspect-ratio: 16 / 9;
+    position: relative;
+    aspect-ratio: 4/3;
     width: 100%;
     overflow: hidden;
+    background-color: #f7f7f7;
     border-bottom: 1px solid #f1f5f9;
   }
 
   .work-card-image {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
   }
 
   .work-card-placeholder {
