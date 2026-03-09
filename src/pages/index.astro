@@ -166,7 +166,9 @@ const galleryImages = [
                   {work.customerComment && (
                     <div class="customer-voice">
                       <div class="voice-icon">💬</div>
-                      <p class="voice-text">{work.customerComment}</p>
+                      <p class="voice-text" title={work.customerComment.replace(/<[^>]*>?/gm, '')}>
+                        {work.customerComment.replace(/<[^>]*>?/gm, '')}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -624,6 +626,10 @@ const galleryImages = [
     color: var(--color-text-light);
     font-style: italic;
     margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .empty-state {

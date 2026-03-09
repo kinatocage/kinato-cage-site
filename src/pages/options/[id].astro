@@ -23,7 +23,7 @@ try {
         <div class="hero-inner">
           <div class="hero-image-col">
             {option.images && option.images.length > 0 ? (
-              <img src={option.images[0].url} alt={option.name} class="hero-image" />
+              <img src={option.images[0].url} alt={option.name} class="hero-image" id="mainImage" />
             ) : (
               <div class="placeholder-image hero-placeholder" aria-label="画像なし"></div>
             )}
@@ -31,8 +31,8 @@ try {
             {/* 複数画像がある場合のギャラリー */}
             {option.images && option.images.length > 1 && (
               <div class="image-gallery">
-                {option.images.slice(1).map((img: any) => (
-                  <img src={img.url} alt={`${option.name}の画像`} class="gallery-thumb" loading="lazy" />
+                {option.images.map((img: any, index: number) => (
+                  <img src={img.url} alt={`${option.name}の画像`} class={`gallery-thumb ${index === 0 ? 'active' : ''}`} data-src={img.url} loading="lazy" />
                 ))}
               </div>
             )}
@@ -144,6 +144,17 @@ try {
     background-color: #f7f7f7;
     border-radius: var(--radius-sm);
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: opacity 0.2s, border-color 0.2s;
+  }
+
+  .gallery-thumb:hover {
+    opacity: 0.8;
+  }
+
+  .gallery-thumb.active {
+    border-color: var(--color-accent);
   }
 
   .hero-text-col {
@@ -283,3 +294,23 @@ try {
     margin: 0;
   }
 </style>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const mainImage = document.getElementById('mainImage') as HTMLImageElement;
+    const thumbs = document.querySelectorAll('.gallery-thumb');
+
+    if (mainImage && thumbs.length > 0) {
+      thumbs.forEach(thumb => {
+        thumb.addEventListener('click', function() {
+          const newSrc = this.getAttribute('data-src');
+          if (newSrc) {
+            mainImage.src = newSrc;
+          }
+          thumbs.forEach(t => t.classList.remove('active'));
+          this.classList.add('active');
+        });
+      });
+    }
+  });
+</script>

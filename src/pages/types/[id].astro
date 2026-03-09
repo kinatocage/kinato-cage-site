@@ -125,9 +125,9 @@ const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(r
           <div class="options-grid">
             {applicableOptions.map((opt: any) => (
               <div class="option-card card-base">
-                {opt.image ? (
+                {opt.images && opt.images.length > 0 ? (
                   <div class="option-image-wrapper">
-                     <img src={opt.image.url} alt={opt.title} class="option-image" loading="lazy" />
+                     <img src={opt.images[0].url} alt={opt.name} class="option-image" loading="lazy" />
                   </div>
                 ) : (
                    <div class="option-image-wrapper">
@@ -135,10 +135,10 @@ const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(r
                    </div>
                 )}
                 <div class="option-content">
-                  <h3 class="option-title">{opt.title}</h3>
-                  {opt.description && <p class="option-desc">{opt.description}</p>}
+                  <h3 class="option-title">{opt.name}</h3>
+                  {opt.details && <p class="option-desc">{opt.details}</p>}
                   <div class="option-price">
-                    {opt.price ? `+ ¥${opt.price.toLocaleString()}` : "サイズにより変動（お見積もり）"}
+                    {opt.price ? `+ ¥${Number(opt.price).toLocaleString()}` : "サイズにより変動（お見積もり）"}
                   </div>
                 </div>
               </div>
@@ -181,11 +181,17 @@ const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(r
                       </span>
                     )}
                   </div>
-                  {work.features && <p class="work-features">{work.features}</p>}
+                  {work.features && (
+                    <p class="work-features" title={work.features.replace(/<[^>]*>?/gm, '')}>
+                      {work.features.replace(/<[^>]*>?/gm, '')}
+                    </p>
+                  )}
                   {work.customerComment && (
                     <div class="customer-voice">
                       <div class="voice-icon">💬</div>
-                      <p class="voice-text text-small">{work.customerComment}</p>
+                      <p class="voice-text text-small" title={work.customerComment.replace(/<[^>]*>?/gm, '')}>
+                        {work.customerComment.replace(/<[^>]*>?/gm, '')}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -430,6 +436,10 @@ const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(r
     font-size: 0.875rem;
     color: var(--color-text-light);
     margin-bottom: 1rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   /* Option Cards */
@@ -516,7 +526,16 @@ const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(r
   }
 
   .voice-icon { font-size: 1.25rem; }
-  .voice-text { font-size: 0.875rem; color: var(--color-text-light); font-style: italic; margin: 0; }
+  .voice-text {
+    font-size: 0.875rem;
+    color: var(--color-text-light);
+    font-style: italic;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
   .text-small { font-size: 0.8rem; }
 
   .empty-state {
