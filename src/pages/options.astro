@@ -103,7 +103,11 @@ const groupedOptions = categories.map(cat => {
                         </div>
                       )}
 
-                      {opt.details && <p class="option-details">{opt.details}</p>}
+                      {opt.details && (
+                        <p class="option-details" title={opt.details.replace(/<[^>]*>?/gm, "")}>
+                          {opt.details.replace(/<[^>]*>?/gm, "").substring(0, 100)}{opt.details.replace(/<[^>]*>?/gm, "").length > 100 ? '...' : ''}
+                        </p>
+                      )}
                       
                       <div class="option-price">
                         {opt.price ? `+ ¥${Number(opt.price).toLocaleString()}` : "サイズにより変動（お見積もり）"}

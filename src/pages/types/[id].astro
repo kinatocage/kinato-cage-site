@@ -139,8 +139,8 @@ const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(r
                 <div class="option-content">
                   <h3 class="option-title">{opt.name}</h3>
                   {opt.details && (
-                    <p class="option-desc" title={opt.details.replace(/<[^>]*>?/gm, '')}>
-                      {opt.details.replace(/<[^>]*>?/gm, '')}
+                    <p class="option-desc" title={opt.details.replace(/<[^>]*>?/gm, "")}>
+                      {opt.details.replace(/<[^>]*>?/gm, "").substring(0, 100)}{opt.details.replace(/<[^>]*>?/gm, "").length > 100 ? '...' : ''}
                     </p>
                   )}
                   <div class="option-price">
