@@ -124,24 +124,30 @@ const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(r
         {applicableOptions.length > 0 ? (
           <div class="options-grid">
             {applicableOptions.map((opt: any) => (
-              <div class="option-card card-base">
+              <a href={`/options/${opt.id}`} class="option-card card-base">
                 {opt.images && opt.images.length > 0 ? (
                   <div class="option-image-wrapper">
                      <img src={opt.images[0].url} alt={opt.name} class="option-image" loading="lazy" />
+                     <div class="option-overlay"><span class="view-more">詳しく見る →</span></div>
                   </div>
                 ) : (
                    <div class="option-image-wrapper">
                       <img src="/assets/acrylic_cage.png" alt="No image available" class="option-image placeholder-fallback" loading="lazy" />
+                      <div class="option-overlay"><span class="view-more">詳しく見る →</span></div>
                    </div>
                 )}
                 <div class="option-content">
                   <h3 class="option-title">{opt.name}</h3>
-                  {opt.details && <p class="option-desc">{opt.details}</p>}
+                  {opt.details && (
+                    <p class="option-desc" title={opt.details.replace(/<[^>]*>?/gm, '')}>
+                      {opt.details.replace(/<[^>]*>?/gm, '')}
+                    </p>
+                  )}
                   <div class="option-price">
                     {opt.price ? `+ ¥${Number(opt.price).toLocaleString()}` : "サイズにより変動（お見積もり）"}
                   </div>
                 </div>
-              </div>
+              </a>
             ))}
           </div>
         ) : (
@@ -463,6 +469,7 @@ const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(r
     aspect-ratio: 4/3;
     border-radius: var(--radius-sm);
     overflow: hidden;
+    position: relative;
     background-color: #f7f7f7;
   }
 
@@ -470,6 +477,30 @@ const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(r
     width: 100%;
     height: 100%;
     object-fit: contain;
+    transition: transform 0.5s ease;
+  }
+
+  .option-card:hover .option-image {
+    transform: scale(1.05);
+  }
+
+  .option-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(244, 167, 185, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .option-card:hover .option-overlay {
+    opacity: 1;
+  }
+
+  .option-card:hover .view-more {
+    transform: translateY(0);
   }
 
   .option-content {
@@ -488,6 +519,10 @@ const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(r
     font-size: 0.875rem;
     color: var(--color-text-light);
     margin-bottom: 1rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .option-price {

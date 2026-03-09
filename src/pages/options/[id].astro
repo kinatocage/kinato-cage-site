@@ -55,7 +55,15 @@ try {
                 {option.price ? `+ ¥${Number(option.price).toLocaleString()}` : "サイズにより変動（お見積もり）"}
               </span>
             </div>
-
+            
+            {/* オプションの詳細本文（以前は下にあったものを移動） */}
+            {option.details && (
+              <div class="option-details-box">
+                <h3 class="details-heading">機能や効果の詳細</h3>
+                <p class="details-text">{option.details}</p>
+              </div>
+            )}
+            
             <div class="applicable-types-box">
               <h3 class="types-heading">適用可能なケージタイプ</h3>
               <div class="applicable-types">
@@ -74,19 +82,7 @@ try {
       </div>
     </section>
 
-    <!-- オプションの詳細本文 -->
-    {option.details && (
-      <section class="section option-content-section">
-        <div class="container">
-          <div class="section-header">
-            <h2>機能や効果の詳細</h2>
-          </div>
-          <div class="content-body">
-            <p>{option.details}</p>
-          </div>
-        </div>
-      </section>
-    )}
+    <!-- セクション移動済みのため削除 -->
   </main>
 </Layout>
 
@@ -222,6 +218,32 @@ try {
     font-size: 1.25rem;
   }
 
+  .option-details-box {
+    margin-top: 1.5rem;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background-color: white;
+    border-radius: var(--radius-md);
+    box-shadow: 0 2px 15px rgba(0,0,0,0.03);
+  }
+
+  .details-heading {
+    font-size: 1.1rem;
+    font-family: var(--font-heading);
+    color: var(--color-primary-dark);
+    margin-bottom: 0.8rem;
+    border-bottom: 2px solid var(--color-border);
+    padding-bottom: 0.5rem;
+  }
+
+  .details-text {
+    font-size: 1rem;
+    color: var(--color-text);
+    line-height: 1.8;
+    white-space: pre-wrap;
+    margin: 0;
+  }
+
   .applicable-types-box {
     margin-top: 1rem;
     padding: 1.5rem;
@@ -274,25 +296,7 @@ try {
     }
   }
 
-  /* Content Body */
-  .option-content-section {
-    padding: 1rem 0 4rem;
-  }
-
-  .content-body {
-    background-color: white;
-    padding: 2.5rem;
-    border-radius: var(--radius-lg);
-    box-shadow: 0 2px 15px rgba(0,0,0,0.03);
-    color: var(--color-text);
-    line-height: 1.8;
-  }
-
-  .content-body p {
-    font-size: 1rem;
-    white-space: pre-wrap;
-    margin: 0;
-  }
+    /* Removed old content-body styles */
 </style>
 
 <script>
