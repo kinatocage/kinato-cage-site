@@ -1,0 +1,211 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="お問い合わせ | きなとのケージ屋さん">
+	<main class="container">
+		<section class="section">
+			<div class="section-header">
+				<h1>お問い合わせ</h1>
+				<p>Contact Us</p>
+			</div>
+
+			<div class="contact-grid">
+				<div class="contact-character">
+					<img src="/assets/characters/charactor_contact.png" alt="お気軽にお問い合わせください！" class="contact-kinato" />
+					<div class="character-msg">
+						「ご質問やオーダーのご相談など、<br>お気軽にご連絡くださいね♪」
+					</div>
+				</div>
+
+				<div class="contact-methods">
+					<div class="contact-card card-base">
+						<h3>SNSで相談する</h3>
+						<p class="desc">DM（ダイレクトメッセージ）にて承っております。お好みのSNSをお選びください。</p>
+						<div class="sns-buttons">
+							<a href="https://x.com/kinato_cage/" target="_blank" rel="noopener noreferrer" class="sns-button x-link">
+								<span class="icon">𝕏</span> X (Twitter) はこちら
+							</a>
+							<a href="https://www.instagram.com/kinato_cage/" target="_blank" rel="noopener noreferrer" class="sns-button insta-link">
+								<span class="icon">📸</span> Instagram はこちら
+							</a>
+						</div>
+						<p class="note">※XのDMが送れない場合は、プロフィールより「フォロー」または「リプライ」をいただけますと幸いです。</p>
+					</div>
+
+					<div class="contact-card card-base">
+						<h3>メールで相談する</h3>
+						<p class="desc">メールでのご連絡をご希望の方はこちらから起動します。</p>
+						<a href="mailto:kinato_cage@yahoo.co.jp" class="email-button">
+							<span class="icon">✉️</span> メールを作成する
+						</a>
+						<p class="email-address">kinato_cage@yahoo.co.jp</p>
+					</div>
+				</div>
+			</div>
+
+			<div class="back-link-container">
+				<a href="/" class="back-link">トップページに戻る</a>
+			</div>
+		</section>
+	</main>
+</Layout>
+
+<style>
+	.container {
+		max-width: 1000px;
+		margin: 0 auto;
+		padding: 2rem 1rem;
+	}
+
+	.section-header h1 {
+		font-family: var(--font-heading);
+		font-size: 2.2rem;
+		color: var(--color-primary-dark);
+		margin-bottom: 0.5rem;
+		font-weight: 800;
+	}
+
+	.contact-grid {
+		display: grid;
+		grid-template-columns: 1fr 1.5fr;
+		gap: 3rem;
+		align-items: center;
+		margin-top: 2rem;
+	}
+
+	.contact-character {
+		text-align: center;
+	}
+
+	.contact-kinato {
+		width: 100%;
+		max-width: 320px;
+		margin: 0 auto;
+		filter: drop-shadow(0 10px 20px rgba(244, 167, 185, 0.3));
+	}
+
+	.character-msg {
+		margin-top: 1.5rem;
+		background: white;
+		border: 2px solid var(--color-accent);
+		padding: 1rem;
+		border-radius: var(--radius-md);
+		position: relative;
+		font-size: 0.95rem;
+		line-height: 1.6;
+		display: inline-block;
+	}
+
+	.character-msg::before {
+		content: '';
+		position: absolute;
+		top: -12px;
+		left: 50%;
+		transform: translateX(-50%);
+		border-width: 0 10px 12px 10px;
+		border-style: solid;
+		border-color: transparent transparent white transparent;
+		z-index: 1;
+	}
+	.character-msg::after {
+		content: '';
+		position: absolute;
+		top: -15px;
+		left: 50%;
+		transform: translateX(-50%);
+		border-width: 0 11px 14px 11px;
+		border-style: solid;
+		border-color: transparent transparent var(--color-accent) transparent;
+	}
+
+	.contact-methods {
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
+	}
+
+	.contact-card {
+		padding: 2rem;
+		background: white;
+	}
+
+	.contact-card h3 {
+		font-family: var(--font-heading);
+		color: var(--color-primary-dark);
+		margin-bottom: 0.5rem;
+		font-size: 1.3rem;
+	}
+
+	.contact-card .desc {
+		font-size: 0.9rem;
+		color: var(--color-text-light);
+		margin-bottom: 1.5rem;
+	}
+
+	.sns-buttons {
+		display: flex;
+		flex-direction: column;
+		gap: 0.8rem;
+		margin-bottom: 1rem;
+	}
+
+	.sns-button, .email-button {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.8rem;
+		padding: 1rem;
+		border-radius: var(--radius-sm);
+		font-weight: 700;
+		color: white;
+		transition: transform 0.2s ease, opacity 0.2s ease;
+	}
+
+	.x-link { background-color: #000; }
+	.insta-link { background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%); }
+	.email-button { background-color: var(--color-primary); }
+
+	.sns-button:hover, .email-button:hover {
+		opacity: 0.9;
+		transform: scale(1.02);
+	}
+
+	.note, .email-address {
+		font-size: 0.75rem;
+		color: var(--color-text-light);
+		margin-top: 1rem;
+	}
+
+	.back-link-container {
+		margin-top: 4rem;
+		text-align: center;
+	}
+
+	.back-link {
+		display: inline-block;
+		padding: 0.8rem 2rem;
+		background-color: var(--color-primary-light);
+		color: var(--color-primary-dark);
+		border-radius: var(--radius-full);
+		font-weight: 600;
+		transition: all 0.3s ease;
+	}
+
+	.back-link:hover {
+		background-color: var(--color-primary);
+		color: white;
+	}
+
+	@media (max-width: 850px) {
+		.contact-grid {
+			grid-template-columns: 1fr;
+		}
+		.contact-character {
+			order: 2;
+		}
+		.contact-methods {
+			order: 1;
+		}
+	}
+</style>
