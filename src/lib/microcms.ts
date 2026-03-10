@@ -59,6 +59,19 @@ export type OptionData = {
 };
 
 /**
+ * @typedef {Object} Seitai
+ * @description 生体マスタを定義するスキーマ
+ */
+export type Seitai = {
+    /** 生体の一意な識別子 */
+    id: string;
+    /** 生体名 */
+    name: string;
+    /** 表示順序を制御するための数値 */
+    order?: number;
+};
+
+/**
  * @typedef {Object} Work
  * @description 納品済みの製作事例（ポートフォリオ）データを定義するスキーマ
  */
@@ -67,12 +80,10 @@ export type Work = {
     id: string;
     /** 事例のタイトル（例: "フトアゴヒゲトカゲ用 木製ケージ"） */
     title: string;
-    /** 飼育対象の生体名。単一または複数設定可能。 */
-    species: string | string[];
+    /** 飼育対象の生体マスタ。複数設定可能。 */
+    seitainame?: Seitai[];
     /** ケージの寸法（例: "W900×D450×H450"） */
     size: string;
-    /** ケージの主な特徴やアピールポイント（フリーテキスト） */
-    features?: string;
     /** 製作事例のギャラリー画像リスト */
     images?: { url: string }[];
     /** 事例の詳細本文（リッチエディタによるHTMLコンテンツ） */
@@ -95,4 +106,8 @@ export const getTypes = async (queries?: any) => {
 
 export const getOptions = async (queries?: any) => {
     return await client.get({ endpoint: "options", queries: { orders: 'order', ...queries } });
+};
+
+export const getSeitai = async (queries?: any) => {
+    return await client.get({ endpoint: "seitai", queries: { orders: 'order', ...queries } });
 };

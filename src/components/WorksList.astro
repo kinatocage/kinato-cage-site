@@ -25,13 +25,12 @@ const works = response.contents;
         <h3 class="work-card-title">{work.title}</h3>
         <div class="work-card-meta">
           <span class="work-card-species">
-            {Array.isArray(work.species) ? work.species.join(', ') : work.species}
+            {work.seitainame && work.seitainame.length > 0 
+              ? work.seitainame.map(s => s.name).join(', ') 
+              : '未設定'}
           </span>
           <span class="work-card-size">{work.size}</span>
         </div>
-        {work.features && (
-          <p class="work-card-features">{work.features}</p>
-        )}
       </div>
     </a>
   ))}
@@ -129,14 +128,4 @@ const works = response.contents;
     font-weight: 600;
   }
 
-  .work-card-features {
-    font-size: 0.875rem;
-    color: #64748b;
-    margin: 0;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    line-height: 1.6;
-  }
 </style>

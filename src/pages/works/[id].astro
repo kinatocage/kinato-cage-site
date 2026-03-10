@@ -45,9 +45,9 @@ try {
               {work.cageType && (
                 <a href={`/types/${work.cageType.id}`} class="badge type-badge">{work.cageType.title}</a>
               )}
-              {work.species && (
+              {work.seitainame && work.seitainame.length > 0 && (
                 <span class="badge species-badge">
-                  {Array.isArray(work.species) ? work.species.join(', ') : work.species}
+                  {work.seitainame.map((s: any) => s.name).join(', ')}
                 </span>
               )}
             </div>
@@ -61,12 +61,7 @@ try {
               </div>
             )}
 
-            {work.features && (
-              <div class="work-features-box">
-                <h3>主な特徴</h3>
-                <p>{work.features}</p>
-              </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
