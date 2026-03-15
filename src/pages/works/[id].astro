@@ -42,13 +42,17 @@ try {
             <a href="/#works" class="back-link">← 製作事例一覧へ戻る</a>
             
             <div class="work-meta-top">
-              {work.cageType && (
+              {work.cageType && work.cageType.title && (
                 <a href={`/types/${work.cageType.id}`} class="badge type-badge">{work.cageType.title}</a>
               )}
               {work.seitainame && work.seitainame.length > 0 && (
-                <span class="badge species-badge">
-                  {work.seitainame.map((s: any) => s.name).join(', ')}
-                </span>
+                <div class="species-badges">
+                  {work.seitainame.map((s: any) => (
+                    <a href={`/works/tags/${s.id}`} class="badge species-badge">
+                      {s.name}
+                    </a>
+                  ))}
+                </div>
               )}
             </div>
 
@@ -184,6 +188,12 @@ try {
     flex-wrap: wrap;
   }
 
+  .species-badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
   .badge {
     padding: 0.4rem 0.8rem;
     border-radius: var(--radius-full);
@@ -208,6 +218,13 @@ try {
   .species-badge {
     background: linear-gradient(135deg, var(--color-accent), var(--color-accent-warm));
     color: white;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .species-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
   }
 
   .work-title {

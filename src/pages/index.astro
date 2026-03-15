@@ -1,10 +1,11 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { getTypes, getWorks } from '../lib/microcms';
+import { getTypes, getWorks, getSeitai } from '../lib/microcms';
 
 // データの取得
 let types: any[] = [];
 let works: any[] = [];
+let allTags: any[] = [];
 
 try {
   const typesResponse = await getTypes({ limit: 100 });
@@ -12,6 +13,32 @@ try {
   
   const worksResponse = await getWorks({ limit: 6 });
   works = worksResponse.contents || [];
+
+  // タグ一覧と、全製作事例（件数カウント用）を取得
+  const [tagsResponse, allWorksResponse] = await Promise.all([
+    getSeitai({ limit: 100 }),
+    getWorks({ limit: 100, fields: 'id,seitainame' }) // 軽量化のためIDと生体のみ
+  ]);
+  
+  const allTagsData = tagsResponse.contents || [];
+  const allWorksData = allWorksResponse.contents || [];
+
+  // 各タグの製作事例数をカウント
+  const tagCounts: Record<string, number> = {};
+  allWorksData.forEach((w: any) => {
+    if (w.seitainame && Array.isArray(w.seitainame)) {
+      w.seitainame.forEach((s: any) => {
+        tagCounts[s.id] = (tagCounts[s.id] || 0) + 1;
+      });
+    }
+  });
+
+  // タグ情報に件数を合体
+  allTags = allTagsData.map((t: any) => ({
+    ...t,
+    count: tagCounts[t.id] || 0
+  }));
+
 } catch (err) {
   console.error("データの取得に失敗しました。スキーマやAPIキーを確認してください:", err);
 }
@@ -137,6 +164,25 @@ const galleryImages = [
           <p>お客様の想いを形にした、世界に一つのケージたち</p>
         </div>
 
+        {allTags.length > 0 && (
+          <div class="tags-filter-container">
+            <p class="filter-label">生体タグで絞り込む：</p>
+            <div class="filter-tags">
+              {allTags.map(tag => (
+                tag.count > 0 ? (
+                  <a href={`/works/tags/${tag.id}`} class="badge species-badge filter-tag">
+                    {tag.name} <span class="tag-count">({tag.count})</span>
+                  </a>
+                ) : (
+                  <span class="badge filter-tag disabled">
+                    {tag.name} <span class="tag-count">(0)</span>
+                  </span>
+                )
+              ))}
+            </div>
+          </div>
+        )}
+
         {works.length > 0 ? (
           <div class="works-grid">
             {works.map(work => (
@@ -147,7 +193,7 @@ const galleryImages = [
                   ) : (
                     <div class="placeholder-image" aria-label="画像読み込み中"></div>
                   )}
-                  {work.cageType && (
+                  {work.cageType && work.cageType.title && (
                     <span class="badge type-badge">{work.cageType.title}</span>
                   )}
                   <div class="work-overlay">
@@ -157,10 +203,12 @@ const galleryImages = [
                 <div class="work-content">
                   <h3 class="work-title">{work.title}</h3>
                   <div class="work-meta">
-                    {work.species && (
-                      <span class="badge species-badge">
-                        {Array.isArray(work.species) ? work.species.join(', ') : work.species}
-                      </span>
+                    {work.seitainame && work.seitainame.length > 0 && (
+                      <div class="species-badges">
+                        {work.seitainame.map((s: any) => (
+                          <span class="badge species-badge">{s.name}</span>
+                        ))}
+                      </div>
                     )}
                   </div>
                   {work.customerComment && (
@@ -511,6 +559,61 @@ const galleryImages = [
     margin: 0 1rem;
   }
 
+  .tags-filter-container {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: var(--radius-md);
+    margin-bottom: 2.5rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    border: 1px solid var(--color-border);
+    text-align: center;
+  }
+
+  .filter-label {
+    font-size: 0.9rem;
+    color: var(--color-text-light);
+    margin-bottom: 1rem;
+    font-weight: bold;
+  }
+
+  .filter-tags {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .filter-tag {
+    text-decoration: none;
+    padding: 0.5rem 1.2rem;
+    font-size: 0.95rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: static !important; /* 絶対配置を解除 */
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .filter-tag:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(244, 167, 185, 0.3);
+  }
+
+  .filter-tag.disabled {
+    background: #f1f5f9;
+    color: #94a3b8;
+    cursor: not-allowed;
+    opacity: 0.7;
+    border: none;
+  }
+
+  .tag-count {
+    font-size: 0.8rem;
+    opacity: 0.8;
+    margin-left: 0.2rem;
+    font-family: var(--font-base);
+    font-weight: normal;
+  }
+
   .works-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -591,6 +694,12 @@ const galleryImages = [
     display: inline-block;
     background: linear-gradient(135deg, var(--color-accent), var(--color-accent-warm));
     color: white;
+  }
+
+  .species-badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
     margin-bottom: 0.5rem;
   }
 
