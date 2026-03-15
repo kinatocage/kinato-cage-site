@@ -22,3 +22,9 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# admin-tools (Security: API keys and venv excluded)
+admin-tools/venv/
+admin-tools/.env
+admin-tools/__pycache__/
+admin-tools/.ipynb_checkpoints/

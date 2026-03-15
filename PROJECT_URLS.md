@@ -11,7 +11,7 @@
   - `C:\Users\owner\OneDrive\Desktop\Web` にて `npm run dev` を実行している間だけ見れるテスト用サイトです。ファイルを保存すると即座に画面が変わります。
 - **管理者用ツール (Streamlit)**
   🔗 http://localhost:8501/
-  - `C:\Users\owner\OneDrive\Desktop\admin-tools` フォルダにて `.\venv\Scripts\activate.ps1` と `streamlit run app.py` で起動する、オーダー管理や見積もり、ケージの一覧を管理するための社内ツールです。
+  - `C:\Users\owner\OneDrive\Desktop\Web\admin-tools` フォルダにて `.\venv\Scripts\activate.ps1` と `streamlit run app.py` で起動する、オーダー管理や見積もり、ケージの一覧を管理するための社内ツールです。
 
 ## ⚙️ 各種管理ダッシュボード（設定やデータ入力用）
 - **Cloudflare 管理画面**
