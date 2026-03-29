@@ -1,8 +1,8 @@
 import { createClient } from 'microcms-js-sdk';
 
 // どちらの環境（ローカル/Cloudflare）でも値を読み取れるようにします
-const serviceDomain = import.meta.env.PUBLIC_MICROCMS_SERVICE_DOMAIN || process.env.PUBLIC_MICROCMS_SERVICE_DOMAIN;
-const apiKey = import.meta.env.PUBLIC_MICROCMS_API_KEY || process.env.PUBLIC_MICROCMS_API_KEY;
+const serviceDomain = import.meta.env.PUBLIC_MICROCMS_SERVICE_DOMAIN;
+const apiKey = import.meta.env.PUBLIC_MICROCMS_API_KEY;
 
 // 万が一、変数が読み込めていない場合にビルドログへ警告を出す（デバッグ用）
 if (!serviceDomain || !apiKey) {

@@ -4,15 +4,12 @@ import { getTypes, getWorks, getSeitai } from '../lib/microcms';
 
 // データの取得
 let types: any[] = [];
-let works: any[] = [];
 let allTags: any[] = [];
 
 try {
   const typesResponse = await getTypes({ limit: 100 });
   types = typesResponse.contents || [];
-  
-  const worksResponse = await getWorks({ limit: 6 });
-  works = worksResponse.contents || [];
+
 
   // タグ一覧と、全製作事例（件数カウント用）を取得
   const [tagsResponse, allWorksResponse] = await Promise.all([
@@ -76,10 +73,9 @@ const galleryImages = [
       <div class="hero-bubble b3"></div>
       <div class="hero-content">
         <h1 class="hero-title">
-          ペットと暮らす、<br />
-          もっとおしゃれで<br class="sp-only" />優しい時間。
+          アルミフレーム、アクリルを使った<br class="sp-only" />機能性あるケージ
         </h1>
-        <p class="hero-subtitle">インテリアに溶け込む、爬虫類・小動物のためのオーダーメイドケージ</p>
+        <p class="hero-subtitle">理想のケージづくりをお手伝いさせて頂きます</p>
         <div class="hero-tags">
           <span class="hero-tag">🦎 爬虫類</span>
           <span class="hero-tag">🐿️ 小動物</span>
@@ -88,7 +84,7 @@ const galleryImages = [
       </div>
       <!-- キャラクター装飾 -->
       <div class="hero-character">
-        <img src="/assets/characters/charactor.png" alt="きなとちゃん" class="hero-char-img" />
+        <img src="/assets/characters/charactor_walk_nobg.png" alt="きなとちゃん" class="hero-char-img" />
       </div>
     </section>
 
@@ -127,7 +123,7 @@ const galleryImages = [
     <section id="types" class="container section">
       <div class="section-header">
         <h2>ケージの種類</h2>
-        <p>お部屋の雰囲気や生体に合わせて選べるバリエーション</p>
+        <p>生体に合わせて選べるバリエーション</p>
       </div>
       
       {types.length > 0 ? (
@@ -181,50 +177,6 @@ const galleryImages = [
               ))}
             </div>
           </div>
-        )}
-
-        {works.length > 0 ? (
-          <div class="works-grid">
-            {works.map(work => (
-              <a href={`/works/${work.id}`} class="work-card card-base">
-                <div class="work-image-wrapper">
-                  {work.images && work.images.length > 0 ? (
-                    <img src={work.images[0].url} alt={work.title} class="work-image" loading="lazy" />
-                  ) : (
-                    <div class="placeholder-image" aria-label="画像読み込み中"></div>
-                  )}
-                  {work.cageType && work.cageType.title && (
-                    <span class="badge type-badge">{work.cageType.title}</span>
-                  )}
-                  <div class="work-overlay">
-                    <span class="view-more">詳しく見る →</span>
-                  </div>
-                </div>
-                <div class="work-content">
-                  <h3 class="work-title">{work.title}</h3>
-                  <div class="work-meta">
-                    {work.seitainame && work.seitainame.length > 0 && (
-                      <div class="species-badges">
-                        {work.seitainame.map((s: any) => (
-                          <span class="badge species-badge">{s.name}</span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {work.customerComment && (
-                    <div class="customer-voice">
-                      <div class="voice-icon">💬</div>
-                      <p class="voice-text" title={work.customerComment.replace(/<[^>]*>?/gm, '')}>
-                        {work.customerComment.replace(/<[^>]*>?/gm, '')}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </a>
-            ))}
-          </div>
-        ) : (
-          <p class="empty-state">製作事例がありません。</p>
         )}
       </div>
     </section>
@@ -331,12 +283,15 @@ const galleryImages = [
     width: 160px;
     height: auto;
     filter: drop-shadow(0 10px 24px rgba(244, 167, 185, 0.3));
-    animation: hero-char-float 5s ease-in-out infinite;
+    animation: hero-char-walk 3s ease-in-out infinite;
   }
 
-  @keyframes hero-char-float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-14px); }
+  @keyframes hero-char-walk {
+    0% { transform: translateX(0) translateY(0) rotate(0deg); }
+    25% { transform: translateX(12px) translateY(-8px) rotate(6deg); }
+    50% { transform: translateX(0) translateY(0) rotate(0deg); }
+    75% { transform: translateX(-12px) translateY(-8px) rotate(-6deg); }
+    100% { transform: translateX(0) translateY(0) rotate(0deg); }
   }
 
   .sp-only { display: none; }

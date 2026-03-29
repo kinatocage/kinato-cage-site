@@ -19,12 +19,17 @@ try {
 }
 
 try {
-  // そのTypeに紐付く製作事例
-  const worksResponse = await getWorks({ 
-    filters: `cageType[equals]${type.id}`, 
-    limit: 20
+  // 全ての製作事例を取得し、JS側で対象Typeのものをフィルタリングする（確実な取得のため）
+  const worksResponse = await getWorks({ limit: 100 });
+  const allWorks = worksResponse.contents || [];
+  // cageTypeのデータ構造（単一参照か複数参照か）に対応してフィルタリング
+  relatedWorks = allWorks.filter((w: any) => {
+    if (!w.cageType) return false;
+    if (Array.isArray(w.cageType)) {
+      return w.cageType.some((ct: any) => ct.id === type.id);
+    }
+    return w.cageType.id === type.id;
   });
-  relatedWorks = worksResponse.contents || [];
 
   // 全オプションを取得し、対象Typeに適合するものをフィルタリング
   const optionsResponse = await getOptions({ limit: 100 });
@@ -113,49 +118,6 @@ const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(r
       </section>
     )}
 
-    <!-- Options (対応オプション) -->
-    <section class="section options-section">
-      <div class="container">
-        <div class="section-header">
-          <h2>対応オプション</h2>
-          <p>このケージに追加できる便利なパーツや仕様</p>
-        </div>
-        
-        {applicableOptions.length > 0 ? (
-          <div class="options-grid">
-            {applicableOptions.map((opt: any) => (
-              <a href={`/options/${opt.id}`} class="option-card card-base">
-                {opt.images && opt.images.length > 0 ? (
-                  <div class="option-image-wrapper">
-                     <img src={opt.images[0].url} alt={opt.name} class="option-image" loading="lazy" />
-                     <div class="option-overlay"><span class="view-more">詳しく見る →</span></div>
-                  </div>
-                ) : (
-                   <div class="option-image-wrapper">
-                      <img src="/assets/acrylic_cage.png" alt="No image available" class="option-image placeholder-fallback" loading="lazy" />
-                      <div class="option-overlay"><span class="view-more">詳しく見る →</span></div>
-                   </div>
-                )}
-                <div class="option-content">
-                  <h3 class="option-title">{opt.name}</h3>
-                  {opt.details && (
-                    <p class="option-desc" title={opt.details.replace(/<[^>]*>?/gm, "")}>
-                      {opt.details.replace(/<[^>]*>?/gm, "").substring(0, 100)}{opt.details.replace(/<[^>]*>?/gm, "").length > 100 ? '...' : ''}
-                    </p>
-                  )}
-                  <div class="option-price">
-                    {opt.price ? `+ ¥${Number(opt.price).toLocaleString()}` : "サイズにより変動（お見積もり）"}
-                  </div>
-                </div>
-              </a>
-            ))}
-          </div>
-        ) : (
-          <p class="empty-state">現在ご案内できるオプションはありません。</p>
-        )}
-      </div>
-    </section>
-
     <!-- Related Works (紐付く事例一覧) -->
     <section class="section related-works-section">
       <div class="container">
@@ -206,6 +168,49 @@ const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(r
           </div>
         ) : (
           <p class="empty-state">その他の事例はまだありません。</p>
+        )}
+      </div>
+    </section>
+
+    <!-- Options (対応オプション) -->
+    <section class="section options-section">
+      <div class="container">
+        <div class="section-header">
+          <h2>対応オプション</h2>
+          <p>このケージに追加できる便利なパーツや仕様</p>
+        </div>
+        
+        {applicableOptions.length > 0 ? (
+          <div class="options-grid">
+            {applicableOptions.map((opt: any) => (
+              <a href={`/options/${opt.id}`} class="option-card card-base">
+                {opt.images && opt.images.length > 0 ? (
+                  <div class="option-image-wrapper">
+                     <img src={opt.images[0].url} alt={opt.name} class="option-image" loading="lazy" />
+                     <div class="option-overlay"><span class="view-more">詳しく見る →</span></div>
+                  </div>
+                ) : (
+                   <div class="option-image-wrapper">
+                      <img src="/assets/acrylic_cage.png" alt="No image available" class="option-image placeholder-fallback" loading="lazy" />
+                      <div class="option-overlay"><span class="view-more">詳しく見る →</span></div>
+                   </div>
+                )}
+                <div class="option-content">
+                  <h3 class="option-title">{opt.name}</h3>
+                  {opt.details && (
+                    <p class="option-desc" title={opt.details.replace(/<[^>]*>?/gm, "")}>
+                      {opt.details.replace(/<[^>]*>?/gm, "").substring(0, 100)}{opt.details.replace(/<[^>]*>?/gm, "").length > 100 ? '...' : ''}
+                    </p>
+                  )}
+                  <div class="option-price">
+                    {opt.price ? `+ ¥${Number(opt.price).toLocaleString()}` : "サイズにより変動（お見積もり）"}
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <p class="empty-state">現在ご案内できるオプションはありません。</p>
         )}
       </div>
     </section>
