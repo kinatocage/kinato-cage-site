@@ -52,7 +52,15 @@ try {
             <div class="option-price-box">
               <span class="price-label">追加料金:</span>
               <span class="price-value">
-                {option.price ? `+ ¥${Number(option.price).toLocaleString()}` : "サイズにより変動（お見積もり）"}
+                {option.price && option.price.trim() !== "" ? (
+                  /^[0-9, ]+$/.test(option.price.toString().trim()) ? (
+                    `+ ¥${Number(option.price.toString().replace(/[^0-9]/g, "")).toLocaleString()}`
+                  ) : (
+                    option.price
+                  )
+                ) : (
+                  "サイズにより変動"
+                )}
               </span>
             </div>
             

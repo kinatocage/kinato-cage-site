@@ -1,0 +1,222 @@
+{
+  "haiban": [
+    {
+      "id": "648l9uy3d_iz",
+      "name": "雪崩防止板",
+      "price": "廃版",
+      "order": 12
+    },
+    {
+      "id": "sidi8zlqr",
+      "name": "TypeF・F2三角屋根",
+      "price": "廃版",
+      "order": 22
+    },
+    {
+      "id": "4_42p_stcew",
+      "name": "天板BBQ網へ変更",
+      "price": "廃版（天板金網へ統合）",
+      "order": 28
+    },
+    {
+      "id": "b28es7hcmvx",
+      "name": "〇情報　【２室分けケージ】仕切り板の取外し方法　手順書",
+      "price": "廃版（後付けタイプへ統合）",
+      "order": 32
+    },
+    {
+      "id": "kujtey0ox",
+      "name": "換気扇",
+      "price": "廃版",
+      "order": 48
+    },
+    {
+      "id": "x184o2c6i",
+      "name": "２室分けケージ仕切りの簡単取外し化",
+      "price": "廃版（後付けタイプへ統合）",
+      "order": 50
+    },
+    {
+      "id": "2opt0iifqp",
+      "name": "重量級対応",
+      "price": "廃版",
+      "order": 52
+    },
+    {
+      "id": "sya3itd4ze6u",
+      "name": "光るバックパネル",
+      "price": "廃版",
+      "order": 80
+    },
+    {
+      "id": "w92i48ycb7",
+      "name": "インサイドディッシュドリンカー",
+      "price": "廃版",
+      "order": 84
+    },
+    {
+      "id": "rrs2c3zrdcc",
+      "name": "TypeFすのこ板アクリルパンチング",
+      "price": "廃版",
+      "order": 89
+    }
+  ],
+  "info": [
+    {
+      "id": "gea4lwdqz",
+      "name": "〇情報　暖突のコンセントコードの通し方",
+      "price": "",
+      "order": 3
+    },
+    {
+      "id": "gli5z90fgu",
+      "name": "〇情報　TypeH　ご購入されたお客様へ。回し車ユニットカバー取り出し方法",
+      "price": "",
+      "order": 18
+    },
+    {
+      "id": "psh6e-4_pe0v",
+      "name": "〇情報　TypeH・TypeAHの奥行サイズについて（45cm推奨）",
+      "price": "",
+      "order": 19
+    },
+    {
+      "id": "4pjftz-6sts",
+      "name": "〇情報　アクリル板の色について",
+      "price": "",
+      "order": 29
+    },
+    {
+      "id": "ktdghi6swu16",
+      "name": "〇情報　中空ポリカ　という素材について",
+      "price": "",
+      "order": 30
+    },
+    {
+      "id": "vulw8-kn1lkq",
+      "name": "〇情報　【保温球について注意点】冬支度について",
+      "price": "",
+      "order": 31
+    },
+    {
+      "id": "b28es7hcmvx",
+      "name": "〇情報　【２室分けケージ】仕切り板の取外し方法　手順書",
+      "price": "廃版（後付けタイプへ統合）",
+      "order": 32
+    },
+    {
+      "id": "fckat6rud5m6",
+      "name": "〇情報　【オプション品】キャスタの後付け方法",
+      "price": "",
+      "order": 35
+    },
+    {
+      "id": "fl_i7qdlmcd",
+      "name": "〇情報　【オプション品　段積ブラケット取付方法】",
+      "price": "",
+      "order": 37
+    },
+    {
+      "id": "r3ugmod90hm",
+      "name": "〇情報　スライド扉のスライド重さの調整方法",
+      "price": "",
+      "order": 38
+    },
+    {
+      "id": "i9faho8cx",
+      "name": "〇情報　【アクリルのお手入れ方法】　アルコール系は割れ（ケミカルクラック）可能性あります",
+      "price": "",
+      "order": 39
+    },
+    {
+      "id": "x9yad3pp4vr6",
+      "name": "〇情報　アクリル・中空ポリカの違い",
+      "price": "",
+      "order": 57
+    },
+    {
+      "id": "st_ujhgxvfgn",
+      "name": "〇情報　アクリルケージ使用時の注意事項",
+      "price": "",
+      "order": 65
+    },
+    {
+      "id": "vdh5y3azzw7",
+      "name": "〇情報　適切なペットシーツサイズについて",
+      "price": "",
+      "order": 66
+    },
+    {
+      "id": "79xzuouw6y1",
+      "name": "〇情報　暖突の取付・天板グロメットへ暖突コンセントを通す方法",
+      "price": "",
+      "order": 67
+    },
+    {
+      "id": "y8z58jwkxuux",
+      "name": "〇情報　ケージお手入れ方法",
+      "price": "",
+      "order": 74
+    },
+    {
+      "id": "23rxdf_ke2p",
+      "name": "〇情報　【ご注文方法・発送の可否について】",
+      "price": "",
+      "order": 75
+    },
+    {
+      "id": "91nn0w_ib",
+      "name": "〇情報　お問い合わせテンプレート",
+      "price": "",
+      "order": 76
+    },
+    {
+      "id": "nb90wf3i6x",
+      "name": "〇情報　お支払い方法（オーダメイド製作・イベント会場）",
+      "price": "",
+      "order": 83
+    },
+    {
+      "id": "p9-q84yu3ter",
+      "name": "〇情報　『縦長フクモモ向けケージ　種類違い説明』",
+      "price": "",
+      "order": 87
+    },
+    {
+      "id": "sutz83a64-ft",
+      "name": "〇情報　暖突取付穴を広げる方法",
+      "price": "",
+      "order": 90
+    },
+    {
+      "id": "v0upsv6h1x42",
+      "name": "〇情報　ヒーティングトップ使用方法",
+      "price": "",
+      "order": 109
+    },
+    {
+      "id": "oitqy3zaa0zm",
+      "name": "〇情報　暖突イタズラ防止カバーへのコンセント線通す方法",
+      "price": "",
+      "order": 110
+    },
+    {
+      "id": "fpkbcfwcpvq",
+      "name": "〇情報　よく頂く質問「スライド扉鍵オプション無しの場合、市販品のスライド扉ロックは使えますか？」",
+      "price": "",
+      "order": 111
+    },
+    {
+      "id": "lwiknmcjf7j",
+      "name": "〇情報　スライド扉カギの上付け注意点",
+      "price": "",
+      "order": 112
+    },
+    {
+      "id": "z9qaedfhf_cs",
+      "name": "〇情報　送料について",
+      "price": "",
+      "order": 113
+    }
+  ]
+}

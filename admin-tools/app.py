@@ -120,7 +120,7 @@ if not st.session_state.types:
 
 st.sidebar.title("🛠 管理メニュー")
 mode = st.sidebar.radio("操作モード", ["新規登録", "既存データの編集"])
-target_model = st.sidebar.selectbox("対象コンテンツ", ["Cage Types", "オプション紹介", "製作事例", "生体マスタ"])
+target_model = st.sidebar.selectbox("対象コンテンツ", ["Cage Types", "オプション紹介", "オプション一括編集", "製作事例", "生体マスタ"])
 
 if st.sidebar.button("↻ データを再読み込み"):
     refresh_data()
@@ -518,12 +518,15 @@ def render_options_form(is_edit=False):
                 st.error("オプション名とカテゴリは必須です。")
                 return
                 
+            
+            new_app_types = [types_list[t] for t in selected_types]
+            
             payload = {
                 "name": name,
                 "category": category,
                 "details": details,
                 "order": order_input,
-                "applicableTypes": [types_list[t] for t in selected_types]
+                "applicableTypes": new_app_types
             }
             # 空欄対応
             if price_input.strip() == "":
@@ -1030,6 +1033,165 @@ def render_seitai_form(is_edit=False):
                     st.error(f"保存に失敗しました: {e}")
 
 # ==========================================
+# フォーム5: オプション一括編集
+# ==========================================
+def render_options_bulk_edit():
+    st.subheader("🛠 オプション一括編集")
+    
+    if not st.session_state.options:
+        st.warning("登録されているオプションがありません。")
+        return
+
+    # DataFrame用のデータ生成
+    df_data = []
+    types_list = st.session_state.types
+    
+    for opt in st.session_state.options:
+        # 最初の画像のURLを取得
+        img_url = None
+        if opt.get("images") and len(opt["images"]) > 0:
+            first_img = opt["images"][0]
+            if isinstance(first_img, dict) and "url" in first_img:
+                img_url = first_img["url"]
+            elif isinstance(first_img, str):
+                img_url = first_img
+                
+        row = {
+            "削除": False,
+            "id": opt["id"],
+            "画像": img_url,
+            "タイトル": opt.get("name", ""),
+            "並び順": opt.get("order", 0),
+            "価格": opt.get("price", ""),
+        }
+        
+        # 適用ケージタイプ
+        app_list = opt.get("applicableTypes") or []
+        app_types = [t["id"] for t in app_list if isinstance(t, dict)]
+            
+        for ctype in types_list:
+            row[ctype["title"]] = ctype["id"] in app_types
+            
+        df_data.append(row)
+
+    df = pd.DataFrame(df_data)
+    
+    # DataFrameをorderの昇順でソートしておく（見やすさのため）
+    df = df.sort_values("並び順")
+    
+    # 編集用カラム設定
+    column_config = {
+        "削除": st.column_config.CheckboxColumn("削除", default=False),
+        "id": None, # 非表示
+        "画像": st.column_config.ImageColumn("画像", help="登録されている最初の画像"),
+        "タイトル": st.column_config.TextColumn("タイトル (*必須)", required=True),
+        "並び順": st.column_config.NumberColumn("並び順", step=1),
+        "価格": st.column_config.TextColumn("価格"),
+    }
+    
+    # チェックボックス用のカラム設定を生成
+    for ctype in types_list:
+        column_config[ctype["title"]] = st.column_config.CheckboxColumn(ctype["title"])
+        
+    st.info("💡 タイトル、並び順、価格、および対象のケージTypeを表から直接編集できます。編集後に下部の「一括保存」ボタンを押してください。")
+    
+    edited_df = st.data_editor(
+        df,
+        column_config=column_config,
+        disabled=["画像"], # 画像は表示のみ
+        hide_index=True,
+        use_container_width=True,
+        num_rows="fixed" # ここでは行の追加削除はサポートしない
+    )
+    
+    # 保存処理
+    if st.button("💾 一括保存する", type="primary"):
+        changed_options = []
+        deleted_ids = []
+        
+        for i, row in edited_df.iterrows():
+            opt_id = row["id"]
+            
+            # 削除チェック
+            if row["削除"]:
+                deleted_ids.append(opt_id)
+                continue
+
+            orig_opt = next((o for o in st.session_state.options if o["id"] == opt_id), None)
+            if not orig_opt: continue
+            
+            # 適用タイプの比較準備
+            new_app_types = []
+            for ctype in types_list:
+                if bool(row[ctype["title"]]): # numpy boolからpython boolへ
+                    new_app_types.append(ctype["id"])
+            
+            orig_app_list = orig_opt.get("applicableTypes") or []
+            orig_app_types = [t["id"] for t in orig_app_list if isinstance(t, dict)]
+            
+            new_title = row["タイトル"]
+            orig_title = orig_opt.get("name", "")
+            
+            # order と price の取得（NoneやNaN対策）
+            new_order = int(row["並び順"]) if pd.notna(row["並び順"]) else 0
+            orig_order = orig_opt.get("order", 0)
+            
+            new_price = row["価格"] if pd.notna(row["価格"]) else ""
+            orig_price = orig_opt.get("price", "")
+            if orig_price is None: orig_price = ""
+            
+            # 差分比較とペイロードの構築
+            payload = {}
+            if new_title != orig_title:
+                payload["name"] = new_title
+            if new_order != orig_order:
+                payload["order"] = new_order
+            if str(new_price) != str(orig_price):
+                payload["price"] = str(new_price)
+                
+            if set(new_app_types) != set(orig_app_types):
+                payload["applicableTypes"] = new_app_types
+                
+            if payload:
+                changed_options.append({
+                    "id": opt_id,
+                    "payload": payload
+                })
+                
+        if len(changed_options) == 0 and len(deleted_ids) == 0:
+            st.info("変更されたオプションはありませんでした。")
+        else:
+            status_text = []
+            if changed_options: status_text.append(f"{len(changed_options)}件の更新")
+            if deleted_ids: status_text.append(f"{len(deleted_ids)}件の削除")
+            
+            with st.spinner(f"{'と'.join(status_text)}を実行しています..."):
+                try:
+                    # 削除の実行
+                    for d_id in deleted_ids:
+                        MicroCMSClient.delete_content("options", d_id)
+                    
+                    # 更新の実行
+                    for chg in changed_options:
+                        current_chg = chg
+                        MicroCMSClient.update_content("options", chg["id"], chg["payload"])
+                    
+                    st.success(f"🎉 {'と'.join(status_text)}が完了しました！")
+                    refresh_data()
+                    time.sleep(1)
+                    st.rerun()
+                except Exception as e:
+                    import requests
+                    error_msg = f"処理に失敗しました: {e}"
+                    if isinstance(e, requests.exceptions.HTTPError):
+                        try:
+                            error_detail = e.response.json().get("message", e.response.text)
+                            error_msg = f"APIエラー: {error_detail}"
+                        except:
+                            pass
+                    st.error(error_msg)
+
+# ==========================================
 # 画面描画
 # ==========================================
 is_edit_mode = mode == "既存データの編集"
@@ -1038,6 +1200,8 @@ if target_model == "Cage Types":
     render_types_form(is_edit_mode)
 elif target_model == "オプション紹介":
     render_options_form(is_edit_mode)
+elif target_model == "オプション一括編集":
+    render_options_bulk_edit()
 elif target_model == "製作事例":
     render_works_form(is_edit_mode)
 elif target_model == "生体マスタ":

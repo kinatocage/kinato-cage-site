@@ -73,3 +73,12 @@ class MicroCMSClient:
         response = requests.patch(url, headers=HEADERS, json=payload, timeout=60)
         response.raise_for_status()
         return response.json()
+
+    @staticmethod
+    def delete_content(endpoint, content_id):
+        """既存コンテンツを削除する(DELETE)"""
+        url = f"{BASE_URL}/{endpoint}/{content_id}"
+        # タイムアウトを 60 秒に設定
+        response = requests.delete(url, headers=HEADERS, timeout=60)
+        response.raise_for_status()
+        return True
