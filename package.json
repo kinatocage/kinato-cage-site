@@ -1,9 +1,11 @@
 {
-  "name": "",
+  "name": "kinato-cage-site",
   "type": "module",
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
+    "admin": ".\\admin-tools\\venv\\Scripts\\python.exe -m streamlit run .\\admin-tools\\app.py",
+    "dev:all": "concurrently \"npm run dev\" \"npm run admin\"",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro"
@@ -14,5 +16,8 @@
     "cheerio": "^1.2.0",
     "dotenv": "^17.3.1",
     "microcms-js-sdk": "^3.3.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }
