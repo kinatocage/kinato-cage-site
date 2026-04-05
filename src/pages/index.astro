@@ -88,6 +88,26 @@ const galleryImages = [
       </div>
     </section>
 
+    <!-- ===== コンセプトバナー ===== -->
+    <section class="concept-banner container">
+      <a href="/concept" class="concept-banner-link card-base" id="concept-banner">
+        <div class="concept-banner-content">
+          <div class="concept-banner-text">
+            <span class="concept-banner-label">✨ Our Concept</span>
+            <h2 class="concept-banner-title">きなとのケージ屋さんが<br class="sp-only" />大切にしていること</h2>
+            <p class="concept-banner-desc">
+              「生体ファースト」を軸に、ミリ単位の精密さと美しさを。<br class="pc-only" />
+              私たちのものづくりへの想いをご紹介します。
+            </p>
+            <span class="concept-banner-cta">コンセプトを読む →</span>
+          </div>
+          <div class="concept-banner-char">
+            <img src="/assets/characters/charactor2.png" alt="きなとちゃん" class="concept-banner-char-img" />
+          </div>
+        </div>
+      </a>
+    </section>
+
     <!-- ===== 横スクロールギャラリー ===== -->
     <section id="gallery" class="gallery-section section">
       <div class="section-header">
@@ -703,6 +723,111 @@ const galleryImages = [
     background: var(--color-surface);
     border-radius: var(--radius-md);
     border: 2px dashed var(--color-border);
+  }
+
+  /* ===== コンセプトバナー ===== */
+  .concept-banner {
+    padding-top: 2rem;
+    padding-bottom: 0;
+  }
+
+  .concept-banner-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    background: linear-gradient(135deg, #FFF8F5 0%, #FDE8EE 40%, #E8F5E9 100%);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: border-color 0.3s ease, transform 0.4s ease, box-shadow 0.4s ease;
+  }
+
+  .concept-banner-link:hover {
+    border-color: var(--color-accent);
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px rgba(244, 167, 185, 0.2);
+  }
+
+  .concept-banner-content {
+    display: flex;
+    align-items: center;
+    padding: 2rem 2.5rem;
+    gap: 2rem;
+  }
+
+  .concept-banner-text {
+    flex: 1;
+  }
+
+  .concept-banner-label {
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    color: var(--color-accent);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.6rem;
+    display: inline-block;
+  }
+
+  .concept-banner-title {
+    font-family: var(--font-heading);
+    font-size: 1.4rem;
+    color: var(--color-primary-dark);
+    font-weight: 800;
+    margin-bottom: 0.6rem;
+    line-height: 1.5;
+  }
+
+  .concept-banner-desc {
+    font-size: 0.88rem;
+    color: var(--color-text-light);
+    line-height: 1.7;
+    margin-bottom: 1rem;
+  }
+
+  .concept-banner-cta {
+    display: inline-block;
+    background: white;
+    border: 2px solid var(--color-accent);
+    color: var(--color-primary-dark);
+    padding: 0.45rem 1.2rem;
+    border-radius: var(--radius-full);
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 0.85rem;
+    transition: background 0.3s ease, color 0.3s ease;
+  }
+
+  .concept-banner-link:hover .concept-banner-cta {
+    background: var(--color-accent);
+    color: white;
+  }
+
+  .concept-banner-char {
+    flex-shrink: 0;
+  }
+
+  .concept-banner-char-img {
+    width: 100px;
+    height: auto;
+    filter: drop-shadow(0 6px 12px rgba(244, 167, 185, 0.3));
+    transition: transform 0.4s ease;
+  }
+
+  .concept-banner-link:hover .concept-banner-char-img {
+    transform: scale(1.08) rotate(-3deg);
+  }
+
+  .pc-only { display: inline; }
+
+  @media (max-width: 768px) {
+    .pc-only { display: none; }
+    .concept-banner-content {
+      padding: 1.5rem;
+      gap: 1rem;
+    }
+    .concept-banner-title { font-size: 1.15rem; }
+    .concept-banner-char-img { width: 75px; }
   }
 </style>
 

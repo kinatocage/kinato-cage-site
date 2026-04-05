@@ -4,11 +4,24 @@ export interface Props {
 }
 
 const { title } = Astro.props;
+const gaId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID;
 ---
 
 <!doctype html>
 <html lang="ja">
 	<head>
+		{/* Google tag (gtag.js) */}
+		{gaId && (
+			<>
+				<script async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}></script>
+				<script is:inline define:vars={{ gaId }}>
+					window.dataLayer = window.dataLayer || [];
+					function gtag(){dataLayer.push(arguments);}
+					gtag('js', new Date());
+					gtag('config', gaId);
+				</script>
+			</>
+		)}
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -29,7 +42,8 @@ const { title } = Astro.props;
 			</div>
 			<nav class="global-nav">
 				<ul class="nav-list">
-					<li><a href="/#gallery" class="nav-link">作例紹介</a></li>
+					<li><a href="/concept" class="nav-link">コンセプト</a></li>
+				<li><a href="/#gallery" class="nav-link">作例紹介</a></li>
 					<li><a href="/#types" class="nav-link">ケージの種類</a></li>
 					<li><a href="/#works" class="nav-link">製作事例紹介</a></li>
 					<li><a href="/options" class="nav-link">オプション類</a></li>
