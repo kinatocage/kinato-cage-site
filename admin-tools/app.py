@@ -7,12 +7,24 @@ from microcms_api import MicroCMSClient
 import time
 import os
 import io
+import re
 from dotenv import load_dotenv
 
 load_dotenv()
 # PUBLIC_プレフィックスをもつAstro用環境変数にも対応できるようにする
 MICROCMS_SERVICE_DOMAIN = os.getenv("MICROCMS_SERVICE_DOMAIN") or os.getenv("PUBLIC_MICROCMS_SERVICE_DOMAIN")
 MICROCMS_API_KEY = os.getenv("MICROCMS_API_KEY") or os.getenv("PUBLIC_MICROCMS_API_KEY")
+
+def calc_textarea_height(text, min_height=100, max_height=800):
+    """テキストの行数に合わせて、テキストエリアの高さを(px)で算出する。"""
+    if not text:
+        return min_height
+    # 改行コードで分割（末尾の改行も一文字と数える）
+    lines = str(text).count('\n') + 1
+    # 1行あたり約24px、上下パディングなどの補正
+    # ※ フォントサイズやブラウザの計算により多少前後するため余裕を持たせる
+    calculated = lines * 24 + 48
+    return min(max_height, max(min_height, calculated))
 
 st.set_page_config(page_title="きなとのケージ屋さん - コンテンツ管理", layout="wide", initial_sidebar_state="expanded")
 
@@ -79,7 +91,45 @@ st.markdown("""
         width: 100%;
         margin-top: 5px;
     }
+
+    /* テキストエリアのオートリサイズ設定（モダンブラウザ用・ progressive enhancement） */
+    textarea {
+        field-sizing: content;
+        min-height: 100px;
+        transition: height 0.1s ease-out;
+    }
     </style>
+
+    <script>
+    // JavaScriptによるフォールバック：入力時に高さを調整するスクリプトを注入
+    // ※ Streamlitのiframe構成により、メインのdocumentに影響を与える
+    function applyAutoResize() {
+        const textareas = document.querySelectorAll('textarea');
+        textareas.forEach(el => {
+            if (el.dataset.autoResized === 'true') return;
+            
+            const resize = () => {
+                el.style.height = 'auto';
+                el.style.height = (el.scrollHeight + 4) + 'px';
+            };
+            
+            el.addEventListener('input', resize);
+            el.dataset.autoResized = 'true';
+            
+            // 初回適用
+            setTimeout(resize, 0);
+        });
+    }
+
+    // 要素が動的に追加された際にも適用するためのオブザーバー
+    const observer = new MutationObserver(() => {
+        applyAutoResize();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // 初期実行
+    applyAutoResize();
+    </script>
 """, unsafe_allow_html=True)
 
 # 環境変数が設定されていない場合の警告
@@ -168,6 +218,37 @@ def upload_images(uploaded_files):
                 return None
     return images_payload
 
+def to_textarea_text(html_text):
+    """HTMLを取得し、テキストエリア用のプレーンテキストに変換する"""
+    if html_text is None: return ""
+    if not isinstance(html_text, str): return str(html_text)
+    
+    # <br>, <br /> を \n に変換
+    text = re.sub(r'<br\s*/?>', '\n', html_text)
+    # 最初と最後の <p>, </p> を除去（非最短一致で慎重に除去）
+    # ※ 複数の <p> がある場合は残るが、外側の一つだけを対象とする
+    if text.startswith('<p>') and text.endswith('</p>'):
+        text = text[3:-4]
+    
+    return text
+
+def to_microcms_html(plain_text):
+    """テキストエリアの文字列を MicroCMS 用の HTML に変換する"""
+    if not plain_text: return ""
+    # \n を <br /> に変換
+    html = plain_text.replace('\n', '<br />')
+    return html
+
+def clean_text(text):
+    """プレーンテキスト項目用：タグを完全に除去しつつ改行を保持する"""
+    if text is None: return ""
+    if not isinstance(text, str): return str(text)
+    # <br> を改行に変換
+    text = re.sub(r'<br\s*/?>', '\n', text)
+    # それ以外のタグを全て除去
+    text = re.sub(r'<[^>]*?>', '', text)
+    return text
+
 # ==========================================
 # フォーム1: Cage Types
 # ==========================================
@@ -213,7 +294,7 @@ def render_types_form(is_edit=False):
             t_data = type_options[selected_id]
             target_id = t_data["id"]
             default_title = t_data.get("title", "")
-            default_desc = t_data.get("description", "")
+            default_desc = clean_text(t_data.get("description", ""))
             
     # 左側リスト(is_edit時のみ)と右側フォームの表示制御
     if is_edit:
@@ -264,7 +345,7 @@ def render_types_form(is_edit=False):
     with container.form("types_form"):
         st.subheader("📝 基本情報")
         title = st.text_input("Type名 (title) *必須", value=default_title)
-        description = st.text_area("特徴説明 (description) *必須", value=default_desc)
+        description = st.text_area("特徴説明 (description) *必須", value=default_desc, height=calc_textarea_height(default_desc))
         
         st.write("---")
         st.subheader("📸 画像・参照設定")
@@ -300,7 +381,7 @@ def render_types_form(is_edit=False):
                 
             payload = {
                 "title": title,
-                "description": description,
+                "description": clean_text(description),
                 "pinnedWorks": [works_list[w] for w in selected_works]
             }
             
@@ -418,7 +499,7 @@ def render_options_form(is_edit=False):
             default_name = o_data.get("name", "")
             default_cat = o_data.get("category", "")
             default_price = str(o_data.get("price", ""))
-            default_details = o_data.get("details", "")
+            default_details = to_textarea_text(o_data.get("details", ""))
             default_order = o_data.get("order", 0)
             
     # 左側リスト(is_edit時のみ)と右側フォームの表示制御
@@ -472,12 +553,12 @@ def render_options_form(is_edit=False):
         col1, col2 = st.columns(2)
         with col1:
             name = st.text_input("オプション名 (name) *必須", value=default_name)
-            category = st.text_input("カテゴリ (category) *必須", value=default_cat)
+            category = st.text_input("カテゴリ (category)", value=default_cat)
         with col2:
             price_input = st.text_input("価格 (price) ※空欄の場合は「サイズにより変動」", value=default_price)
             order_input = st.number_input("並び順 (order) ※数字が小さいほど上に表示", value=default_order if is_edit else 0, step=1)
             
-        details = st.text_area("詳細解説 (details)", value=default_details, height=100)
+        details = st.text_area("詳細解説 (details)", value=default_details, height=calc_textarea_height(default_details))
         
         st.write("---")
         st.subheader("📸 画像設定")
@@ -514,8 +595,8 @@ def render_options_form(is_edit=False):
         submit = st.form_submit_button("保存する 💾")
         
         if submit:
-            if not name or not category:
-                st.error("オプション名とカテゴリは必須です。")
+            if not name:
+                st.error("オプション名は必須です。")
                 return
                 
             
@@ -524,7 +605,7 @@ def render_options_form(is_edit=False):
             payload = {
                 "name": name,
                 "category": category,
-                "details": details,
+                "details": to_microcms_html(details),
                 "order": order_input,
                 "applicableTypes": new_app_types
             }
@@ -677,8 +758,8 @@ def render_works_form(is_edit=False):
                 return str(val) if val is not None else ""
                 
             default_size = w_data.get("size", "")
-            default_content = w_data.get("content", "")
-            default_comment = w_data.get("customerComment", "")
+            default_content = to_textarea_text(w_data.get("content", ""))
+            default_comment = clean_text(w_data.get("customerComment", ""))
             default_order = w_data.get("order", 0)
             
     # 左側リスト(is_edit時のみ)と右側フォームの表示制御
@@ -770,8 +851,8 @@ def render_works_form(is_edit=False):
         size = st.text_input("サイズ (size)", value=default_size, help="例: W900×D450×H450")
         order_input = st.number_input("並び順 (order)", value=default_order if is_edit else 0, step=1)
         
-        content = st.text_area("詳細・本文 (content)", value=default_content)
-        customerComment = st.text_area("お客様の声 (customerComment)", value=default_comment)
+        content = st.text_area("詳細・本文 (content)", value=default_content, height=calc_textarea_height(default_content))
+        customerComment = st.text_area("お客様の声 (customerComment)", value=default_comment, height=calc_textarea_height(default_comment))
         
         st.write("---")
         st.subheader("📸 画像設定")
@@ -808,8 +889,8 @@ def render_works_form(is_edit=False):
                 "cageType": [types_list.get(cagetype_selection)] if cagetype_selection else [],
                 "seitainame": [seitai_options[name] for name in selected_seitai_names],
                 "size": size,
-                "content": content,
-                "customerComment": customerComment,
+                "content": to_microcms_html(content),
+                "customerComment": clean_text(customerComment),
                 "order": order_input
             }
             
