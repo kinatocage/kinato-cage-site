@@ -36,7 +36,9 @@ def apply_chromakey(input_path, output_path):
     img.save(output_path, "PNG")
     print(f"Saved chromakeyed image to {output_path}")
 
-input_img = r"c:\Users\owner\OneDrive\Desktop\Web\public\assets\characters\Gemini_Generated_Image_ow8db5ow8db5ow8d.png"
-output_img = r"c:\Users\owner\OneDrive\Desktop\Web\public\assets\characters\Gemini_Generated_Image_ow8db5ow8db5ow8d.png"
+if len(sys.argv) > 1:
+    img_path = sys.argv[1]
+else:
+    img_path = r"c:\Users\owner\OneDrive\Desktop\Web\public\assets\characters\Gemini_Generated_Image_rhw0c8rhw0c8rhw0.png"
 
-apply_chromakey(input_img, output_img)
+apply_chromakey(img_path, img_path)
