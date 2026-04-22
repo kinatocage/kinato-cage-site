@@ -27,4 +27,12 @@ pnpm-debug.log*
 admin-tools/venv/
 admin-tools/.env
 admin-tools/__pycache__/
-admin-tools/.ipynb_checkpoints/
+
+# temporary files and logs
+*.txt
+*.log
+dev_out.txt
+dev_err.txt
+build_out.txt
+build_err.txt
+build_output.log

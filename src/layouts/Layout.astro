@@ -4,6 +4,8 @@ export interface Props {
 }
 
 const { title } = Astro.props;
+import '../styles/global.css';
+import CageChat from '../components/CageChat.astro';
 const gaId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID || 'G-W5HMEDEZ4J';
 ---
 
@@ -72,6 +74,7 @@ const gaId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID || 'G-W5HMEDEZ4J';
 			</div>
 			<img src="/assets/characters/charactor2.png" alt="きなとちゃん" class="char-image" />
 		</div>
+		<CageChat />
 	</body>
 </html>
 
@@ -394,15 +397,15 @@ const gaId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID || 'G-W5HMEDEZ4J';
 		box-shadow: 0 14px 30px rgba(244, 167, 185, 0.18);
 	}
 
-	/* ===== キャラクターウィジェット（右下固定） ===== */
+	/* ===== キャラクターウィジェット（左下固定） ===== */
 	.char-widget {
 		position: fixed;
 		bottom: 1.5rem;
-		right: 1.5rem;
-		z-index: 1000;
+		left: 1.5rem;
+		z-index: 999;
 		display: flex;
 		flex-direction: column;
-		align-items: flex-end;
+		align-items: flex-start;
 		gap: 0.5rem;
 		cursor: pointer;
 	}
@@ -453,7 +456,7 @@ const gaId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID || 'G-W5HMEDEZ4J';
 		content: '';
 		position: absolute;
 		bottom: -12px;
-		right: 28px;
+		left: 28px;
 		border-width: 10px 8px 0 8px;
 		border-style: solid;
 		border-color: white transparent transparent transparent;
@@ -466,6 +469,10 @@ const gaId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID || 'G-W5HMEDEZ4J';
 	}
 
 	@media (max-width: 768px) {
+		/* スマホでは左側のキャラウィジェットを非表示（右下のAIチャットのみ表示） */
+		.char-widget {
+			display: none;
+		}
 		.char-image {
 			width: 64px;
 		}
