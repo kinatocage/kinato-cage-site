@@ -4,7 +4,7 @@
 <div id="ai-chat-widget" class="fixed bottom-6 right-6 z-[9999] font-sans flex flex-col items-end">
   
   <!-- チャットウィンドウ -->
-  <div id="ai-chat-window" class="hidden mb-4 w-80 sm:w-96 bg-white border border-pink-100 rounded-2xl shadow-2xl flex-col transition-all duration-300 origin-bottom-right overflow-hidden">
+  <div id="ai-chat-window" class="hidden mb-4 w-80 sm:w-96 h-[550px] max-h-[calc(100vh-120px)] bg-white border border-pink-100 rounded-2xl shadow-2xl flex-col transition-all duration-300 origin-bottom-right overflow-hidden">
     
     <!-- ヘッダー -->
     <div class="chat-header text-white p-4 flex justify-between items-center shadow-sm">
@@ -30,7 +30,7 @@
     </div>
 
     <!-- メッセージエリア -->
-    <div id="ai-chat-messages" class="flex-1 p-4 h-80 overflow-y-auto bg-[#FFF8F5] flex flex-col gap-3">
+    <div id="ai-chat-messages" class="flex-1 p-4 overflow-y-auto bg-[#FFF8F5] flex flex-col gap-3">
       <!-- 初期メッセージ -->
       <div class="flex items-start gap-2 max-w-[85%]">
         <div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border-2 border-pink-200 shadow-sm mt-1">
