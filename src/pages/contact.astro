@@ -345,6 +345,18 @@ import Layout from '../layouts/Layout.astro';
 		const copyBtn = document.getElementById('copy-template-btn');
 		const templateText = document.getElementById('dm-template');
 
+		// AIチャットからの連携データを読み込む
+		const urlParams = new URLSearchParams(window.location.search);
+		if (urlParams.get('from_chat') === '1' && templateText) {
+			const chatHistory = sessionStorage.getItem('kinato_chat_history');
+			if (chatHistory) {
+				templateText.value = templateText.value + "\n\n--- AIチャット相談履歴 ---\n" + chatHistory;
+				// アコーディオンを開いておく
+				const accordion = document.querySelector('.dm-template-accordion');
+				if (accordion) accordion.open = true;
+			}
+		}
+
 		if (copyBtn && templateText && 'value' in templateText) {
 			copyBtn.addEventListener('click', () => {
 				navigator.clipboard.writeText(templateText.value).then(() => {

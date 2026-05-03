@@ -57,6 +57,13 @@
       </div>
     </div>
 
+    <!-- 連携ボタン -->
+    <div class="px-3 pb-2 bg-white">
+      <button type="button" id="ai-chat-to-contact" class="w-full py-2 text-sm text-[#6B7E66] border border-[#6B7E66] rounded-xl hover:bg-[#6B7E66] hover:text-white transition-colors flex items-center justify-center gap-2">
+        <span class="icon">📝</span> この内容で問い合わせフォームへ入力
+      </button>
+    </div>
+
     <!-- 入力エリア -->
     <form id="ai-chat-form" class="p-3 bg-white border-t border-[#F2E0D8] flex gap-2 items-end shadow-[0_-4px_10px_-4px_rgba(244,167,185,0.15)]">
       <textarea 
@@ -216,6 +223,19 @@
   let messages = [
     { role: "system", content: SYSTEM_PROMPT }
   ];
+
+  // Contactページへの連携ボタン処理
+  const toContactBtn = document.getElementById('ai-chat-to-contact');
+  toContactBtn?.addEventListener('click', () => {
+    const chatLog = messages.filter(m => m.role !== 'system');
+    if (chatLog.length === 0) {
+      alert('まだ会話のやり取りがありません。まずはご相談ください！');
+      return;
+    }
+    const historyText = chatLog.map(m => `[${m.role === 'user' ? 'あなた' : 'AI'}]\n${m.content}`).join('\n\n');
+    sessionStorage.setItem('kinato_chat_history', historyText);
+    window.location.href = '/contact?from_chat=1';
+  });
 
   // 「お問い合わせよりDMください」をリンクに変換する関数
   const linkifyContact = (text) => {
