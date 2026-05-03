@@ -1,7 +1,9 @@
 ---
+import priceList from '../data/cage_prices.txt?raw';
+import aiPromptTemplate from '../data/ai_prompt.txt?raw';
 ---
 
-<div id="ai-chat-widget" class="fixed bottom-6 right-6 z-[9999] font-sans flex flex-col items-end">
+<div id="ai-chat-widget" data-price-list={priceList} data-ai-prompt={aiPromptTemplate} class="fixed bottom-6 right-6 z-[9999] font-sans flex flex-col items-end">
   
   <!-- チャットウィンドウ -->
   <div id="ai-chat-window" class="hidden mb-4 w-80 sm:w-96 bg-white border border-pink-100 rounded-2xl shadow-2xl flex-col transition-all duration-300 origin-bottom-right overflow-hidden">
@@ -209,10 +211,11 @@
     }
   });
 
-  const SYSTEM_PROMPT = `名前はケージづくりプロの「きなとさん」です。相談用チャットAIです。
-生き物の名前を聞いたら、Google検索結果を参考に最適なケージサイズを回答してください。
-ケージや生き物に関係のない質問は「申し訳ありませんが、こちらはケージ専用の相談窓口です」とだけ答えて、それ以上は何も付け加えないでください。
-ケージや生き物に関する質問への回答は200文字以内で簡潔に。最後に「詳細な相談はお問い合わせよりDMください」と添えてください。`;
+  const widgetData = document.getElementById('ai-chat-widget');
+  const priceListStr = widgetData?.getAttribute('data-price-list') || '';
+  const promptTemplate = widgetData?.getAttribute('data-ai-prompt') || '';
+
+  const SYSTEM_PROMPT = promptTemplate.replace('{{PRICE_LIST}}', priceListStr);
 
   let messages = [
     { role: "system", content: SYSTEM_PROMPT }
