@@ -1,11 +1,5 @@
 ---
-import priceList from '../data/cage_prices.txt?raw';
-import aiPromptTemplate from '../data/ai_prompt.txt?raw';
-
-const compiledPrompt = aiPromptTemplate.replace('{{PRICE_LIST}}', priceList);
 ---
-
-<script is:inline set:html={`window.WIDGET_SYSTEM_PROMPT = ${JSON.stringify(compiledPrompt)};`}></script>
 
 <div id="ai-chat-widget" class="fixed bottom-6 right-6 z-[9999] font-sans flex flex-col items-end">
   
@@ -169,7 +163,9 @@ const compiledPrompt = aiPromptTemplate.replace('{{PRICE_LIST}}', priceList);
   }
 </style>
 
-<script is:inline>
+<script>
+  import { priceList, aiPromptTemplate } from '../data/prompts';
+
   // DOM Elements
   const toggleBtn = document.getElementById('ai-chat-toggle');
   const closeBtn = document.getElementById('ai-chat-close');
@@ -215,7 +211,7 @@ const compiledPrompt = aiPromptTemplate.replace('{{PRICE_LIST}}', priceList);
     }
   });
 
-  const SYSTEM_PROMPT = window.WIDGET_SYSTEM_PROMPT || "";
+  const SYSTEM_PROMPT = aiPromptTemplate.replace('{{PRICE_LIST}}', priceList);
 
   let messages = [
     { role: "system", content: SYSTEM_PROMPT }
