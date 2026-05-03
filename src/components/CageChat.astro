@@ -58,7 +58,7 @@
     </div>
 
     <!-- 連携ボタン -->
-    <div class="px-3 pb-2 bg-white">
+    <div id="ai-chat-to-contact-wrapper" class="hidden px-3 pb-2 bg-white">
       <button type="button" id="ai-chat-to-contact" class="w-full py-2 text-sm text-[#6B7E66] border border-[#6B7E66] rounded-xl hover:bg-[#6B7E66] hover:text-white transition-colors flex items-center justify-center gap-2">
         <span class="icon">📝</span> この内容で問い合わせフォームへ入力
       </button>
@@ -366,6 +366,10 @@
 
       appendMessage('assistant', replyContent);
       messages.push({ role: "assistant", content: replyContent });
+
+      // AIからの回答が来たら連携ボタンを表示
+      const toContactWrapper = document.getElementById('ai-chat-to-contact-wrapper');
+      toContactWrapper?.classList.remove('hidden');
 
     } catch (error) {
       console.error("チャットエラー:", error);
