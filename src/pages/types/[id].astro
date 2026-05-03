@@ -60,9 +60,18 @@ const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(r
         <div class="hero-inner">
           <div class="hero-image-col">
             {type.image && type.image.length > 0 ? (
-              <img src={type.image[0].url} alt={type.title} class="hero-image" />
+              <img src={type.image[0].url} alt={type.title} class="hero-image" id="mainImage" />
             ) : (
               <img src="/assets/acrylic_cage.png" alt="No image available" class="hero-image placeholder-fallback" />
+            )}
+
+            {/* 複数画像がある場合のギャラリー */}
+            {type.image && type.image.length > 1 && (
+              <div class="image-gallery">
+                {type.image.map((img: any, index: number) => (
+                  <img src={img.url} alt={`${type.title}の画像`} class={`gallery-thumb ${index === 0 ? 'active' : ''}`} data-src={img.url} loading="lazy" />
+                ))}
+              </div>
             )}
           </div>
           <div class="hero-text-col">
@@ -251,6 +260,33 @@ const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(r
   .hero-placeholder {
     aspect-ratio: 4/3;
     border-radius: var(--radius-md);
+  }
+
+  .image-gallery {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .gallery-thumb {
+    width:calc(33.333% - 0.35rem);
+    aspect-ratio: 16/9;
+    object-fit: contain;
+    background-color: #f7f7f7;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: opacity 0.2s, border-color 0.2s;
+  }
+
+  .gallery-thumb:hover {
+    opacity: 0.8;
+  }
+
+  .gallery-thumb.active {
+    border-color: var(--color-accent);
   }
 
   .hero-text-col {
@@ -588,3 +624,23 @@ const filteredRelatedWorks = relatedWorks.filter(rw => !pinnedWorkIds.includes(r
     border: 2px dashed var(--color-border);
   }
 </style>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const mainImage = document.getElementById('mainImage') as HTMLImageElement;
+    const thumbs = document.querySelectorAll('.gallery-thumb');
+
+    if (mainImage && thumbs.length > 0) {
+      thumbs.forEach(thumb => {
+        thumb.addEventListener('click', function() {
+          const newSrc = this.getAttribute('data-src');
+          if (newSrc) {
+            mainImage.src = newSrc;
+          }
+          thumbs.forEach(t => t.classList.remove('active'));
+          this.classList.add('active');
+        });
+      });
+    }
+  });
+</script>
