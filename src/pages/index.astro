@@ -5,20 +5,23 @@ import { getTypes, getWorks, getSeitai } from '../lib/microcms';
 // データの取得
 let types: any[] = [];
 let allTags: any[] = [];
+let recentWorksData: any[] = [];
 
 try {
   const typesResponse = await getTypes({ limit: 100 });
   types = typesResponse.contents || [];
 
 
-  // タグ一覧と、全製作事例（件数カウント用）を取得
-  const [tagsResponse, allWorksResponse] = await Promise.all([
+  // タグ一覧と、全製作事例（件数カウント用）、新着事例を取得
+  const [tagsResponse, allWorksResponse, recentWorksResponse] = await Promise.all([
     getSeitai({ limit: 100 }),
-    getWorks({ limit: 100, fields: 'id,seitainame' }) // 軽量化のためIDと生体のみ
+    getWorks({ limit: 100, fields: 'id,seitainame' }), // 軽量化のためIDと生体のみ
+    getWorks({ limit: 3, orders: '-publishedAt' }) // 新着3件
   ]);
   
   const allTagsData = tagsResponse.contents || [];
   const allWorksData = allWorksResponse.contents || [];
+  recentWorksData = recentWorksResponse.contents || [];
 
   // 各タグの製作事例数をカウント
   const tagCounts: Record<string, number> = {};
@@ -197,6 +200,45 @@ const galleryImages = [
                     {tag.name} <span class="tag-count">(0)</span>
                   </span>
                 )
+              ))}
+            </div>
+          </div>
+        )}
+
+        {recentWorksData.length > 0 && (
+          <div class="recent-works-container" style="margin-top: 3rem;">
+            <h3 style="text-align: center; margin-bottom: 2rem; font-size: 1.4rem; color: var(--color-primary-dark); font-family: var(--font-heading);">新着の製作事例</h3>
+            <div class="works-grid">
+              {recentWorksData.map((work: any) => (
+                <a href={`/works/${work.id}`} class="work-card card-base">
+                  <div class="work-image-wrapper">
+                    {work.images && work.images.length > 0 ? (
+                      <img src={work.images[0].url} alt={work.title} class="work-image" loading="lazy" />
+                    ) : (
+                      <div class="placeholder-image" aria-label="画像なし">🐾</div>
+                    )}
+                    <div class="work-overlay">
+                      <span class="view-more">詳しく見る →</span>
+                    </div>
+                    {work.cageType && (
+                      <span class="badge type-badge">{work.cageType.title}</span>
+                    )}
+                  </div>
+                  <div class="work-content">
+                    <div class="species-badges">
+                      {work.seitainame && work.seitainame.map((s: any) => (
+                        <span class="badge species-badge">{s.name}</span>
+                      ))}
+                    </div>
+                    <h3 class="work-title">{work.title}</h3>
+                    {work.customerComment && (
+                      <div class="customer-voice">
+                        <span class="voice-icon">💬</span>
+                        <p class="voice-text">{work.customerComment}</p>
+                      </div>
+                    )}
+                  </div>
+                </a>
               ))}
             </div>
           </div>
