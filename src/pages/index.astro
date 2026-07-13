@@ -16,7 +16,7 @@ try {
   const [tagsResponse, allWorksResponse, recentWorksResponse] = await Promise.all([
     getSeitai({ limit: 100 }),
     getWorks({ limit: 100, fields: 'id,seitainame' }), // 軽量化のためIDと生体のみ
-    getWorks({ limit: 3, orders: '-publishedAt' }) // 新着3件
+    getWorks({ limit: 100, orders: '-publishedAt' }) // 新着事例（最大100件）
   ]);
   
   const allTagsData = tagsResponse.contents || [];
@@ -208,8 +208,11 @@ const galleryImages = [
         {recentWorksData.length > 0 && (
           <div class="recent-works-container" style="margin-top: 3rem;">
             <h3 style="text-align: center; margin-bottom: 2rem; font-size: 1.4rem; color: var(--color-primary-dark); font-family: var(--font-heading);">新着の製作事例</h3>
-            <div class="works-grid">
-              {recentWorksData.map((work: any) => (
+            {/* ページネーション用データをJSON埋め込み */}
+            <script id="recent-works-data" type="application/json" set:html={JSON.stringify(recentWorksData)} />
+            {/* カード描画エリア（JSが未ロードの場合の初期表示: 先頭3件） */}
+            <div id="recent-works-grid" class="works-grid">
+              {recentWorksData.slice(0, 3).map((work: any) => (
                 <a href={`/works/${work.id}`} class="work-card card-base">
                   <div class="work-image-wrapper">
                     {work.images && work.images.length > 0 ? (
@@ -241,6 +244,10 @@ const galleryImages = [
                 </a>
               ))}
             </div>
+            {/* ページネーションUI */}
+            {recentWorksData.length > 3 && (
+              <div id="works-pagination" class="works-pagination" aria-label="製作事例ページナビゲーション"></div>
+            )}
           </div>
         )}
       </div>
@@ -875,70 +882,252 @@ const galleryImages = [
     .concept-banner-title { font-size: 1.15rem; }
     .concept-banner-char-img { width: 75px; }
   }
+
+  /* ===== 新着製作事例 ページネーション ===== */
+  .works-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 2.5rem;
+    flex-wrap: wrap;
+  }
+
+  .pagination-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.4rem;
+    height: 2.4rem;
+    padding: 0 0.6rem;
+    border-radius: var(--radius-full);
+    border: 2px solid var(--color-border);
+    background: white;
+    color: var(--color-text);
+    font-size: 0.9rem;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    line-height: 1;
+  }
+
+  .pagination-btn:hover:not(:disabled) {
+    border-color: var(--color-accent);
+    background: var(--color-pink-light);
+    transform: translateY(-2px);
+  }
+
+  .pagination-btn.active {
+    border-color: var(--color-accent);
+    background: linear-gradient(135deg, var(--color-accent), var(--color-accent-warm));
+    color: white;
+    box-shadow: 0 4px 12px rgba(244, 167, 185, 0.4);
+  }
+
+  .pagination-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .pagination-ellipsis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 2.4rem;
+    font-size: 1rem;
+    color: var(--color-text-light);
+    letter-spacing: 0.05em;
+    font-weight: 700;
+    user-select: none;
+  }
+
+  /* グリッドのフェードインアニメーション */
+  #recent-works-grid {
+    animation: works-grid-in 0.35s ease both;
+  }
+  @keyframes works-grid-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
 </style>
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
+    // ===== 横スクロールギャラリー（自動マーキー） =====
     const track = document.querySelector('.gallery-marquee-track');
-    if (!track) return;
+    if (track) {
+      let isDown = false;
+      let startX = 0;
+      let scrollLeft = 0;
+      let animationId = 0;
+      let isHovering = false;
 
-    let isDown = false;
-    let startX = 0;
-    let scrollLeft = 0;
-    let animationId = 0;
-    let isHovering = false;
+      // スクロール速度 (ピクセル/フレーム)
+      const autoScrollSpeed = 0.5;
 
-    // スクロール速度 (ピクセル/フレーム)
-    const autoScrollSpeed = 0.5;
-
-    const autoScroll = () => {
-      // ユーザーがドラッグ中・タッチ中・ホバー中ではない場合のみ自動スクロール
-      if (!isDown && !isHovering) {
-        track.scrollLeft += autoScrollSpeed;
-        
-        // ギャラリーの画像リストは2セット（同じもの）並んでいる前提
-        // 1セット目(全体の半分)をスクロールし終えたら、scrollLeftを0にリセットしてループさせる
-        if (track.scrollLeft >= track.scrollWidth / 2) {
-          track.scrollLeft -= track.scrollWidth / 2;
-        } else if (track.scrollLeft <= 0 && autoScrollSpeed < 0) { 
-          // もし逆にスクロールした場合の処理(念の為)
-          track.scrollLeft += track.scrollWidth / 2;
+      const autoScroll = () => {
+        // ユーザーがドラッグ中・タッチ中・ホバー中ではない場合のみ自動スクロール
+        if (!isDown && !isHovering) {
+          track.scrollLeft += autoScrollSpeed;
+          // 1セット目(全体の半分)をスクロールし終えたらリセット
+          if (track.scrollLeft >= track.scrollWidth / 2) {
+            track.scrollLeft -= track.scrollWidth / 2;
+          } else if (track.scrollLeft <= 0 && autoScrollSpeed < 0) {
+            track.scrollLeft += track.scrollWidth / 2;
+          }
         }
-      }
+        animationId = requestAnimationFrame(autoScroll);
+      };
+
       animationId = requestAnimationFrame(autoScroll);
-    };
 
-    animationId = requestAnimationFrame(autoScroll);
+      track.addEventListener('mouseenter', () => isHovering = true);
+      track.addEventListener('mouseleave', () => {
+        isHovering = false;
+        isDown = false;
+        track.classList.remove('active');
+      });
+      track.addEventListener('touchstart', () => isHovering = true, { passive: true });
+      track.addEventListener('touchend', () => isHovering = false);
 
-    // ホバー・タッチで一時停止
-    track.addEventListener('mouseenter', () => isHovering = true);
-    track.addEventListener('mouseleave', () => {
-      isHovering = false;
-      isDown = false;
-      track.classList.remove('active');
-    });
-    track.addEventListener('touchstart', () => isHovering = true, { passive: true });
-    track.addEventListener('touchend', () => isHovering = false);
+      track.addEventListener('mousedown', (e) => {
+        isDown = true;
+        track.classList.add('active');
+        startX = e.pageX - track.offsetLeft;
+        scrollLeft = track.scrollLeft;
+      });
+      track.addEventListener('mouseup', () => {
+        isDown = false;
+        track.classList.remove('active');
+      });
+      track.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        e.preventDefault();
+        const x = e.pageX - track.offsetLeft;
+        const walk = (x - startX) * 1.5;
+        track.scrollLeft = scrollLeft - walk;
+      });
+    }
 
-    // マウスドラッグで横スクロール
-    track.addEventListener('mousedown', (e) => {
-      isDown = true;
-      track.classList.add('active');
-      startX = e.pageX - track.offsetLeft;
-      scrollLeft = track.scrollLeft;
-    });
+    // ===== 新着製作事例 ページネーション =====
+    const dataEl = document.getElementById('recent-works-data');
+    const gridEl = document.getElementById('recent-works-grid');
+    const paginationEl = document.getElementById('works-pagination');
+    if (!dataEl || !gridEl || !paginationEl) return;
 
-    track.addEventListener('mouseup', () => {
-      isDown = false;
-      track.classList.remove('active');
-    });
+    const works = JSON.parse(dataEl.textContent || '[]');
+    const PER_PAGE = 3; // 1ページあたりの表示件数
+    const totalPages = Math.ceil(works.length / PER_PAGE);
+    let currentPage = 1;
 
-    track.addEventListener('mousemove', (e) => {
-      if (!isDown) return;
-      e.preventDefault();
-      const x = e.pageX - track.offsetLeft;
-      const walk = (x - startX) * 1.5; // スクロール感度
-      track.scrollLeft = scrollLeft - walk;
-    });
+    /**
+     * 1件分のカードHTMLを生成する
+     */
+    function buildCardHTML(work) {
+      const imageHTML = (work.images && work.images.length > 0)
+        ? `<img src="${work.images[0].url}" alt="${escHtml(work.title)}" class="work-image" loading="lazy" />`
+        : `<div class="placeholder-image" aria-label="画像なし">🐾</div>`;
+
+      const typeBadgeHTML = work.cageType
+        ? `<span class="badge type-badge">${escHtml(work.cageType.title)}</span>`
+        : '';
+
+      const speciesBadgesHTML = (work.seitainame && work.seitainame.length > 0)
+        ? work.seitainame.map(s => `<span class="badge species-badge">${escHtml(s.name)}</span>`).join('')
+        : '';
+
+      const voiceHTML = work.customerComment
+        ? `<div class="customer-voice"><span class="voice-icon">💬</span><p class="voice-text">${escHtml(work.customerComment)}</p></div>`
+        : '';
+
+      return `
+        <a href="/works/${work.id}" class="work-card card-base">
+          <div class="work-image-wrapper">
+            ${imageHTML}
+            <div class="work-overlay"><span class="view-more">詳しく見る →</span></div>
+            ${typeBadgeHTML}
+          </div>
+          <div class="work-content">
+            <div class="species-badges">${speciesBadgesHTML}</div>
+            <h3 class="work-title">${escHtml(work.title)}</h3>
+            ${voiceHTML}
+          </div>
+        </a>
+      `;
+    }
+
+    /** HTMLエスケープユーティリティ */
+    function escHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    /**
+     * ページネーションのページ番号リストを生成する（「...」省略付き）
+     * 例: [1, '...', 4, 5, 6, '...', 10]
+     */
+    function buildPageList(current, total) {
+      if (total <= 7) {
+        return Array.from({ length: total }, (_, i) => i + 1);
+      }
+      const pages = [];
+      const WING = 1; // 現在ページの前後何ページを表示するか
+      const left = Math.max(2, current - WING);
+      const right = Math.min(total - 1, current + WING);
+
+      pages.push(1);
+      if (left > 2) pages.push('...');
+      for (let i = left; i <= right; i++) pages.push(i);
+      if (right < total - 1) pages.push('...');
+      pages.push(total);
+      return pages;
+    }
+
+    /** 指定ページのカードとページネーションを描画する */
+    function renderPage(page) {
+      currentPage = page;
+      const start = (page - 1) * PER_PAGE;
+      const pageWorks = works.slice(start, start + PER_PAGE);
+
+      // カードを再描画（アニメーションリセット）
+      gridEl.style.animation = 'none';
+      gridEl.offsetHeight; // リフロー強制
+      gridEl.style.animation = '';
+      gridEl.innerHTML = pageWorks.map(buildCardHTML).join('');
+
+      // ページネーションを再描画
+      const pageList = buildPageList(page, totalPages);
+      const btnPrev = `<button class="pagination-btn" id="pgn-prev" aria-label="前のページ" ${page === 1 ? 'disabled' : ''}>‹</button>`;
+      const btnNext = `<button class="pagination-btn" id="pgn-next" aria-label="次のページ" ${page === totalPages ? 'disabled' : ''}>›</button>`;
+      const pageButtons = pageList.map(p => {
+        if (p === '...') return `<span class="pagination-ellipsis" aria-hidden="true">…</span>`;
+        return `<button class="pagination-btn${p === page ? ' active' : ''}" data-page="${p}" aria-label="${p}ページ目" aria-current="${p === page ? 'page' : 'false'}">${p}</button>`;
+      }).join('');
+
+      paginationEl.innerHTML = btnPrev + pageButtons + btnNext;
+
+      // 前へ・次へ
+      document.getElementById('pgn-prev')?.addEventListener('click', () => renderPage(currentPage - 1));
+      document.getElementById('pgn-next')?.addEventListener('click', () => renderPage(currentPage + 1));
+
+      // 各ページ番号ボタン
+      paginationEl.querySelectorAll('.pagination-btn[data-page]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const target = parseInt(btn.getAttribute('data-page') || '1', 10);
+          renderPage(target);
+          // セクション先頭にスムーズスクロール
+          gridEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+      });
+    }
+
+    // 初期描画（JSが制御を引き継ぐ）
+    renderPage(1);
   });
 </script>
