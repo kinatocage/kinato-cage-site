@@ -20,6 +20,7 @@
     "tailwindcss": "^4.2.2"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.9",
     "concurrently": "^9.2.1"
   }
 }
