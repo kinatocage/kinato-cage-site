@@ -141,7 +141,6 @@
     position: relative;
     white-space: nowrap;
     animation: callout-bounce 2.5s ease-in-out infinite;
-    /* チャット開いてる時は非表示（JSで制御） */
   }
   /* 吹き出しの三角（下向き、右寄り） */
   .chat-callout::after {
@@ -171,7 +170,7 @@
 </style>
 
 <script>
-  import { priceList, aiPromptTemplate } from '../data/prompts';
+  import { priceList, aiPromptTemplateV2 } from '../data/prompts';
 
   // DOM Elements
   const toggleBtn = document.getElementById('ai-chat-toggle');
@@ -218,7 +217,7 @@
     }
   });
 
-  const SYSTEM_PROMPT = aiPromptTemplate.replace('{{PRICE_LIST}}', priceList);
+  const SYSTEM_PROMPT = aiPromptTemplateV2.replace('{{PRICE_LIST}}', priceList);
 
   let messages = [
     { role: "system", content: SYSTEM_PROMPT }
@@ -237,12 +236,21 @@
     window.location.href = '/contact?from_chat=1';
   });
 
-  // 「お問い合わせよりDMください」をリンクに変換する関数
+  // お問い合わせ導線の文言をリンクに変換する関数
   const linkifyContact = (text) => {
-    return text.replace(
-      /お問い合わせよりDMください/g,
-      '<a href="/contact" class="ai-contact-link" target="_self">お問い合わせよりDMください</a>'
+    // 「お問い合わせ」から「ご連絡ください/ください」などの範囲を柔軟にマッチさせてリンク化します
+    let replaced = text.replace(
+      /お問い合わせより(?:、)?DM(?:に)?て?(?:ご連絡ください|ご連絡下さい|ご連絡|ください|下さい)/g,
+      '<a href="/contact" class="ai-contact-link" target="_self">お問い合わせよりDMにてご連絡ください</a>'
     );
+    // 万が一ブレが大きく上記にマッチしなかった場合のフォールバックとして、「お問い合わせ」単語単体をリンク化します
+    if (!replaced.includes('class="ai-contact-link"') && replaced.includes('お問い合わせ')) {
+      replaced = replaced.replace(
+        /お問い合わせ/g,
+        '<a href="/contact" class="ai-contact-link" target="_self">お問い合わせ</a>'
+      );
+    }
+    return replaced;
   };
 
   const appendMessage = (role, content) => {
@@ -282,7 +290,6 @@
 
   // チャットを閉じたとき吹き出しを表示、開いたとき非表示
   const callout = document.getElementById('chat-callout');
-  const originalToggleChat = toggleChat;
 
   chatForm?.addEventListener('submit', async (e) => {
     e.preventDefault();

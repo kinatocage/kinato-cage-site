@@ -18,9 +18,12 @@
 ### 1. 関連ファイル
 - 📂 **[src/data/prompts.ts](file:///c:/Users/owner/OneDrive/Desktop/Web/src/data/prompts.ts)**
   - **`priceList`**: AIが概算価格を計算するためのケージサイズ別価格表データ。
-  - **`aiPromptTemplate`**: システムプロンプト。接客時のルール、オプションの優先順位、システム条件の隠蔽などの指示が記述されています。
+  - **`aiPromptTemplate`**: 初期バージョンのシステムプロンプト。
+  - **`aiPromptTemplateV2`**: **【推奨・現在使用中】** 段階的誘導対話（ステップ1〜5）のルールと記述順序が設定されたアップデート版システムプロンプト。
+- 📂 **[src/components/CageChatInteractive.astro](file:///c:/Users/owner/OneDrive/Desktop/Web/src/components/CageChatInteractive.astro)**
+  - **【現在アクティブ】** 段階的な誘導対話（サイズ・価格 → 飼育環境 → レイアウト・床材 → 多頭飼育 → メンテナンス）に対応したチャットUIとGemini API連携ロジックを実装したコンポーネント。
 - 📂 **[src/components/CageChat.astro](file:///c:/Users/owner/OneDrive/Desktop/Web/src/components/CageChat.astro)**
-  - チャットのUI（フローティングボタンやチャットウィンドウ）と、クライアントサイドでのGemini API連携ロジックを実装しています。
+  - 従来の一括回答形式のチャットコンポーネント。
 
 ### 2. プロンプトに設定されている接客ルール（チューニングポイント）
 AIの回答品質を一定に保つため、システムプロンプトには以下のような厳密なルールが設定されています：
