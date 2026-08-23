@@ -172,7 +172,7 @@
 
 <script>
   // @ts-nocheck
-  import { priceList, aiPromptTemplate } from '../data/prompts';
+  import { priceList, shippingPriceList, aiPromptTemplate } from '../data/prompts';
 
   // DOM Elements
   const toggleBtn = document.getElementById('ai-chat-toggle');
@@ -219,7 +219,9 @@
     }
   });
 
-  const SYSTEM_PROMPT = aiPromptTemplate.replace('{{PRICE_LIST}}', priceList);
+  const SYSTEM_PROMPT = aiPromptTemplate
+    .replace('{{PRICE_LIST}}', priceList)
+    .replace('{{SHIPPING_PRICE_LIST}}', shippingPriceList);
 
   let messages = [
     { role: "system", content: SYSTEM_PROMPT }
