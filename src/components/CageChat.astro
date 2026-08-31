@@ -310,6 +310,29 @@
     // 最下部へスクロール
     if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
 
+    // ユーザー入力から自社製作事例URL (/works/:id または kinato-cage-site.pages.dev/works/:id) を検出
+    let workContext = "";
+    const worksUrlMatch = message.match(/(?:https?:\/\/[^\/]+)?\/works\/([a-zA-Z0-9_-]+)/);
+    if (worksUrlMatch && worksUrlMatch[1]) {
+      const workId = worksUrlMatch[1];
+      try {
+        const res = await fetch(`https://kinatocage.microcms.io/api/v1/works/${workId}`, {
+          headers: {
+            "X-MICROCMS-API-KEY": "9A9gNCMcRBCvcKZEkyvJnSOvOjAgizeqD5RX"
+          }
+        });
+        if (res.ok) {
+          const workData = await res.json();
+          // HTMLタグを除去した本文抜粋
+          const cleanContent = (workData.content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 300);
+          const typeName = workData.cageType && workData.cageType[0] ? workData.cageType[0].title : '';
+          workContext = `\n\n【システム補足：ユーザーが参照している自社製作事例（URL）の情報】\n・タイトル: ${workData.title || ''}\n・ケージサイズ: ${workData.size || ''}\n・タイプ: ${typeName}\n・事例概要: ${cleanContent}\n※上記サイズ・仕様をもとに、価格表から正確な概算価格と特徴を案内してください。`;
+        }
+      } catch (e) {
+        console.warn("作例データの取得に失敗しました:", e);
+      }
+    }
+
     try {
       // Gemini v1 API形式にフォーマット（systemInstructionはv1では未対応のため先頭に埋め込む）
       const userMessages = messages.filter(m => m.role !== "system");
@@ -318,10 +341,19 @@
         { role: "user", parts: [{ text: SYSTEM_PROMPT + "\n\n以上がシステム設定です。了解しましたか？" }] },
         { role: "model", parts: [{ text: "はい、了解しました。きなとのケージ屋さん相談AIとして、ケージや生き物に関するご相談にお答えします。" }] },
         // 実際の会話履歴
-        ...userMessages.map(m => ({
-          role: m.role === "assistant" ? "model" : "user",
-          parts: m.parts ? m.parts : [{ text: m.content }]
-        }))
+        ...userMessages.map((m, idx) => {
+          // 最新のユーザーメッセージに対して、作例コンテキストがあれば付与
+          if (m.role === "user" && idx === userMessages.length - 1 && workContext) {
+            return {
+              role: "user",
+              parts: [{ text: m.content + workContext }]
+            };
+          }
+          return {
+            role: m.role === "assistant" ? "model" : "user",
+            parts: m.parts ? m.parts : [{ text: m.content }]
+          };
+        })
       ];
 
       const geminiPayload = { 
