@@ -4,11 +4,19 @@
 - **公開用Webサイト (Cloudflare Pages)**
   🔗 https://kinato-cage-site.pages.dev/
   - 本番の最新状態が反映されるURLです。お客様はこちらのURLを見る形になります。
+- **3Dケージ見積もりシミュレーター（限定公開・秘匿運用）**
+  🔗 https://kinato-cage-site.pages.dev/sim/
+  - TOPページ等にはリンクを掲載せず、URL直接入力のみでアクセスできる3Dシミュレーター画面です（検索エンジン除外 noindex 設定済み）。
 
 ## 💻 ローカル開発環境（手元でのテスト・確認用）
 - **Webサイト開発画面 (Astro)**
   🔗 http://localhost:4321/
   - `C:\Users\owner\OneDrive\Desktop\Web` にて `npm run dev` を実行している間だけ見れるテスト用サイトです。ファイルを保存すると即座に画面が変わります。
+  - シミュレーター画面も 🔗 http://localhost:4321/sim/ でそのまま確認できます。
+- **シミュレーター単体開発画面 (Vite)**
+  🔗 http://localhost:5173/
+  - `cage_mitumori` フォルダ内の `start_simulator.bat` をダブルクリック、または `cd cage_mitumori && npm run dev` でシミュレーター単体を高速開発できます。
+  - 修正内容は `npm run build` または `npm run build:sim` で本流サイト（`public/sim/`）へ自動反映されます。
 - **管理者用ツール (Streamlit)**
   🔗 http://localhost:8501/
   - `C:\Users\owner\OneDrive\Desktop\Web` にて `npm run admin` で一発起動できます。

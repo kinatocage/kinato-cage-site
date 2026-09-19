@@ -1,0 +1,187 @@
+[
+  {
+    "timestamp": "2026-09-19T14:05:12+09:00",
+    "visitorId": "usr_a8f3",
+    "sessionId": "ses_0192",
+    "seq": 1,
+    "device": {
+      "type": "iPhone",
+      "os": "iOS 17.4",
+      "browser": "Safari",
+      "screen": "393x852"
+    },
+    "spec": {
+      "cageType": "A",
+      "typeName": "Type A（全面扉）",
+      "W": 900,
+      "D": 450,
+      "H": 450,
+      "thickness": 3.0,
+      "frontWideFrame": "standard",
+      "hasFloorReinforcement": false,
+      "hasTopReinforcement": false,
+      "hasSideReinforcement": false,
+      "footType": "rubber",
+      "hasSideVentCover": false
+    },
+    "calculated": {
+      "rawCost": 18900,
+      "priceWithMarkup": 31200,
+      "grossProfit": 12300,
+      "weight": 8.6
+    },
+    "meta": {
+      "elapsedSec": 45,
+      "referrer": "https://www.instagram.com/",
+      "diffNote": "初期表示からの試算"
+    }
+  },
+  {
+    "timestamp": "2026-09-19T14:06:25+09:00",
+    "visitorId": "usr_a8f3",
+    "sessionId": "ses_0192",
+    "seq": 2,
+    "device": {
+      "type": "iPhone",
+      "os": "iOS 17.4",
+      "browser": "Safari",
+      "screen": "393x852"
+    },
+    "spec": {
+      "cageType": "A",
+      "typeName": "Type A（全面扉）",
+      "W": 800,
+      "D": 400,
+      "H": 400,
+      "thickness": 3.0,
+      "frontWideFrame": "standard",
+      "hasFloorReinforcement": false,
+      "hasTopReinforcement": false,
+      "hasSideReinforcement": false,
+      "footType": "rubber",
+      "hasSideVentCover": false
+    },
+    "calculated": {
+      "rawCost": 16600,
+      "priceWithMarkup": 27400,
+      "grossProfit": 10800,
+      "weight": 7.2
+    },
+    "meta": {
+      "elapsedSec": 73,
+      "referrer": "https://www.instagram.com/",
+      "diffNote": "サイズ縮小 (W-100/D-50/H-50)"
+    }
+  },
+  {
+    "timestamp": "2026-09-19T14:07:40+09:00",
+    "visitorId": "usr_a8f3",
+    "sessionId": "ses_0192",
+    "seq": 3,
+    "device": {
+      "type": "iPhone",
+      "os": "iOS 17.4",
+      "browser": "Safari",
+      "screen": "393x852"
+    },
+    "spec": {
+      "cageType": "A",
+      "typeName": "Type A（全面扉）",
+      "W": 800,
+      "D": 400,
+      "H": 400,
+      "thickness": 3.0,
+      "frontWideFrame": "standard",
+      "hasFloorReinforcement": false,
+      "hasTopReinforcement": false,
+      "hasSideReinforcement": false,
+      "footType": "caster",
+      "hasSideVentCover": true
+    },
+    "calculated": {
+      "rawCost": 17600,
+      "priceWithMarkup": 29400,
+      "grossProfit": 11800,
+      "weight": 7.7
+    },
+    "meta": {
+      "elapsedSec": 75,
+      "referrer": "https://www.instagram.com/",
+      "diffNote": "オプション追加 (キャスター/換気板)"
+    }
+  },
+  {
+    "timestamp": "2026-09-19T14:12:10+09:00",
+    "visitorId": "usr_c4e1",
+    "sessionId": "ses_8821",
+    "seq": 1,
+    "device": {
+      "type": "PC (Windows)",
+      "os": "Windows 11",
+      "browser": "Chrome",
+      "screen": "1920x1080"
+    },
+    "spec": {
+      "cageType": "C",
+      "typeName": "Type C（前窓＋扉）",
+      "W": 1200,
+      "D": 600,
+      "H": 600,
+      "thickness": 5.0,
+      "frontWideFrame": "3x",
+      "hasFloorReinforcement": true,
+      "hasTopReinforcement": true,
+      "hasSideReinforcement": true,
+      "footType": "caster",
+      "hasSideVentCover": false
+    },
+    "calculated": {
+      "rawCost": 35200,
+      "priceWithMarkup": 58300,
+      "grossProfit": 23100,
+      "weight": 18.4
+    },
+    "meta": {
+      "elapsedSec": 180,
+      "referrer": "https://x.com/",
+      "diffNote": "大型ケージのフルオプション試算"
+    }
+  },
+  {
+    "timestamp": "2026-09-19T14:15:02+09:00",
+    "visitorId": "usr_a8f3",
+    "sessionId": "ses_9914",
+    "seq": 1,
+    "device": {
+      "type": "iPhone",
+      "os": "iOS 17.4",
+      "browser": "Safari",
+      "screen": "393x852"
+    },
+    "spec": {
+      "cageType": "A",
+      "typeName": "Type A（全面扉）",
+      "W": 800,
+      "D": 400,
+      "H": 400,
+      "thickness": 3.0,
+      "frontWideFrame": "standard",
+      "hasFloorReinforcement": false,
+      "hasTopReinforcement": false,
+      "hasSideReinforcement": false,
+      "footType": "caster",
+      "hasSideVentCover": true
+    },
+    "calculated": {
+      "rawCost": 17600,
+      "priceWithMarkup": 29400,
+      "grossProfit": 11800,
+      "weight": 7.7
+    },
+    "meta": {
+      "elapsedSec": 25,
+      "referrer": "Direct",
+      "diffNote": "リピート訪問（前回最終構成の再確認）"
+    }
+  }
+]

@@ -1,0 +1,13 @@
+---
+export const prerender = true;
+import fs from 'fs';
+import path from 'path';
+
+// ビルド時に生成された public/sim/index.html を読み込んで直接配信
+const htmlPath = path.resolve('./public/sim/index.html');
+let htmlContent = '';
+if (fs.existsSync(htmlPath)) {
+  htmlContent = fs.readFileSync(htmlPath, 'utf-8');
+}
+---
+<Fragment set:html={htmlContent} />

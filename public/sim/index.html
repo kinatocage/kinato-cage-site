@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>爬虫類・小動物ケージ 3D見積もりシミュレーター</title>
+  <meta name="description" content="爬虫類・小動物用アルミフレームケージの寸法を自由に変更し、リアルタイムに3D表示・部材集計ができる見積もりシミュレーターです。" />
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script type="module" crossorigin src="./assets/index-DDG07-ph.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-DKgy8RjW.css">
+</head>
+<body>
+  <div id="app" class="app-layout">
+    <!-- 3D ビューア キャンバス エリア -->
+    <main class="viewer-container" id="canvas-container">
+      <!-- 3Dビューア内 フローティング コントロール（視点・表示設定） -->
+      <div class="viewport-overlay top-left">
+        <div class="app-brand">
+          <div class="brand-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+          </div>
+          <div>
+            <h1 class="brand-title">きなとのケージ屋さん</h1>
+            <p class="brand-subtitle">3Dケージ設計・見積もりシミュレーター</p>
+          </div>
+        </div>
+
+        <!-- 価格・重量・仕様表示カード (HUD) -->
+        <div class="cost-hud-card" id="cost-hud-card">
+          <div class="cost-hud-header">
+            <span class="cost-hud-dot"></span>
+            <span class="cost-hud-badge">ケージ仕様・概算お見積もり</span>
+          </div>
+          <!-- 現在サイズ・オプション選択スペックサマリー（改行対応） -->
+          <div class="cost-hud-spec" id="current-spec-summary"></div>
+          <!-- 計算結果表示部（見積もり計算ボタン押下時に表示、変更時は非表示） -->
+          <div class="cost-hud-body hidden" id="cost-hud-result">
+            <div class="cost-hud-metrics">
+              <div class="cost-hud-item">
+                <span class="cost-hud-label">β版機能：概算価格（税込・送料別）</span>
+                <span class="cost-hud-value cost-highlight" id="hud-cost-total">¥0</span>
+              </div>
+              <div class="cost-hud-divider"></div>
+              <div class="cost-hud-item">
+                <span class="cost-hud-label">重量（計算値）</span>
+                <span class="cost-hud-value" id="hud-weight-total">0.0 kg</span>
+              </div>
+            </div>
+            <!-- 見積もり詳細＆画像保存モーダルを開くボタン（価格・重量の真下にワイド配置） -->
+            <button class="btn-open-estimate-modal" id="btn-open-estimate-modal" title="お見積もり結果の詳細確認・画像保存・仕様コピー">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+              <span>📋 お見積もり結果・画像保存を開く</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="viewport-overlay top-right">
+        <div class="preset-bar">
+          <span class="preset-label">視点:</span>
+          <button class="preset-btn active" data-view="iso" title="斜め全体 (アイソメ)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+            アイソメ
+          </button>
+          <button class="preset-btn preset-btn-auto" id="btn-auto-rotate" data-view="auto" title="ケージ周囲を自動回転">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+            自動
+          </button>
+          <button class="preset-btn" data-view="front" title="正面視点">正面</button>
+          <button class="preset-btn highlight-top" data-view="top" title="上面視点 (天面パンチング・グロメット確認)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><circle cx="15.5" cy="8.5" r="1.5"></circle></svg>
+            天面
+          </button>
+          <button class="preset-btn" data-view="side" title="右側面">側面</button>
+          <button class="preset-btn highlight-bottom" data-view="bottom" title="床裏面 (補強フレーム確認)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+            床裏面
+          </button>
+        </div>
+      </div>
+
+      <!-- 操作ヒント -->
+      <div class="viewport-overlay bottom-left">
+        <div class="interaction-hint">
+          <span class="hint-item pc-only"><kbd>左ドラッグ</kbd> 360°回転</span>
+          <span class="hint-item pc-only"><kbd>右ドラッグ</kbd> 平行移動</span>
+          <span class="hint-item pc-only"><kbd>ホイール</kbd> ズーム</span>
+          <span class="hint-item mobile-only"><kbd>1本指</kbd> 回転</span>
+          <span class="hint-item mobile-only"><kbd>2本指ピンチ</kbd> ズーム</span>
+        </div>
+      </div>
+
+      <!-- 警告メッセージバナー（床面たわみ・耐震転倒注意） -->
+      <div class="viewport-overlay bottom-center" id="warning-overlay">
+        <!-- 床面たわみ注意バナー -->
+        <div class="warning-banner hidden" id="floor-warning-banner">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          <span>床面アクリルがたわみやすいので、床面中央補強フレーム (2分割) を推奨します</span>
+        </div>
+
+        <!-- 耐震基準・転倒注意喚起バナー -->
+        <div class="warning-banner seismic-warning hidden" id="seismic-warning-banner">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <!-- 傾いた家具・転倒注意のシルエットアイコン -->
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <circle cx="12" cy="17" r="1"></circle>
+          </svg>
+          <span id="seismic-warning-text">耐震基準注意：転倒防止対策（壁固定等）をご検討ください</span>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- サイドバー：設定コントロールパネル -->
+    <aside class="sidebar-panel">
+      <div class="sidebar-header">
+        <h2 class="panel-heading">設計パラメータ設定</h2>
+        <span class="badge-tag" id="type-badge">Type A 選択中</span>
+      </div>
+
+      <!-- カテゴリ切り替えタブバー (4タブ構成) -->
+      <nav class="sidebar-tabs" role="tablist" aria-label="設定項目カテゴリ">
+        <button class="sidebar-tab active" data-tab="tab-creature" role="tab" aria-selected="true" id="tab-btn-creature">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="m4.93 4.93 4.24 4.24"></path><path d="m14.83 9.17 4.24-4.24"></path><path d="m14.83 14.83 4.24 4.24"></path><path d="m9.17 14.83-4.24 4.24"></path></svg>
+          <span>① 生体サイズ</span>
+        </button>
+        <button class="sidebar-tab" data-tab="tab-basic" role="tab" aria-selected="false" id="tab-btn-basic">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.3 15.3l-8.6-8.6a2 2 0 0 0-2.8 0L2.7 13.9a2 2 0 0 0 0 2.8l2.6 2.6a2 2 0 0 0 2.8 0l7.2-7.2"></path><path d="m14.5 12.5 2-2"></path><path d="m11.5 9.5 2-2"></path><path d="m8.5 6.5 2-2"></path></svg>
+          <span>② 基本・寸法</span>
+        </button>
+        <button class="sidebar-tab" data-tab="tab-panels" role="tab" aria-selected="false" id="tab-btn-panels">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+          <span>③ パネル素材</span>
+        </button>
+        <button class="sidebar-tab" data-tab="tab-options" role="tab" aria-selected="false" id="tab-btn-options">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <span>④ オプション</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-content">
+        <!-- 【タブ1】人気生体のおすすめサイズ (縦並びカードリスト) -->
+        <div class="tab-pane active" id="tab-creature" role="tabpanel" aria-labelledby="tab-btn-creature">
+          <div class="creature-tab-intro">
+            <h3 class="creature-intro-heading">🦎 人気生体のおすすめサイズ</h3>
+            <p class="creature-intro-desc">飼育する生体カードをタップすると、最適なケージ寸法・構造が3Dモデルに自動セットされます。</p>
+          </div>
+          <div class="creature-vertical-list" id="creature-preset-grid">
+            <!-- JSで縦並びのダークテーマカードを動的生成 -->
+          </div>
+        </div>
+
+        <!-- 【タブ2】基本設計・寸法・扉開閉 -->
+        <div class="tab-pane" id="tab-basic" role="tabpanel" aria-labelledby="tab-btn-basic">
+          <!-- 1. ケージタイプ選択 -->
+          <section class="control-section">
+            <label class="section-title">ケージタイプ</label>
+            <div class="type-selector">
+              <button class="type-card active" id="btn-type-a" data-type="A">
+                <div class="type-card-header">
+                  <span class="type-code">Type A</span>
+                  <span class="type-badge-mini">全面扉</span>
+                </div>
+                <p class="type-desc">正面床幅広フレーム選択可<br>全面スライド扉構造</p>
+              </button>
+
+              <button class="type-card" id="btn-type-c" data-type="C">
+                <div class="type-card-header">
+                  <span class="type-code">Type C</span>
+                  <span class="type-badge-mini">前窓付き</span>
+                </div>
+                <p class="type-desc">床面均一2020<br>前窓（はめ殺し）＋スライド扉</p>
+              </button>
+            </div>
+          </section>
+
+          <!-- 2. フレームカラー選択 -->
+          <section class="control-section">
+            <label class="section-title">フレームカラー</label>
+            <div class="frame-color-selector">
+              <button class="frame-color-btn active" id="btn-frame-silver" data-frame-color="silver" title="シルバー">
+                <span class="color-swatch silver"></span>
+                <span class="color-label">シルバー</span>
+              </button>
+              <button class="frame-color-btn" id="btn-frame-black" data-frame-color="black" title="ブラック">
+                <span class="color-swatch black"></span>
+                <span class="color-label">ブラック</span>
+              </button>
+            </div>
+          </section>
+
+          <!-- 3. 寸法入力 (W, D, H) -->
+          <section class="control-section">
+            <div class="section-header-flex">
+              <label class="section-title">ケージ基本寸法</label>
+              <span class="unit-note">10mm刻み</span>
+            </div>
+
+            <!-- 幅 (W) -->
+            <div class="param-row">
+              <div class="param-header">
+                <span class="param-name">幅 (W)</span>
+                <div class="param-val-box">
+                  <input type="number" id="input-w" min="300" max="1800" step="10" value="750" />
+                  <span class="unit">mm</span>
+                </div>
+              </div>
+              <div class="slider-wrapper">
+                <input type="range" id="slider-w" min="300" max="1800" step="10" value="750" />
+              </div>
+              <!-- 補強警告/連動通知バッジ -->
+              <div class="sub-tip" id="reinforce-tip">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                <span id="reinforce-text">床面積が 750×450mm を超える場合：床面中央補強フレーム（2分割）を推奨</span>
+              </div>
+            </div>
+
+            <!-- 奥行き (D) -->
+            <div class="param-row">
+              <div class="param-header">
+                <span class="param-name">奥行き (D)</span>
+                <div class="param-val-box">
+                  <input type="number" id="input-d" min="300" max="900" step="10" value="450" />
+                  <span class="unit">mm</span>
+                </div>
+              </div>
+              <div class="slider-wrapper">
+                <input type="range" id="slider-d" min="300" max="900" step="10" value="450" />
+              </div>
+            </div>
+
+            <!-- 高さ (H) -->
+            <div class="param-row">
+              <div class="param-header">
+                <span class="param-name">高さ (H)</span>
+                <div class="param-val-box">
+                  <input type="number" id="input-h" min="200" max="900" step="10" value="300" />
+                  <span class="unit">mm</span>
+                </div>
+              </div>
+              <div class="slider-wrapper">
+                <input type="range" id="slider-h" min="200" max="900" step="10" value="300" />
+              </div>
+            </div>
+
+            <!-- Type C 専用：前窓開口高さ (frontWindowH) -->
+            <div class="param-row hidden" id="row-front-window">
+              <div class="param-header">
+                <span class="param-name highlight-param">前窓 開口高さ</span>
+                <div class="param-val-box highlight-box">
+                  <input type="number" id="input-fw" min="30" max="300" step="10" value="50" />
+                  <span class="unit">mm</span>
+                </div>
+              </div>
+              <div class="slider-wrapper">
+                <input type="range" id="slider-fw" min="30" max="300" step="10" value="50" />
+              </div>
+              <div class="sub-tip info-tip">
+                <span>※床フレームと中桟フレームの間の内寸開口（初期値: 50mm）</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- 4. 引き違いスライド扉 開閉操作（排他制御ボタングループ） -->
+          <section class="control-section">
+            <label class="section-title">引き違いスライド扉 開閉</label>
+            <div class="door-mode-group">
+              <button class="door-mode-btn active" id="btn-door-closed" data-mode="closed">
+                <span class="door-mode-icon">🔒</span>
+                <span class="door-mode-label">全閉</span>
+              </button>
+              <button class="door-mode-btn" id="btn-door-left" data-mode="left_open">
+                <span class="door-mode-icon">▶</span>
+                <span class="door-mode-label">左扉を開く</span>
+              </button>
+              <button class="door-mode-btn" id="btn-door-right" data-mode="right_open">
+                <span class="door-mode-icon">◀</span>
+                <span class="door-mode-label">右扉を開く</span>
+              </button>
+            </div>
+          </section>
+        </div>
+
+        <!-- 【タブ2】パネル素材設定 -->
+        <div class="tab-pane" id="tab-panels" role="tabpanel" aria-labelledby="tab-btn-panels">
+          <section class="control-section accordion-section" id="section-panel-config">
+            <div class="accordion-header active" id="panel-config-toggle-btn">
+              <div class="accordion-title-wrap">
+                <svg class="accordion-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="3" y1="9" x2="21" y2="9"></line>
+                  <line x1="9" y1="21" x2="9" y2="9"></line>
+                </svg>
+                <span class="section-title" style="margin-bottom: 0;">各面パネル・素材設定</span>
+              </div>
+              <div class="accordion-header-right">
+                <span class="accordion-sub-badge" id="panel-summary-badge">素材・金網設定</span>
+                <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+            </div>
+
+            <div class="accordion-content" id="panel-config-container">
+              <div class="panel-select-list">
+                <!-- 正面 (透明アクリル 3.0mm 固定) -->
+                <div class="panel-select-row">
+                  <div class="panel-select-header">
+                    <span class="panel-select-label">正面扉</span>
+                    <span class="panel-badge-fixed">3.0mm 固定</span>
+                  </div>
+                  <select class="custom-select disabled" id="select-panel-front" disabled>
+                    <option value="acrylic" selected>透明アクリル 3.0mm</option>
+                  </select>
+                </div>
+
+                <!-- 床面 (透明アクリル / ブラックマット地アクリル) -->
+                <div class="panel-select-row">
+                  <div class="panel-select-header">
+                    <span class="panel-select-label">床面</span>
+                  </div>
+                  <select class="custom-select" id="select-panel-floor">
+                    <option value="acrylic" selected>透明アクリル 3.0mm</option>
+                    <option value="black_matte">アクリル黒両面マット 3.0mm</option>
+                  </select>
+                </div>
+
+                <!-- 側面 (補強なし時) -->
+                <div class="panel-select-row" id="row-panel-side">
+                  <div class="panel-select-header">
+                    <span class="panel-select-label">側面 (左右)</span>
+                  </div>
+                  <select class="custom-select" id="select-panel-side">
+                    <option value="acrylic" selected>透明アクリル 3.0mm</option>
+                    <option value="punching">塩ビパンチングボード 透明 3.0mm</option>
+                    <option value="polyca">中空ポリカ 4.0mm</option>
+                    <option value="black_matte">アクリル黒両面マット 3.0mm</option>
+                  </select>
+                </div>
+
+                <!-- 側面 (補強あり・2分割時) -->
+                <div class="panel-select-row hidden" id="row-panel-side-split">
+                  <div class="panel-select-header">
+                    <span class="panel-select-label">側面 (左右 2分割)</span>
+                  </div>
+                  <div class="split-select-group">
+                    <div class="split-select-item">
+                      <span class="split-label">側面上部</span>
+                      <select class="custom-select" id="select-panel-side-upper">
+                        <option value="punching" selected>塩ビパンチングボード 透明 3.0mm</option>
+                        <option value="acrylic">透明アクリル 3.0mm</option>
+                        <option value="polyca">中空ポリカ 4.0mm</option>
+                        <option value="black_matte">アクリル黒両面マット 3.0mm</option>
+                      </select>
+                    </div>
+                    <div class="split-select-item">
+                      <span class="split-label">側面下部</span>
+                      <select class="custom-select" id="select-panel-side-lower">
+                        <option value="acrylic" selected>透明アクリル 3.0mm</option>
+                        <option value="punching">塩ビパンチングボード 透明 3.0mm</option>
+                        <option value="polyca">中空ポリカ 4.0mm</option>
+                        <option value="black_matte">アクリル黒両面マット 3.0mm</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 背面 -->
+                <div class="panel-select-row">
+                  <div class="panel-select-header">
+                    <span class="panel-select-label">背面</span>
+                  </div>
+                  <select class="custom-select" id="select-panel-back">
+                    <option value="acrylic" selected>透明アクリル 3.0mm</option>
+                    <option value="punching">塩ビパンチングボード 透明 3.0mm</option>
+                    <option value="polyca">中空ポリカ 4.0mm (横筋)</option>
+                    <option value="black_matte">アクリル黒両面マット 3.0mm</option>
+                  </select>
+                </div>
+
+                <!-- 天面 (1枚天板時) -->
+                <div class="panel-select-row" id="row-panel-top">
+                  <div class="panel-select-header">
+                    <span class="panel-select-label">天面</span>
+                  </div>
+                  <select class="custom-select" id="select-panel-top">
+                    <option value="punching" selected>塩ビパンチングボード 透明 3.0mm (φ3.1-P7)</option>
+                    <option value="acrylic">透明アクリル 3.0mm</option>
+                    <option value="mesh15">金網15mmピッチ（黒粉体塗装）</option>
+                    <option value="mesh25">金網25mmピッチ（黒粉体塗装）</option>
+                    <option value="mesh30">金網30mmピッチ（黒粉体塗装）</option>
+                  </select>
+                </div>
+
+                <!-- 天面 (2分割時) -->
+                <div class="panel-select-row hidden" id="row-panel-top-split">
+                  <div class="panel-select-header">
+                    <span class="panel-select-label">天面 (2分割)</span>
+                  </div>
+                  <div class="split-select-group">
+                    <div class="split-select-item">
+                      <span class="split-label">天面 (左側)</span>
+                      <select class="custom-select" id="select-panel-top-left">
+                        <option value="punching" selected>塩ビパンチングボード 透明 3.0mm</option>
+                        <option value="acrylic">透明アクリル 3.0mm</option>
+                        <option value="mesh15">金網15mmピッチ（黒粉体塗装）</option>
+                        <option value="mesh25">金網25mmピッチ（黒粉体塗装）</option>
+                        <option value="mesh30">金網30mmピッチ（黒粉体塗装）</option>
+                      </select>
+                    </div>
+                    <div class="split-select-item">
+                      <span class="split-label">天面 (右側)</span>
+                      <select class="custom-select" id="select-panel-top-right">
+                        <option value="punching" selected>塩ビパンチングボード 透明 3.0mm</option>
+                        <option value="acrylic">透明アクリル 3.0mm</option>
+                        <option value="mesh15">金網15mmピッチ（黒粉体塗装）</option>
+                        <option value="mesh25">金網25mmピッチ（黒粉体塗装）</option>
+                        <option value="mesh30">金網30mmピッチ（黒粉体塗装）</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- 【タブ3】オプション仕様 -->
+        <div class="tab-pane" id="tab-options" role="tabpanel" aria-labelledby="tab-btn-options">
+          <section class="control-section accordion-section" id="section-options">
+            <div class="accordion-header active" id="options-toggle-btn">
+              <div class="accordion-title-wrap">
+                <svg class="accordion-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+                <span class="section-title" style="margin-bottom: 0;">オプション仕様</span>
+              </div>
+              <div class="accordion-header-right">
+                <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+            </div>
+
+            <div class="accordion-content" id="options-container">
+              <!-- 正面下側幅広フレーム2倍幅 -->
+              <div class="option-inline-card active" id="card-front-wide-2x">
+                <label class="option-checkbox-label">
+                  <input type="checkbox" id="toggle-front-wide-2x" class="custom-checkbox" checked />
+                  <div class="option-text-wrap">
+                    <span class="option-title">正面下側幅広フレーム2倍幅</span>
+                    <span class="option-sub" id="front-wide-2x-sub">高さ40mmフレーム使用。床材厚みを隠し高剛性化（Type A専用）</span>
+                  </div>
+                </label>
+              </div>
+
+              <!-- 正面下側幅広フレーム3倍幅 -->
+              <div class="option-inline-card disabled" id="card-front-wide-3x" style="margin-top: 8px;">
+                <label class="option-checkbox-label">
+                  <input type="checkbox" id="toggle-front-wide-3x" class="custom-checkbox" disabled />
+                  <div class="option-text-wrap">
+                    <span class="option-title">正面下側幅広フレーム3倍幅</span>
+                    <span class="option-sub" id="front-wide-3x-sub">高さ60mmフレーム(黒は40mm+20mm 2段重ね)使用（Type A専用）</span>
+                  </div>
+                </label>
+              </div>
+
+              <!-- 側面補強フレーム -->
+              <div class="option-inline-card" id="card-side-reinforce" style="margin-top: 8px;">
+                <label class="option-checkbox-label">
+                  <input type="checkbox" id="toggle-side-reinforce" class="custom-checkbox" />
+                  <div class="option-text-wrap">
+                    <span class="option-title">側面補強フレーム</span>
+                    <span class="option-sub">左右対称 / 上部パンチング</span>
+                  </div>
+                </label>
+
+                <!-- チェックボックスのすぐ隣に寸法入力欄を配置 -->
+                <div class="option-input-inline disabled" id="box-side-h">
+                  <div class="param-val-box highlight-box-emerald compact-val-box">
+                    <input type="number" id="input-side-h" min="30" max="200" step="10" value="120" title="側面下部 開口高さ (フレーム間距離)" />
+                    <span class="unit">mm</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 側面換気量調整板 -->
+              <div class="option-inline-card disabled" id="card-side-vent-cover" style="margin-top: 8px;">
+                <label class="option-checkbox-label">
+                  <input type="checkbox" id="toggle-side-vent-cover" class="custom-checkbox" disabled />
+                  <div class="option-text-wrap">
+                    <div class="option-title-row">
+                      <span class="option-title">側面換気量調整板</span>
+                      <span class="option-cond-badge" id="vent-cover-badge">要側面2分割</span>
+                    </div>
+                    <span class="option-sub" id="vent-cover-sub">冬場の保温・換気調整用。左右外張り</span>
+                  </div>
+                </label>
+              </div>
+
+              <!-- 床面中央補強フレーム -->
+              <div class="option-inline-card" id="card-floor-reinforce" style="margin-top: 8px;">
+                <label class="option-checkbox-label">
+                  <input type="checkbox" id="toggle-floor-reinforce" class="custom-checkbox" />
+                  <div class="option-text-wrap">
+                    <span class="option-title">床面中央補強フレーム</span>
+                    <span class="option-sub" id="floor-reinf-sub">床面積が 750×450mm 超で推奨。解除時はたわみにご注意ください</span>
+                  </div>
+                </label>
+              </div>
+
+              <!-- 天板中央補強フレーム -->
+              <div class="option-inline-card" id="card-top-reinforce" style="margin-top: 8px;">
+                <label class="option-checkbox-label">
+                  <input type="checkbox" id="toggle-top-reinforce" class="custom-checkbox" />
+                  <div class="option-text-wrap">
+                    <span class="option-title">天板中央補強フレーム</span>
+                    <span class="option-sub" id="top-reinf-sub">940mm以下は任意指定（W&gt;940mmは必須）</span>
+                  </div>
+                </label>
+              </div>
+
+              <!-- 正面スライド扉 たわみ防止レール -->
+              <div class="option-inline-card" id="card-door-anti-flex" style="margin-top: 8px;">
+                <label class="option-checkbox-label">
+                  <input type="checkbox" id="toggle-door-anti-flex" class="custom-checkbox" />
+                  <div class="option-text-wrap">
+                    <span class="option-title">正面スライド扉 たわみ防止レール</span>
+                    <span class="option-sub">強力生体向け。左右端に縦レールを追加し内側からの変形を防止</span>
+                  </div>
+                </label>
+              </div>
+
+              <!-- キャスター仕様 -->
+              <div class="option-inline-card" id="card-caster" style="margin-top: 8px;">
+                <label class="option-checkbox-label">
+                  <input type="checkbox" id="toggle-caster" class="custom-checkbox" />
+                  <div class="option-text-wrap">
+                    <span class="option-title">キャスター仕様へ変更</span>
+                    <span class="option-sub" id="caster-sub">高さ66mm。標準仕様はゴム脚 (H11mm)</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- フッター -->
+      <div class="sidebar-footer">
+        <button class="action-btn secondary btn-cost-calc" id="btn-calc-estimate" title="見積もりと重量を計算">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="16" y1="14" x2="16" y2="18"></line><path d="M16 10h.01"></path><path d="M12 10h.01"></path><path d="M8 10h.01"></path><path d="M12 14h.01"></path><path d="M8 14h.01"></path><path d="M12 18h.01"></path><path d="M8 18h.01"></path></svg>
+          <span class="calc-btn-title">見積もりと重量計算（β版）</span>
+        </button>
+
+        <button class="action-btn primary" id="btn-reset-specs">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+          標準サイズにリセット (750×450×300)
+        </button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- お見積もり結果・画像保存・仕様コピー モーダル -->
+  <div class="estimate-modal-overlay hidden" id="estimate-result-modal">
+    <div class="estimate-modal-card">
+      <div class="estimate-modal-header">
+        <div class="modal-title-wrap">
+          <img src="./logo_kinato.png" alt="きなとロゴ" class="modal-brand-logo" />
+          <div>
+            <h2 class="modal-title">お見積もり結果</h2>
+            <span class="modal-id-badge" id="modal-estimate-id">EST-XXXXX</span>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="btn-close-modal" title="閉じる">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <div class="estimate-modal-body">
+        <!-- 価格・重量サマリーカード -->
+        <div class="modal-price-card">
+          <div class="modal-price-row">
+            <span class="modal-price-label">お見積もり合計金額 (税込・送料別)</span>
+            <span class="modal-price-val" id="modal-price-total">¥0</span>
+          </div>
+          <div class="modal-weight-row">
+            <span class="modal-weight-label">概算重量:</span>
+            <span class="modal-weight-val" id="modal-weight-total">0.0 kg</span>
+          </div>
+        </div>
+
+        <!-- 📱 画像保存アクション -->
+        <div class="modal-action-section">
+          <button class="modal-btn-save-image" id="btn-save-image-modal">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span>見積もりカードを画像保存 (PNG)</span>
+          </button>
+          <div class="modal-download-success hidden" id="modal-download-success">
+            <span class="download-success-title">✅ ダウンロード完了（保存先: ダウンロードフォルダ）</span>
+            <span class="download-filename" id="download-filename-label">Cage_Estimate_EST-XXXX.png</span>
+          </div>
+          <span class="modal-action-hint">※お使いの端末（PC・スマホ）の「ダウンロード」フォルダにPNG画像を出力保存します</span>
+        </div>
+
+        <!-- 📋 仕様テキスト＆コピー -->
+        <div class="modal-spec-section">
+          <div class="modal-spec-header">
+            <span class="modal-spec-title">📋 お問い合わせ・ご注文用 仕様テキスト</span>
+            <button class="modal-btn-copy" id="btn-copy-spec-modal">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <span class="copy-text-label">コピー</span>
+            </button>
+          </div>
+          <textarea class="modal-spec-textarea" id="modal-spec-textarea" readonly rows="7"></textarea>
+          <div class="modal-copy-toast hidden" id="modal-copy-toast">✅ クリップボードにコピーしました！</div>
+        </div>
+      </div>
+
+      <div class="estimate-modal-footer">
+        <button class="modal-btn-dismiss" id="btn-dismiss-modal">
+          シミュレーターに戻る
+        </button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

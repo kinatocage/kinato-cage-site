@@ -6,7 +6,8 @@
     "dev": "astro dev",
     "admin": ".\\admin-tools\\venv\\Scripts\\python.exe -m streamlit run .\\admin-tools\\app.py",
     "dev:all": "concurrently \"npm run dev\" \"npm run admin\"",
-    "build": "astro build",
+    "build:sim": "node scripts/build-sim.mjs",
+    "build": "node scripts/build-sim.mjs && astro build",
     "preview": "astro preview",
     "astro": "astro"
   },
