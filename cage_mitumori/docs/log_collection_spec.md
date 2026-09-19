@@ -355,3 +355,19 @@ function setupWebHistoryHeader(sheet) {
 3. 開発者ツールのコンソール（F12）を開くと、`[WebLog] (ローカル環境) GASへアクセスログを送信中` と表示され、スプレッドシートの **`Web履歴`** シートに「Instagram」「直接/お気に入り」「トップ」などが書き込まれます。
 4. 他のページ（コンセプト、見積もりシステム）へ遷移すると、`Web履歴` シートの同一行の「回遊ページ動線」が `トップ ➔ コンセプト ➔ 見積もりシステム` に更新されます。
 5. `/sim/` で「見積もりと重量を計算」ボタンを押すと、**`見積もりシステム`** シートに詳細が書き込まれ、端末ID・セッションIDが両シートで一致していることを確認できます。
+
+---
+
+## 6. 本番デプロイ時の重要チェック事項（ローカルログ停止）
+
+テストが完了し、本番環境（Cloudflare Pages）へ公開する際は、ローカルデバッグ時のテストログがスプレッドシートに混入しないよう、以下の2箇所のフラグを `true` に設定してください：
+
+1. **`src/components/WebAnalyticsTracker.astro`**:
+   ```javascript
+   const SKIP_LOG_ON_LOCALHOST = true;
+   ```
+2. **`cage_mitumori/src/main.js`**:
+   ```javascript
+   const SKIP_LOG_ON_LOCALHOST = true;
+   ```
+   ※変更後は `npm run build:sim` でシミュレーター成果物を同期してください。

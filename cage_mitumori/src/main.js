@@ -2192,11 +2192,14 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
+// ★本番デプロイ前チェック: ローカルでのデバッグログ送信を止める場合はここを true にします
+const SKIP_LOG_ON_LOCALHOST = false;
+
 // =================================================================
 // 4. Googleスプレッドシート ログ収集（開発計画2用）
 // =================================================================
 async function maybeSendEstimateLog(estimateData) {
-  // ローカル開発環境の判定（ユーザー指示によりローカルからのログ送信テストを有効化）
+  // ローカル開発環境の判定
   const hostname = window.location.hostname;
   const port = window.location.port;
   const isLocalhost = hostname === 'localhost' ||
@@ -2210,6 +2213,10 @@ async function maybeSendEstimateLog(estimateData) {
                       port === '4173';
 
   if (isLocalhost) {
+    if (SKIP_LOG_ON_LOCALHOST) {
+      console.log(`[Log] ローカル開発環境のため、Googleスプレッドシートへの見積もりログ保存を自動スキップしました。`);
+      return;
+    }
     console.log(`[Log] ローカル開発環境（${hostname || 'local'}:${port}）からGoogleスプレッドシートへ送信テストを実行します。`);
   }
 
@@ -2501,6 +2508,13 @@ checkInitialStateFromStorageOrUrl();
         screen: `${window.innerWidth}x${window.innerHeight}`
       }
     };
+
+    const hostname = window.location.hostname;
+    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+    if (isLocal && SKIP_LOG_ON_LOCALHOST) {
+      console.log('[Log] ローカル開発環境のため、シミュレーター訪問ログ送信をスキップしました。');
+      return;
+    }
 
     fetch(endpoint, {
       method: 'POST',

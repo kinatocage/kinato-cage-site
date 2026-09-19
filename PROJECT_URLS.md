@@ -38,6 +38,15 @@
 ---
 
 ## 🚀 最新版を本番（Cloudflare）へ公開する時の2ステップ
+
+> [!IMPORTANT]
+> **【本番デプロイ前の事前チェック】**
+> ローカル環境でのテストログ送信を止めたい場合は、デプロイ前に以下の2箇所のフラグを `true` に切り替えてください：
+> 1. `src/components/WebAnalyticsTracker.astro` の `const SKIP_LOG_ON_LOCALHOST = true;`
+> 2. `cage_mitumori/src/main.js` の `const SKIP_LOG_ON_LOCALHOST = true;`（※切り替え後 `npm run build:sim`）
+> 
+> これにより、手元での開発・デバッグ時にスプレッドシートへテストログが送られるのを防ぎます。本番環境（`kinato-cage-site.pages.dev`）ではフラグに関わらず常時正常にログが送信されます。
+
 デザインを変えたり、コードを修正したあと「実機（本番URL）に反映させたい！」という時は、VSCodeのターミナルの `C:\Users\owner\OneDrive\Desktop\Web` フォルダ内で以下の2行を実行するだけで完了します。
 （※Githubを経由しなくてOKです）
 

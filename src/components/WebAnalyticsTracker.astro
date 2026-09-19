@@ -158,9 +158,16 @@ const gasEndpoint = Astro.props.endpointUrl || import.meta.env.PUBLIC_GAS_LOG_EN
         return;
       }
 
+      // ★本番デプロイ前チェック: ローカルでのデバッグログ送信を止める場合はここを true にします
+      const SKIP_LOG_ON_LOCALHOST = false; 
+
       const hostname = window.location.hostname;
       const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
       if (isLocal) {
+        if (SKIP_LOG_ON_LOCALHOST) {
+          console.log('[WebLog] ローカル開発環境のため、GASへのログ送信をスキップしました。');
+          return;
+        }
         console.log('[WebLog] (ローカル環境) GASへアクセスログを送信中:', payload);
       }
 
