@@ -115,6 +115,93 @@ const galleryImages = [
       </a>
     </section>
 
+    <!-- ===== 新機能！3D見積もりシミュレーター 特設紹介セクション ===== -->
+    <section id="simulator-banner" class="sim-promo-section section">
+      <div class="container">
+        <div class="sim-promo-card">
+          <div class="sim-promo-content">
+            <div class="sim-promo-badge-row">
+              <span class="sim-promo-badge">✨ 新機能リリース</span>
+              <span class="sim-promo-badge-beta">β版公開中</span>
+            </div>
+            <h2 class="sim-promo-title">
+              理想のケージを指先ひとつで3Dプレビュー！<br />
+              <span class="sim-promo-highlight">3Dケージ見積もりシミュレーター</span>
+            </h2>
+            <p class="sim-promo-desc">
+              爬虫類・小動物用アルミフレームケージの寸法（幅・奥行・高さ）をミリ単位で自由に変更！<br class="pc-only" />
+              リアルタイムに3D表示・概算重量・お見積もり金額をその場で自動計算できます。
+            </p>
+
+            <!-- 3つの特長 -->
+            <div class="sim-promo-features">
+              <div class="sim-feature-item">
+                <span class="sim-feature-icon">📐</span>
+                <div class="sim-feature-text">
+                  <strong>ミリ単位で3D変形</strong>
+                  <p>360度ドラッグ回転＆扉開閉もリアルに確認</p>
+                </div>
+              </div>
+              <div class="sim-feature-item">
+                <span class="sim-feature-icon">⚡</span>
+                <div class="sim-feature-text">
+                  <strong>価格＆重量を即時計算</strong>
+                  <p>アルミフレームの軽さや耐震指数も一目で判定</p>
+                </div>
+              </div>
+              <div class="sim-feature-item">
+                <span class="sim-feature-icon">📋</span>
+                <div class="sim-feature-text">
+                  <strong>ワンタップで仕様コピー</strong>
+                  <p>気に入った仕様をコピーしてそのままDM相談へ</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- β版注記 -->
+            <div class="sim-beta-note">
+              <span class="sim-note-icon">⚠️</span>
+              <p>※ まだβ版なのでオプション選択の制限や価格は多少の誤差があります。正確な見積りはDMにて直接お問い合わせください。</p>
+            </div>
+
+            <!-- CTAボタン -->
+            <div class="sim-promo-actions">
+              <a href="/sim/" class="sim-cta-btn">
+                <span>📱 3D見積もりシミュレーターを試す（無料）</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </a>
+            </div>
+          </div>
+
+          <!-- 右側：シミュレータープレビュー画面 ＆ KINATOちゃん宣伝 -->
+          <div class="sim-promo-visual">
+            <div class="sim-visual-wrapper">
+              <!-- キャラクター＆吹き出しコンテナ -->
+              <div class="sim-char-balloon-group">
+                <!-- 吹き出し（KINATOちゃんの左側に配置して被りを防止） -->
+                <div class="sim-char-speech">
+                  3Dでぐるぐる動かせるよ♪<br />ぴったりのサイズを試してみてね！
+                </div>
+                <!-- KINATOちゃんイラスト画像 -->
+                <img src="/sim/character_transparent.png" alt="KINATOちゃん" class="sim-char-image" />
+              </div>
+              
+              <!-- ブラウザ風モックアップ枠 -->
+              <div class="sim-mockup-frame">
+                <div class="sim-mockup-bar">
+                  <span class="mock-dot red"></span>
+                  <span class="mock-dot yellow"></span>
+                  <span class="mock-dot green"></span>
+                  <span class="mock-title">kinato-cage-site.pages.dev/sim/</span>
+                </div>
+                <img src="/assets/sim-preview.png" alt="3D見積もりシミュレーター 画面イメージ" class="sim-mockup-img" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ===== 横スクロールギャラリー ===== -->
     <section id="gallery" class="gallery-section section">
       <div class="section-header">
@@ -375,6 +462,314 @@ const galleryImages = [
     .hero { padding: 4rem 1.5rem 5rem; }
     .hero-character { display: none; }
     .hero-logo { width: 70px; height: 70px; }
+  }
+
+  /* ===== 新機能！3D見積もりシミュレーター 特設セクション ===== */
+  .sim-promo-section {
+    padding: 2rem 0 3.5rem;
+  }
+
+  .sim-promo-card {
+    background: linear-gradient(135deg, #FFFFFF 0%, #FFF5F7 60%, #FFF9F2 100%);
+    border: 2px solid #F4A7B9;
+    border-radius: 28px;
+    box-shadow: 0 12px 36px rgba(244, 167, 185, 0.18);
+    padding: 2.75rem;
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 2.5rem;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .sim-promo-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+    z-index: 2;
+  }
+
+  .sim-promo-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .sim-promo-badge {
+    background: linear-gradient(135deg, #E85A7E 0%, #F4A7B9 100%);
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 800;
+    padding: 0.3rem 0.85rem;
+    border-radius: 9999px;
+    box-shadow: 0 2px 6px rgba(232, 90, 126, 0.3);
+    letter-spacing: 0.5px;
+  }
+
+  .sim-promo-badge-beta {
+    background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%);
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 0.25rem 0.65rem;
+    border-radius: 9999px;
+    box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
+  }
+
+  .sim-promo-title {
+    font-family: var(--font-heading);
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: var(--color-primary-dark);
+    line-height: 1.35;
+  }
+
+  .sim-promo-highlight {
+    background: linear-gradient(135deg, #C84B71 0%, #E85A7E 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .sim-promo-desc {
+    color: var(--color-text);
+    font-size: 0.95rem;
+    line-height: 1.7;
+  }
+
+  .sim-promo-features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.75rem;
+    margin: 0.3rem 0;
+  }
+
+  .sim-feature-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    background: rgba(255, 255, 255, 0.85);
+    padding: 0.75rem 0.9rem;
+    border-radius: 14px;
+    border: 1px solid #F4E4DF;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+  }
+
+  .sim-feature-icon {
+    font-size: 1.25rem;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .sim-feature-text strong {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--color-primary-dark);
+    margin-bottom: 2px;
+  }
+
+  .sim-feature-text p {
+    font-size: 0.75rem;
+    color: var(--color-text-light);
+    line-height: 1.4;
+  }
+
+  .sim-beta-note {
+    background: #FFFBEB;
+    border: 1px solid #FDE68A;
+    border-radius: 12px;
+    padding: 0.65rem 0.9rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    box-shadow: 0 1px 4px rgba(245, 158, 11, 0.08);
+  }
+
+  .sim-note-icon {
+    font-size: 1rem;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .sim-beta-note p {
+    font-size: 0.8rem;
+    color: #92400E;
+    line-height: 1.5;
+    font-weight: 600;
+  }
+
+  .sim-promo-actions {
+    margin-top: 0.4rem;
+  }
+
+  .sim-cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: linear-gradient(135deg, #E85A7E 0%, #F4A7B9 100%);
+    color: #ffffff;
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: 1rem;
+    padding: 0.95rem 1.8rem;
+    border-radius: 9999px;
+    box-shadow: 0 4px 18px rgba(232, 90, 126, 0.35);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    text-decoration: none;
+  }
+
+  .sim-cta-btn:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 24px rgba(232, 90, 126, 0.45);
+    color: #ffffff;
+  }
+
+  /* ビジュアルエリア */
+  .sim-promo-visual {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .sim-visual-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 490px;
+    margin-top: 2rem;
+  }
+
+  /* キャラクター＆吹き出し（横並びで被りを完全に防止） */
+  .sim-char-balloon-group {
+    position: absolute;
+    top: -50px;
+    right: -10px;
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    z-index: 10;
+  }
+
+  .sim-char-speech {
+    background: #ffffff;
+    border: 2px solid #F4A7B9;
+    border-radius: 18px;
+    padding: 0.6rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--color-text);
+    box-shadow: 0 4px 16px rgba(244, 167, 185, 0.28);
+    white-space: nowrap;
+    line-height: 1.45;
+    position: relative;
+    margin-bottom: 20px;
+    animation: sim-speech-bounce 3s ease-in-out infinite;
+  }
+
+  /* 吹き出しの三角（右向き・KINATOちゃんの口元に向かう） */
+  .sim-char-speech::after {
+    content: '';
+    position: absolute;
+    bottom: 14px;
+    right: -10px;
+    border-width: 6px 0 6px 10px;
+    border-style: solid;
+    border-color: transparent transparent transparent #ffffff;
+    filter: drop-shadow(2px 0 0 #F4A7B9);
+  }
+
+  @keyframes sim-speech-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+
+  .sim-char-image {
+    width: 85px;
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 6px 14px rgba(244, 167, 185, 0.4));
+    animation: float 3.5s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+
+  .sim-mockup-frame {
+    background: #ffffff;
+    border-radius: 18px;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(244, 167, 185, 0.2);
+    border: 2px solid #F4E4DF;
+    overflow: hidden;
+    transition: transform 0.4s ease;
+  }
+
+  .sim-mockup-frame:hover {
+    transform: translateY(-4px);
+  }
+
+  .sim-mockup-bar {
+    background: #FDF4F6;
+    padding: 0.5rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-bottom: 1px solid #F0DFD7;
+  }
+
+  .mock-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+  }
+  .mock-dot.red { background: #FF5F56; }
+  .mock-dot.yellow { background: #FFBD2E; }
+  .mock-dot.green { background: #27C93F; }
+
+  .mock-title {
+    font-size: 0.72rem;
+    color: var(--color-text-light);
+    margin-left: 6px;
+    font-family: var(--font-heading);
+    font-weight: 600;
+  }
+
+  .sim-mockup-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+
+  @media (max-width: 900px) {
+    .sim-promo-card {
+      grid-template-columns: 1fr;
+      padding: 2rem 1.25rem;
+      gap: 2rem;
+    }
+    .sim-promo-visual {
+      order: -1;
+    }
+    .sim-visual-wrapper {
+      max-width: 100%;
+      margin-top: 2.5rem;
+    }
+    .sim-char-balloon-group {
+      top: -48px;
+      right: 0;
+      gap: 8px;
+    }
+    .sim-char-image {
+      width: 72px;
+    }
+    .sim-char-speech {
+      font-size: 0.72rem;
+      padding: 0.45rem 0.75rem;
+      margin-bottom: 16px;
+    }
+    .sim-promo-title {
+      font-size: 1.35rem;
+    }
   }
 
   /* ===== 横スクロールギャラリー（自動マーキー） ===== */

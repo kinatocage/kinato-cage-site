@@ -1215,6 +1215,9 @@ if (btnCalcEstimate) {
 // =================================================================
 // 1. 生体プリセット機能（人気生体のおすすめサイズ自動反映）
 // =================================================================
+// =================================================================
+// 1. 生体プリセット機能（人気生体のおすすめサイズ・仕様自動反映）
+// =================================================================
 function initCreaturePresets() {
   if (!creaturePresetGrid || !Array.isArray(creaturePresets)) return;
 
@@ -1225,6 +1228,13 @@ function initCreaturePresets() {
     card.className = 'creature-card';
     card.dataset.presetId = preset.id;
     card.title = `${preset.name} (${preset.W}×${preset.D}×${preset.H}mm)`;
+
+    // 仕様タグHTML生成
+    const tagsHtml = Array.isArray(preset.tags) && preset.tags.length > 0
+      ? `<div class="creature-card-tags">
+          ${preset.tags.map(t => `<span class="creature-spec-tag">${t}</span>`).join('')}
+         </div>`
+      : '';
 
     card.innerHTML = `
       <div class="creature-card-header">
@@ -1238,6 +1248,7 @@ function initCreaturePresets() {
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>
         <span>幅 ${preset.W} × 奥行 ${preset.D} × 高さ ${preset.H} mm</span>
       </div>
+      ${tagsHtml}
       <p class="creature-card-desc">${preset.desc || ''}</p>
     `;
 
@@ -1250,10 +1261,10 @@ function initCreaturePresets() {
 }
 
 /**
- * 生体プリセットを適用
+ * 生体プリセットを適用（サイズだけでなく、フレーム色・全オプション・パネル素材を完全連動）
  */
 function applyCreaturePreset(preset) {
-  // 1. 寸法設定
+  // 1. 基本寸法設定
   state.W = preset.W;
   state.D = preset.D;
   state.H = preset.H;
@@ -1265,15 +1276,78 @@ function applyCreaturePreset(preset) {
       btnTypeA.classList.toggle('active', state.cageType === 'A');
       btnTypeC.classList.toggle('active', state.cageType === 'C');
       if (typeBadge) {
-        typeBadge.textContent = state.cageType === 'A' ? 'Type A 選択中' : 'Type C 選択中';
+        typeBadge.textContent = state.cageType === 'A' ? 'Type A 選択中 (全面スライド扉)' : 'Type C 選択中 (前窓＋扉)';
       }
       if (rowFrontWindow) {
-        rowFrontWindow.style.display = state.cageType === 'C' ? 'block' : 'none';
+        rowFrontWindow.classList.toggle('hidden', state.cageType !== 'C');
       }
     }
   }
 
-  // 3. UIの入力値とスライダーを更新
+  // 3. 前窓開口高さ (Type C)
+  if (state.cageType === 'C') {
+    const fw = preset.frontWindowH != null ? preset.frontWindowH : 50;
+    state.frontWindowH = fw;
+    if (inputFW) inputFW.value = fw;
+    if (sliderFW) sliderFW.value = fw;
+  }
+
+  // 4. フレームカラー ('silver' または 'black')
+  if (preset.frameColor && (preset.frameColor === 'silver' || preset.frameColor === 'black')) {
+    state.frameColor = preset.frameColor;
+    if (btnFrameSilver && btnFrameBlack) {
+      btnFrameSilver.classList.toggle('active', state.frameColor === 'silver');
+      btnFrameBlack.classList.toggle('active', state.frameColor === 'black');
+    }
+  }
+
+  // 5. 正面幅広フレーム (Type A: 'none' | '2x' | '3x')
+  if (state.cageType === 'A') {
+    const fwf = preset.frontWideFrame || '2x';
+    state.frontWideFrame = fwf;
+    lastTypeAFrontWideFrame = fwf;
+  } else {
+    state.frontWideFrame = 'none';
+  }
+
+  // 6. 側面補強フレーム (側面2分割)
+  state.hasSideReinforcement = !!preset.hasSideReinforcement;
+  if (toggleSideReinforce) toggleSideReinforce.checked = state.hasSideReinforcement;
+  if (cardSideReinforce) cardSideReinforce.classList.toggle('active', state.hasSideReinforcement);
+  if (boxSideH) boxSideH.classList.toggle('disabled', !state.hasSideReinforcement);
+  if (preset.sideOpeningH != null) {
+    state.sideOpeningH = preset.sideOpeningH;
+    if (inputSideH) inputSideH.value = preset.sideOpeningH;
+  } else if (state.hasSideReinforcement) {
+    const centerSideH = Math.round((state.H - 60) / 20) * 10;
+    state.sideOpeningH = centerSideH;
+    if (inputSideH) inputSideH.value = centerSideH;
+  }
+
+  // 7. 正面スライド扉 たわみ防止レール
+  state.hasDoorAntiFlex = !!preset.hasDoorAntiFlex;
+  if (toggleDoorAntiFlex) toggleDoorAntiFlex.checked = state.hasDoorAntiFlex;
+  if (cardDoorAntiFlex) cardDoorAntiFlex.classList.toggle('active', state.hasDoorAntiFlex);
+
+  // 8. 側面換気量調整板
+  state.hasSideVentCover = !!preset.hasSideVentCover;
+  if (toggleSideVentCover) toggleSideVentCover.checked = state.hasSideVentCover;
+  if (cardSideVentCover) cardSideVentCover.classList.toggle('active', state.hasSideVentCover);
+
+  // 9. パネル素材設定 (panelConfig)
+  if (preset.panelConfig) {
+    state.panelConfig = {
+      ...state.panelConfig,
+      ...preset.panelConfig
+    };
+  }
+
+  // 10. 脚仕様 (キャスター / ゴム脚)
+  state.footType = preset.footType || 'rubber';
+  if (toggleCaster) toggleCaster.checked = state.footType === 'caster';
+  if (cardCaster) cardCaster.classList.toggle('active', state.footType === 'caster');
+
+  // 11. UIの寸法入力値とスライダーを更新
   if (inputW) inputW.value = state.W;
   if (sliderW) sliderW.value = state.W;
   if (inputD) inputD.value = state.D;
@@ -1281,8 +1355,14 @@ function applyCreaturePreset(preset) {
   if (inputH) inputH.value = state.H;
   if (sliderH) sliderH.value = state.H;
 
-  // 4. 補強ルール・連動制御の判定
-  updateFloorReinforceByArea();
+  // 12. 床面・天板補強ルールの判定
+  if (preset.hasFloorReinforcement != null) {
+    state.hasFloorReinforcement = !!preset.hasFloorReinforcement;
+    if (toggleFloorReinforce) toggleFloorReinforce.checked = state.hasFloorReinforcement;
+  } else {
+    updateFloorReinforceByArea();
+  }
+
   if (state.W > 940) {
     toggleTopReinforce.checked = true;
     toggleTopReinforce.disabled = true;
@@ -1293,20 +1373,24 @@ function applyCreaturePreset(preset) {
     toggleTopReinforce.disabled = false;
     cardTopReinforce.classList.remove('disabled');
     topReinfSub.textContent = '940mm以下は任意指定（W>940mmは必須）';
-    toggleTopReinforce.checked = false;
-    state.hasTopReinforcement = false;
+    state.hasTopReinforcement = !!preset.hasTopReinforcement;
+    toggleTopReinforce.checked = state.hasTopReinforcement;
   }
 
-  // 5. プリセットカードのアクティブ表示更新
+  // 13. 幅広フレームおよび換気量調整板の排他・利用可否状態を更新
+  updateFrontWideFrameAvailability();
+  updateSideVentCoverAvailability();
+
+  // 14. プリセットカードのアクティブ表示更新
   const allCards = creaturePresetGrid.querySelectorAll('.creature-card');
   allCards.forEach(c => {
     c.classList.toggle('active', c.dataset.presetId === preset.id);
   });
 
-  // 6. 3Dモデル更新＆サマリー描画
+  // 15. 3Dモデル更新＆サマリー・パネルUI同期描画
   syncUpdate();
 
-  // 7. カメラ視点を自動調整（ケージ全体が収まるようにアイソメへ）
+  // 16. カメラ視点を自動調整（ケージ全体が収まるようにアイソメへ）
   viewer.setViewPreset('iso', state);
 }
 
@@ -1642,6 +1726,7 @@ ${panelLines}
 ${optLines}
 ・概算総重量: 約 ${totals.weight.toFixed(1)} kg
 ・お見積り合計金額: ¥${totals.priceWithMarkup.toLocaleString()}（税込・送料別）
+※まだβ版なので誤差（最大±15%程度）が出ております。詳細はDMよりお問い合わせください。
 ※公式サイト: https://kinato-cage-site.pages.dev/`;
 }
 
@@ -1977,7 +2062,7 @@ async function exportEstimateCardImage() {
     const priceBoxX = 65;
     const priceBoxY = 1485;
     const priceBoxW = hasRightColumn ? 650 : 950;
-    const priceBoxH = 295;
+    const priceBoxH = 345;
 
     const priceGrad = ctx.createLinearGradient(priceBoxX, priceBoxY, priceBoxX + priceBoxW, priceBoxY + priceBoxH);
     priceGrad.addColorStop(0, 'rgba(15, 23, 42, 0.88)');
@@ -1991,30 +2076,37 @@ async function exportEstimateCardImage() {
 
     ctx.fillStyle = '#cbd5e1';
     ctx.font = '600 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText('概算総重量 (計算値)', priceBoxX + 35, priceBoxY + 50);
+    ctx.fillText('概算総重量 (計算値)', priceBoxX + 35, priceBoxY + 48);
 
     ctx.fillStyle = '#38bdf8';
     ctx.font = 'bold 32px ui-monospace, monospace';
-    ctx.fillText(`約 ${currentEstimateData.totals.weight.toFixed(1)} kg`, priceBoxX + 280, priceBoxY + 52);
+    ctx.fillText(`約 ${currentEstimateData.totals.weight.toFixed(1)} kg`, priceBoxX + 280, priceBoxY + 50);
 
     ctx.strokeStyle = 'rgba(148, 163, 184, 0.2)';
     ctx.beginPath();
-    ctx.moveTo(priceBoxX + 30, priceBoxY + 75);
-    ctx.lineTo(priceBoxX + priceBoxW - 30, priceBoxY + 75);
+    ctx.moveTo(priceBoxX + 30, priceBoxY + 70);
+    ctx.lineTo(priceBoxX + priceBoxW - 30, priceBoxY + 70);
     ctx.stroke();
 
     ctx.fillStyle = '#f1f5f9';
     ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText('お見積もり合計金額 (税込・送料別)', priceBoxX + 35, priceBoxY + 120);
+    ctx.fillText('お見積もり合計金額 (税込・送料別)', priceBoxX + 35, priceBoxY + 110);
 
     ctx.fillStyle = '#fbbf24';
     ctx.font = 'bold 64px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(`¥${currentEstimateData.totals.priceWithMarkup.toLocaleString()}`, priceBoxX + 35, priceBoxY + 195);
+    ctx.fillText(`¥${currentEstimateData.totals.priceWithMarkup.toLocaleString()}`, priceBoxX + 35, priceBoxY + 180);
 
+    // β版価格誤差に関する注意書き
+    ctx.fillStyle = '#fcd34d';
+    ctx.font = '600 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText('※まだβ版なので誤差（最大±15%程度）が出ております。', priceBoxX + 35, priceBoxY + 220);
+    ctx.fillText('　詳細はDMよりお問い合わせください。', priceBoxX + 35, priceBoxY + 244);
+
+    // 控えに関する注意書き
     ctx.fillStyle = '#94a3b8';
-    ctx.font = '500 17px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText('※本画像はお見積もりシミュレーション結果の控えです。', priceBoxX + 35, priceBoxY + 238);
-    ctx.fillText('お問い合わせ・ご注文の際にお手元にご準備ください。', priceBoxX + 35, priceBoxY + 265);
+    ctx.font = '500 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText('※本画像はお見積もりシミュレーション結果の控えです。', priceBoxX + 35, priceBoxY + 282);
+    ctx.fillText('　お問い合わせ・ご注文の際にお手元にご準備ください。', priceBoxX + 35, priceBoxY + 306);
 
     // 右カラム：公式キャラクターの配置
     if (hasRightColumn && charImg) {
@@ -2104,8 +2196,26 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
 // 4. Googleスプレッドシート ログ収集（開発計画2用）
 // =================================================================
 async function maybeSendEstimateLog(estimateData) {
+  // ローカル開発環境の判定（ユーザー指示によりローカルからのログ送信テストを有効化）
+  const hostname = window.location.hostname;
+  const port = window.location.port;
+  const isLocalhost = hostname === 'localhost' ||
+                      hostname === '127.0.0.1' ||
+                      hostname === '[::1]' ||
+                      hostname === '0.0.0.0' ||
+                      hostname.endsWith('.local') ||
+                      hostname.startsWith('192.168.') ||
+                      hostname.startsWith('10.') ||
+                      port === '5173' ||
+                      port === '4173';
+
+  if (isLocalhost) {
+    console.log(`[Log] ローカル開発環境（${hostname || 'local'}:${port}）からGoogleスプレッドシートへ送信テストを実行します。`);
+  }
+
   const endpoint = materialsConfig?.system?.gasLogEndpointUrl;
   if (!endpoint || typeof endpoint !== 'string' || !endpoint.startsWith('http')) {
+    console.warn('[Log] gasLogEndpointUrl が未設定のため、ログ送信をスキップしました。');
     return;
   }
 
@@ -2131,7 +2241,19 @@ async function maybeSendEstimateLog(estimateData) {
     const optionsSummary = optionsList.length > 0 ? optionsList.join(', ') : 'なし';
     const frameColorDisplayName = getFrameColorDisplayName();
 
+    // 回遊履歴の取得
+    let pageHistory = [];
+    try {
+      const saved = sessionStorage.getItem('cage_page_history');
+      if (saved) pageHistory = JSON.parse(saved);
+      if (!pageHistory.includes('見積もりシステム')) {
+        pageHistory.push('見積もりシステム');
+        sessionStorage.setItem('cage_page_history', JSON.stringify(pageHistory));
+      }
+    } catch (e) {}
+
     const payload = {
+      type: 'estimate',
       timestamp: estimateData.timestamp,
       estimateId: estimateData.estimateId,
       visitorId: estimateData.visitorId,
@@ -2152,10 +2274,12 @@ async function maybeSendEstimateLog(estimateData) {
       meta: {
         elapsedSec: estimateData.elapsedSec,
         referrer: document.referrer || 'Direct',
-        diffNote: estimateData.diffNote
+        diffNote: estimateData.diffNote,
+        pageHistory: pageHistory
       }
     };
 
+    console.log('[Log] GASへ送信中 (type: estimate)...', payload);
     await fetch(endpoint, {
       method: 'POST',
       mode: 'no-cors',
@@ -2171,5 +2295,225 @@ async function maybeSendEstimateLog(estimateData) {
 // 生体プリセットの初期化
 initCreaturePresets();
 
+// =================================================================
+// 5. 外部連携（AIチャット等）からの初期状態引き継ぎ（引数非表示対応）
+// =================================================================
+function checkInitialStateFromStorageOrUrl() {
+  try {
+    let incomingState = null;
 
+    // 1. sessionStorage からの引き継ぎチェック（引数がURLに一切出ない推奨方式）
+    const stored = sessionStorage.getItem('kinato_sim_initial_state');
+    if (stored) {
+      try {
+        incomingState = JSON.parse(stored);
+        sessionStorage.removeItem('kinato_sim_initial_state');
+        console.log('[Sim] sessionStorageから初期設定を読み込みました:', incomingState);
+      } catch (e) {
+        console.warn('[Sim] sessionStorageのパースに失敗:', e);
+      }
+    }
 
+    // 2. URLクエリパラメータのフォールバックチェック
+    if (!incomingState && window.location.search) {
+      const urlParams = new URLSearchParams(window.location.search);
+      incomingState = {};
+      if (urlParams.has('preset')) incomingState.preset = urlParams.get('preset');
+      if (urlParams.has('w')) incomingState.W = parseInt(urlParams.get('w'), 10);
+      if (urlParams.has('d')) incomingState.D = parseInt(urlParams.get('d'), 10);
+      if (urlParams.has('h')) incomingState.H = parseInt(urlParams.get('h'), 10);
+      if (urlParams.has('type')) incomingState.cageType = urlParams.get('type').toUpperCase();
+      if (urlParams.has('frame')) incomingState.frameColor = urlParams.get('frame');
+      if (urlParams.has('foot')) incomingState.footType = urlParams.get('foot');
+      if (urlParams.has('doorAntiFlex')) incomingState.hasDoorAntiFlex = urlParams.get('doorAntiFlex') === '1' || urlParams.get('doorAntiFlex') === 'true';
+      if (urlParams.has('sideVentCover')) incomingState.hasSideVentCover = urlParams.get('sideVentCover') === '1' || urlParams.get('sideVentCover') === 'true';
+      if (urlParams.has('floorReinf')) incomingState.hasFloorReinforcement = urlParams.get('floorReinf') === '1' || urlParams.get('floorReinf') === 'true';
+      if (urlParams.has('topReinf')) incomingState.hasTopReinforcement = urlParams.get('topReinf') === '1' || urlParams.get('topReinf') === 'true';
+      if (urlParams.has('frontWide')) incomingState.frontWideFrame = urlParams.get('frontWide');
+
+      // アドレスバーから引数を消去（お客さんに見えないようにする）
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+      console.log('[Sim] URLパラメータから初期設定を読み込み、URLをクリーンにしました:', incomingState);
+    }
+
+    if (!incomingState || Object.keys(incomingState).length === 0) {
+      return;
+    }
+
+    // プリセット指定があれば先に適用
+    if (incomingState.preset && Array.isArray(creaturePresets)) {
+      const targetPreset = creaturePresets.find(p => p.id === incomingState.preset);
+      if (targetPreset) {
+        applyCreaturePreset(targetPreset);
+      }
+    }
+
+    // 個別値の上書き
+    if (Number.isFinite(incomingState.W)) {
+      state.W = incomingState.W;
+      if (inputW) inputW.value = state.W;
+      if (sliderW) sliderW.value = state.W;
+    }
+    if (Number.isFinite(incomingState.D)) {
+      state.D = incomingState.D;
+      if (inputD) inputD.value = state.D;
+      if (sliderD) sliderD.value = state.D;
+    }
+    if (Number.isFinite(incomingState.H)) {
+      state.H = incomingState.H;
+      if (inputH) inputH.value = state.H;
+      if (sliderH) sliderH.value = state.H;
+    }
+    if (incomingState.cageType === 'A' || incomingState.cageType === 'C') {
+      state.cageType = incomingState.cageType;
+      if (btnTypeA && btnTypeC) {
+        btnTypeA.classList.toggle('active', state.cageType === 'A');
+        btnTypeC.classList.toggle('active', state.cageType === 'C');
+        if (typeBadge) {
+          typeBadge.textContent = state.cageType === 'A' ? 'Type A 選択中 (全面スライド扉)' : 'Type C 選択中 (前窓＋扉)';
+        }
+        if (rowFrontWindow) {
+          rowFrontWindow.classList.toggle('hidden', state.cageType !== 'C');
+        }
+      }
+    }
+    if (incomingState.frameColor === 'silver' || incomingState.frameColor === 'black') {
+      state.frameColor = incomingState.frameColor;
+      if (btnFrameSilver && btnFrameBlack) {
+        btnFrameSilver.classList.toggle('active', state.frameColor === 'silver');
+        btnFrameBlack.classList.toggle('active', state.frameColor === 'black');
+      }
+    }
+    if (incomingState.footType === 'rubber' || incomingState.footType === 'caster') {
+      state.footType = incomingState.footType;
+      if (toggleCaster) toggleCaster.checked = state.footType === 'caster';
+      if (cardCaster) cardCaster.classList.toggle('active', state.footType === 'caster');
+    }
+    if (typeof incomingState.hasDoorAntiFlex === 'boolean') {
+      state.hasDoorAntiFlex = incomingState.hasDoorAntiFlex;
+      if (toggleDoorAntiFlex) toggleDoorAntiFlex.checked = state.hasDoorAntiFlex;
+      if (cardDoorAntiFlex) cardDoorAntiFlex.classList.toggle('active', state.hasDoorAntiFlex);
+    }
+    if (typeof incomingState.hasSideVentCover === 'boolean') {
+      state.hasSideVentCover = incomingState.hasSideVentCover;
+      if (toggleSideVentCover) toggleSideVentCover.checked = state.hasSideVentCover;
+      if (cardSideVentCover) cardSideVentCover.classList.toggle('active', state.hasSideVentCover);
+    }
+    if (typeof incomingState.hasFloorReinforcement === 'boolean') {
+      state.hasFloorReinforcement = incomingState.hasFloorReinforcement;
+      if (toggleFloorReinforce) toggleFloorReinforce.checked = state.hasFloorReinforcement;
+    } else {
+      updateFloorReinforceByArea();
+    }
+    if (incomingState.frontWideFrame) {
+      state.frontWideFrame = incomingState.frontWideFrame;
+      lastTypeAFrontWideFrame = incomingState.frontWideFrame;
+    }
+
+    // 各種状態・3Dビュー・見積もりを同期
+    updateFrontWideFrameAvailability();
+    updateSideVentCoverAvailability();
+    syncUpdate();
+    viewer.setViewPreset('iso', state);
+
+    // お見積もりHUDも即座に計算して表示
+    if (typeof calcEstimate === 'function') {
+      calcEstimate();
+    }
+  } catch (e) {
+    console.error('[Sim] 初期状態の反映エラー:', e);
+  }
+}
+
+// 外部連携からの初期状態適用
+checkInitialStateFromStorageOrUrl();
+
+// シミュレーター訪問時の回遊動線・Web履歴更新ログ
+(function sendSimAccessLog() {
+  const endpoint = materialsConfig?.system?.gasLogEndpointUrl;
+  if (!endpoint || typeof endpoint !== 'string' || !endpoint.startsWith('http')) return;
+
+  try {
+    let pageHistory = [];
+    try {
+      const saved = sessionStorage.getItem('cage_page_history');
+      if (saved) pageHistory = JSON.parse(saved);
+    } catch (e) {}
+
+    if (pageHistory.length === 0 || pageHistory[pageHistory.length - 1] !== '見積もりシステム') {
+      pageHistory.push('見積もりシステム');
+      sessionStorage.setItem('cage_page_history', JSON.stringify(pageHistory));
+    }
+
+    let initialReferrer = sessionStorage.getItem('cage_initial_referrer');
+    let landingPage = sessionStorage.getItem('cage_landing_page');
+    if (!initialReferrer) {
+      initialReferrer = document.referrer || 'Direct';
+      const params = new URLSearchParams(window.location.search);
+      const originParam = params.get('origin') || params.get('utm_source') || params.get('ref');
+      if (originParam) initialReferrer = `${initialReferrer} [Param:${originParam}]`;
+      sessionStorage.setItem('cage_initial_referrer', initialReferrer);
+    }
+    if (!landingPage) {
+      landingPage = window.location.pathname;
+      sessionStorage.setItem('cage_landing_page', landingPage);
+    }
+
+    const ua = navigator.userAgent;
+    let deviceType = 'PC';
+    if (/iPhone/i.test(ua)) deviceType = 'iPhone';
+    else if (/iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) deviceType = 'iPad';
+    else if (/Android/i.test(ua)) deviceType = 'Android';
+    else if (/Mac/i.test(ua)) deviceType = 'Mac';
+    else if (/Win/i.test(ua)) deviceType = 'Windows';
+
+    let browserName = 'Browser';
+    if (/Chrome/i.test(ua) && !/Edge|Edg/i.test(ua)) browserName = 'Chrome';
+    else if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) browserName = 'Safari';
+    else if (/Edge|Edg/i.test(ua)) browserName = 'Edge';
+    else if (/Firefox/i.test(ua)) browserName = 'Firefox';
+
+    // カテゴリ判定
+    let category = '直接 / お気に入り';
+    const lower = initialReferrer.toLowerCase();
+    if (lower.includes('instagram.com')) category = 'Instagram';
+    else if (lower.includes('t.co') || lower.includes('twitter.com') || lower.includes('x.com')) category = 'X (Twitter)';
+    else if (lower.includes('google.')) category = 'Google検索';
+    else if (lower.includes('yahoo.')) category = 'Yahoo!検索';
+    else if (lower.includes('line.me')) category = 'LINE';
+    else if (lower.includes('tiktok.com')) category = 'TikTok';
+    else if (initialReferrer !== 'Direct') category = '外部Webサイト';
+
+    const payload = {
+      type: 'web_access',
+      visitorId: visitorId,
+      sessionId: sessionId,
+      referrer: initialReferrer,
+      referrerCategory: category,
+      landingPage: landingPage,
+      pageHistory: pageHistory,
+      pageCount: pageHistory.length,
+      device: {
+        type: deviceType,
+        browser: browserName,
+        screen: `${window.innerWidth}x${window.innerHeight}`
+      }
+    };
+
+    fetch(endpoint, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      keepalive: true
+    }).then(() => {
+      console.log('[Log] シミュレーター訪問ログをGASへ送信完了 (セッション:', sessionId, ')');
+    }).catch(err => {
+      console.warn('[Log] シミュレーター訪問ログ送信エラー:', err);
+    });
+  } catch (err) {
+    console.warn('[Log] sendSimAccessLog エラー:', err);
+  }
+})();

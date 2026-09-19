@@ -303,7 +303,7 @@ export const materialsConfig = {
   // =================================================================
   system: {
     // 【開発計画2用】Googleスプレッドシート(GAS)の受信用URL
-    gasLogEndpointUrl: 'https://script.google.com/macros/s/AKfycbyGOKgX2Yy01VbMNe4g_2oyr9Lr_Kq-ziKmvh3rnwGmXKV-kLkoEkVUQ2uOqnwNE7tX/exec',
+    gasLogEndpointUrl: 'https://script.google.com/macros/s/AKfycbwWv5VmeJGCnvvD0U3WTJBkT3ZnrFIj1qUHXXMlF2TA3vn2hSu9J1zp-9fc4PY_whjp/exec',
 
     // ショップ情報・問い合わせ先
     shop: {

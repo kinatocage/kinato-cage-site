@@ -58,6 +58,28 @@ AIの回答品質を一定に保つため、システムプロンプトには以
 - **問い合わせへのコンテキスト連携**:
   AIとのチャット履歴を `sessionStorage` に蓄積し、チャットウィンドウ内の「問い合わせフォームに入力」ボタンを押すことで、チャットログを引き継いだ状態でお問い合わせフォーム（`/contact`）へ遷移できます。
 
+## 📊 顧客動向・見積もりログ収集基盤 (Googleスプレッドシート連携)
+
+Webサイト全体（トップ、コンセプト、作例、オプション、見積もり）での**「流入元」「回遊動線」「見積もり試算内容」**を1つのGoogleスプレッドシート（**Webシステムのログ**）へ自動蓄積する分析基盤を構築しています。
+
+### 1. スプレッドシートの構造と役割
+- **`Web履歴` シート**:
+  - サイト訪問時（セッション開始時）に1行記録。
+  - 同一セッション内で別ページを巡回した際は、**同じ行の「最新更新日時」「回遊ページ動線」「閲覧ページ数」を上書き更新**（行数を増やさず動線を集約）。
+  - 流入元（Instagram, X, Google検索, 外部URL）、着地LP、デバイス環境を可視化。
+- **`見積もりシステム` シート**:
+  - 3Dシミュレーター画面で「見積もりと重量を計算」ボタンを押した瞬間の詳細データ（ケージ寸法、パネル構成、選択オプション、提示価格、原価、粗利、回遊動線）を記録。
+
+### 2. 端末ID・セッションIDによるリピーター行動分析
+- **端末ID (`visitorId`)**: `localStorage` に永続保持。ブラウザを閉じても維持され、同一端末からのリピート訪問を識別。
+- **セッションID (`sessionId`)**: `sessionStorage` で訪問ごとに発行。
+- **分析メリット**: `Web履歴` と `見積もりシステム` で同一のIDが共有されるため、`Ctrl + F` で端末IDを検索するだけで「〇日にSNSから来てトップを閲覧し、数日後にGoogle検索で再来訪して見積もりを行った」という顧客ストーリーを完全に追跡可能です。
+
+### 3. 関連スクリプト・仕様書
+- 📂 **[src/components/WebAnalyticsTracker.astro](file:///c:/Users/owner/OneDrive/Desktop/Web/src/components/WebAnalyticsTracker.astro)**: 全ページ共通の軽量非同期トラッカーコンポーネント。
+- 📂 **[scripts/google_apps_script.js](file:///c:/Users/owner/OneDrive/Desktop/Web/scripts/google_apps_script.js)**: スプレッドシート側のGAS Webhookソースコード（同時書き込み排他制御ロック付き）。
+- 📂 **[cage_mitumori/docs/log_collection_spec.md](file:///c:/Users/owner/OneDrive/Desktop/Web/cage_mitumori/docs/log_collection_spec.md)**: スプレッドシートの列定義・自動セットアップ関数・運用手順の完全マニュアル。
+
 ## 🛠️ 技術スタック
 
 ### フロントエンド / インフラ

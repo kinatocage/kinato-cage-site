@@ -1,0 +1,194 @@
+---
+/**
+ * Webサイト訪問・流入元・回遊動線トラッカー
+ * 見積もりシミュレーターと共通の端末ID・セッションIDを使用し、
+ * Googleスプレッドシート「Web履歴」およびGA4へ連携します。
+ */
+interface Props {
+  endpointUrl?: string;
+}
+
+const gasEndpoint = Astro.props.endpointUrl || import.meta.env.PUBLIC_GAS_LOG_ENDPOINT_URL || 'https://script.google.com/macros/s/AKfycbwWv5VmeJGCnvvD0U3WTJBkT3ZnrFIj1qUHXXMlF2TA3vn2hSu9J1zp-9fc4PY_whjp/exec';
+---
+
+<script is:inline define:vars={{ gasEndpoint }}>
+  (function () {
+    // 1. 端末ID (永続・localStorage)
+    function getOrCreateVisitorId() {
+      try {
+        let vid = localStorage.getItem('cage_visitor_id');
+        if (!vid) {
+          vid = 'usr_' + Math.random().toString(36).substring(2, 8);
+          localStorage.setItem('cage_visitor_id', vid);
+        }
+        return vid;
+      } catch (e) {
+        return 'usr_' + Math.random().toString(36).substring(2, 8);
+      }
+    }
+
+    // 2. セッションID (訪問毎・sessionStorage)
+    function getOrCreateSessionId() {
+      try {
+        let sid = sessionStorage.getItem('cage_session_id');
+        if (!sid) {
+          sid = 'ses_' + Math.random().toString(36).substring(2, 8);
+          sessionStorage.setItem('cage_session_id', sid);
+        }
+        return sid;
+      } catch (e) {
+        return 'ses_' + Math.random().toString(36).substring(2, 8);
+      }
+    }
+
+    // 3. 現在のページ日本語名マッピング
+    function getPageDisplayName() {
+      const path = window.location.pathname.replace(/\/$/, '') || '/';
+      if (path === '/' || path === '') return 'トップ';
+      if (path.includes('/sim')) return '見積もりシステム';
+      if (path.includes('/concept')) return 'コンセプト';
+      if (path.includes('/options')) return 'オプション一覧';
+      if (path.includes('/contact')) return 'お問い合わせ';
+      if (path.includes('/legal')) return '特定商取引法';
+      if (path.includes('/works')) return '製作事例';
+      return document.title.split('-')[0].trim() || path;
+    }
+
+    // 4. 流入元カテゴリの判定
+    function detectCategory(ref) {
+      if (!ref || ref === 'Direct' || ref === '') return '直接 / お気に入り';
+      const lower = ref.toLowerCase();
+      if (lower.includes('instagram.com')) return 'Instagram';
+      if (lower.includes('t.co') || lower.includes('twitter.com') || lower.includes('x.com')) return 'X (Twitter)';
+      if (lower.includes('google.')) return 'Google検索';
+      if (lower.includes('yahoo.')) return 'Yahoo!検索';
+      if (lower.includes('bing.')) return 'Bing検索';
+      if (lower.includes('line.me')) return 'LINE';
+      if (lower.includes('tiktok.com')) return 'TikTok';
+      if (lower.includes('youtube.com') || lower.includes('youtu.be')) return 'YouTube';
+      return '外部Webサイト';
+    }
+
+    // 5. デバイス情報の取得
+    function getDeviceInfo() {
+      const ua = navigator.userAgent;
+      let type = 'PC';
+      if (/iPhone/i.test(ua)) type = 'iPhone';
+      else if (/iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) type = 'iPad';
+      else if (/Android/i.test(ua)) type = 'Android';
+      else if (/Mac/i.test(ua)) type = 'Mac';
+      else if (/Win/i.test(ua)) type = 'Windows';
+
+      let browser = 'Browser';
+      if (/Chrome/i.test(ua) && !/Edge|Edg/i.test(ua)) browser = 'Chrome';
+      else if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) browser = 'Safari';
+      else if (/Edge|Edg/i.test(ua)) browser = 'Edge';
+      else if (/Firefox/i.test(ua)) browser = 'Firefox';
+
+      return {
+        type,
+        browser,
+        screen: `${window.innerWidth}x${window.innerHeight}`
+      };
+    }
+
+    // 6. メイン処理の実行
+    function initTracker() {
+      const visitorId = getOrCreateVisitorId();
+      const sessionId = getOrCreateSessionId();
+      const pageName = getPageDisplayName();
+
+      // GA4へのユーザーID・セッションID連携
+      if (typeof window.gtag === 'function') {
+        window.gtag('set', 'user_properties', {
+          visitor_id: visitorId,
+          session_id: sessionId
+        });
+      }
+
+      // セッション内の初回着地情報（Referrer / LP）を保持
+      let initialReferrer = sessionStorage.getItem('cage_initial_referrer');
+      let landingPage = sessionStorage.getItem('cage_landing_page');
+
+      if (!initialReferrer) {
+        initialReferrer = document.referrer || 'Direct';
+        // URLパラメータからの流入情報（?ref=, ?utm_source=, ?origin=）があれば優先
+        const params = new URLSearchParams(window.location.search);
+        const originParam = params.get('origin') || params.get('utm_source') || params.get('ref');
+        if (originParam) {
+          initialReferrer = `${initialReferrer} [Param:${originParam}]`;
+        }
+        sessionStorage.setItem('cage_initial_referrer', initialReferrer);
+      }
+
+      if (!landingPage) {
+        landingPage = window.location.pathname;
+        sessionStorage.setItem('cage_landing_page', landingPage);
+      }
+
+      // 回遊履歴の更新
+      let pageHistory = [];
+      try {
+        const savedHistory = sessionStorage.getItem('cage_page_history');
+        if (savedHistory) pageHistory = JSON.parse(savedHistory);
+      } catch (e) {}
+
+      // 直前と異なる場合のみ追加（リロードで同じページ名が連続しないように）
+      if (pageHistory.length === 0 || pageHistory[pageHistory.length - 1] !== pageName) {
+        pageHistory.push(pageName);
+        if (pageHistory.length > 25) pageHistory.shift(); // 最大25件保持
+        sessionStorage.setItem('cage_page_history', JSON.stringify(pageHistory));
+      }
+
+      // 送信ペイロード
+      const payload = {
+        type: 'web_access',
+        visitorId: visitorId,
+        sessionId: sessionId,
+        referrer: initialReferrer,
+        referrerCategory: detectCategory(initialReferrer),
+        landingPage: landingPage,
+        pageHistory: pageHistory,
+        pageCount: pageHistory.length,
+        device: getDeviceInfo()
+      };
+
+      if (!gasEndpoint || !gasEndpoint.startsWith('http')) {
+        console.warn('[WebLog] GASエンドポイントURLが設定されていません。');
+        return;
+      }
+
+      const hostname = window.location.hostname;
+      const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+      if (isLocal) {
+        console.log('[WebLog] (ローカル環境) GASへアクセスログを送信中:', payload);
+      }
+
+      // 非同期バックグラウンド送信（体感速度への影響ゼロ）
+      try {
+        fetch(gasEndpoint, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          keepalive: true
+        }).then(() => {
+          if (isLocal) {
+            console.log('[WebLog] GASへアクセスログの送信完了 (セッション:', sessionId, ')');
+          }
+        }).catch((err) => {
+          console.warn('[WebLog] 送信エラー:', err);
+        });
+      } catch (err) {
+        console.warn('[WebLog] fetchエラー:', err);
+      }
+    }
+
+    // ページのDOM準備完了時に実行
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initTracker);
+    } else {
+      initTracker();
+    }
+  })();
+</script>

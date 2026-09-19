@@ -6,6 +6,7 @@ export interface Props {
 const { title } = Astro.props;
 import '../styles/global.css';
 import CageChat from '../components/CageChatInteractive.astro';
+import WebAnalyticsTracker from '../components/WebAnalyticsTracker.astro';
 const gaId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID || 'G-W5HMEDEZ4J';
 ---
 
@@ -45,8 +46,20 @@ const gaId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID || 'G-W5HMEDEZ4J';
 			<nav class="global-nav">
 				<ul class="nav-list">
 					<li><a href="/concept" class="nav-link">コンセプト</a></li>
-				<li><a href="/#gallery" class="nav-link">作例紹介</a></li>
+					<li><a href="/#gallery" class="nav-link">作例紹介</a></li>
 					<li><a href="/#types" class="nav-link">ケージの種類</a></li>
+					<li>
+						<a href="/sim/" class="nav-link nav-link-sim">
+							<span class="sim-badge">New</span>
+							<span class="nav-link-text">見積もりシステム（β版）</span>
+						</a>
+					</li>
+					<li>
+						<a href="#ai-chat" id="header-ai-chat-btn" class="nav-link nav-link-chat">
+							<span class="ai-bot-icon">🤖</span>
+							<span class="nav-link-text">AIチャットと相談</span>
+						</a>
+					</li>
 					<li><a href="/#works" class="nav-link">製作事例紹介</a></li>
 					<li><a href="/options" class="nav-link">オプション類</a></li>
 					<li><a href="/contact" class="nav-link">お問い合わせ</a></li>
@@ -75,6 +88,26 @@ const gaId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID || 'G-W5HMEDEZ4J';
 			<img src="/assets/characters/charactor2.png" alt="きなとちゃん" class="char-image" />
 		</div>
 		<CageChat />
+		<WebAnalyticsTracker />
+
+		<script is:inline>
+			// ヘッダーの「AIチャットと相談」クリック時にチャットを開く
+			document.addEventListener('DOMContentLoaded', () => {
+				const headerChatBtn = document.getElementById('header-ai-chat-btn');
+				if (headerChatBtn) {
+					headerChatBtn.addEventListener('click', (e) => {
+						e.preventDefault();
+						if (typeof window.openCageChat === 'function') {
+							window.openCageChat();
+						} else {
+							// 万が一未定義の場合はトグルボタンを代理クリック
+							const toggleBtn = document.getElementById('ai-chat-toggle');
+							toggleBtn?.click();
+						}
+					});
+				}
+			});
+		</script>
 	</body>
 </html>
 
@@ -187,65 +220,123 @@ const gaId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID || 'G-W5HMEDEZ4J';
 	/* ===== ナビゲーション ===== */
 	.global-nav {
 		background: transparent;
-		overflow-x: auto;
-		scrollbar-width: none;
-	}
-
-	.global-nav::-webkit-scrollbar {
-		display: none;
+		padding: 0.35rem 0.5rem 0.65rem;
 	}
 
 	.nav-list {
 		display: flex;
 		justify-content: center;
 		align-items: center;
-		max-width: 1100px;
+		flex-wrap: wrap;
+		gap: 8px 10px;
+		max-width: 1200px;
 		margin: 0 auto;
-		padding: 0 1rem;
-		white-space: nowrap;
+		padding: 0 0.5rem;
+		list-style: none;
 	}
 
 	.nav-link {
-		display: block;
-		padding: 0.7rem 1.4rem;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 6px;
+		padding: 0.5rem 1rem;
 		font-family: var(--font-heading);
-		font-weight: 600;
+		font-weight: 700;
 		color: var(--color-text);
-		font-size: 0.9rem;
-		position: relative;
-		transition: color 0.3s ease;
+		font-size: 0.85rem;
+		white-space: nowrap;
+		background: rgba(255, 255, 255, 0.85);
+		border: 1px solid #F0DFD7;
 		border-radius: var(--radius-full);
-	}
-
-	.nav-link::after {
-		content: '';
-		position: absolute;
-		bottom: 4px;
-		left: 50%;
-		transform: translateX(-50%);
-		width: 0;
-		height: 3px;
-		background: linear-gradient(to right, var(--color-accent), var(--color-accent-warm));
-		transition: width 0.3s ease;
-		border-radius: 3px;
+		box-shadow: 0 2px 5px rgba(244, 167, 185, 0.08);
+		transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+		position: relative;
+		cursor: pointer;
+		text-decoration: none;
 	}
 
 	.nav-link:hover {
+		background: #FFFFFF;
+		border-color: var(--color-accent);
 		color: var(--color-primary-dark);
+		box-shadow: 0 4px 12px rgba(244, 167, 185, 0.22);
+		transform: translateY(-2px);
 	}
 
-	.nav-link:hover::after {
-		width: 70%;
+	/* 目玉機能1: New見積もりシステム（β版） */
+	.nav-link-sim {
+		background: linear-gradient(135deg, #FFF0F4 0%, #FFF9EC 100%);
+		border: 1.5px solid #F4A7B9;
+		color: #9E3554;
+		box-shadow: 0 2px 8px rgba(244, 167, 185, 0.25);
+	}
+
+	.nav-link-sim:hover {
+		background: linear-gradient(135deg, #FFE4EC 0%, #FFF3DC 100%);
+		border-color: #E85A7E;
+		color: #832742;
+		box-shadow: 0 5px 15px rgba(244, 167, 185, 0.38);
+		transform: translateY(-2px) scale(1.02);
+	}
+
+	.sim-badge {
+		background: linear-gradient(135deg, #E85A7E 0%, #F4A7B9 100%);
+		color: #FFFFFF;
+		font-size: 0.68rem;
+		font-weight: 800;
+		padding: 1px 6px;
+		border-radius: 9999px;
+		box-shadow: 0 1px 3px rgba(232, 90, 126, 0.3);
+		letter-spacing: 0.3px;
+	}
+
+	/* 目玉機能2: AIチャットと相談 */
+	.nav-link-chat {
+		background: linear-gradient(135deg, #F0FAF3 0%, #EEF7FF 100%);
+		border: 1.5px solid #8A9A86;
+		color: #385E3B;
+		box-shadow: 0 2px 8px rgba(138, 154, 134, 0.25);
+	}
+
+	.nav-link-chat:hover {
+		background: linear-gradient(135deg, #E3F5E8 0%, #DFEFFF 100%);
+		border-color: #6B7E66;
+		color: #27472A;
+		box-shadow: 0 5px 15px rgba(138, 154, 134, 0.38);
+		transform: translateY(-2px) scale(1.02);
+	}
+
+	.ai-bot-icon {
+		font-size: 1.05rem;
+		display: inline-block;
+		animation: robot-wiggle 3s ease-in-out infinite;
+	}
+
+	@keyframes robot-wiggle {
+		0%, 100% { transform: rotate(0deg); }
+		20% { transform: rotate(-8deg); }
+		40% { transform: rotate(8deg); }
+		60% { transform: rotate(-4deg); }
+		80% { transform: rotate(4deg); }
 	}
 
 	@media (max-width: 768px) {
+		.global-nav {
+			padding: 0.25rem 0.25rem 0.5rem;
+		}
 		.nav-list {
-			justify-content: flex-start;
-			padding: 0 0.5rem;
+			gap: 6px;
+			padding: 0 0.25rem;
 		}
 		.nav-link {
-			padding: 0.65rem 0.9rem;
-			font-size: 0.85rem;
+			padding: 0.38rem 0.72rem;
+			font-size: 0.78rem;
+			border-radius: 12px;
+		}
+		.sim-badge {
+			font-size: 0.6rem;
+			padding: 1px 5px;
 		}
 		.logo-text {
 			font-size: 1.1rem;
