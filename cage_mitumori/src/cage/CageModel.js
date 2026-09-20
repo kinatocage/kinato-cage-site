@@ -59,6 +59,14 @@ export class CageModel {
     this.perchGroup.name = 'Perch';
     this.root.add(this.perchGroup);
 
+    this.caulkingGroup = new THREE.Group();
+    this.caulkingGroup.name = 'Caulking';
+    this.root.add(this.caulkingGroup);
+
+    this.rubberPackingGroup = new THREE.Group();
+    this.rubberPackingGroup.name = 'RubberPacking';
+    this.root.add(this.rubberPackingGroup);
+
     // 現在のパラメータ
     this.params = {
       W: 750,
@@ -73,6 +81,7 @@ export class CageModel {
       hasDoorAntiFlex: false,      // 強力爬虫類向けスライド扉たわみ防止レール (扉幅-2mm)
       hasSideVentCover: false,     // 側面換気量調整板 (t1.5外張りアクリル板)
       hasPerch: false,             // 止まり木（天板吊り下げ式・後付け対応）
+      hasRubberPacking: false,     // モレ対策ゴムパッキン (側面・背面 隙間モレ抑制)
       frontWideFrame: '2x',        // 正面下側幅広フレーム: '2x' (40mm) | '3x' (60mm) | 'none' (20mm標準)
       footType: 'rubber',      // 'rubber' (ゴム脚) | 'caster' (キャスター)
       showPanels: true,
@@ -279,6 +288,8 @@ export class CageModel {
     this.clearGroup(this.doorGroup);
     this.clearGroup(this.feetGroup);
     this.clearGroup(this.perchGroup);
+    this.clearGroup(this.caulkingGroup);
+    this.clearGroup(this.rubberPackingGroup);
     this.disposeResources();
 
     // 寸法変更時は扉アニメーション状態をリセット（新しい寸法で即時配置）
@@ -491,9 +502,23 @@ export class CageModel {
       this.buildPerch();
     }
 
+    // ==========================================
+    // 5. 防水コーキングの構築 (標準装備)
+    // ==========================================
+    this.buildCaulking();
+
+    // ==========================================
+    // 6. モレ対策ゴムパッキンの構築 (オプション)
+    // ==========================================
+    if (this.params.hasRubberPacking) {
+      this.buildRubberPacking();
+    }
+
     // 表示トグルの反映
     this.panelGroup.visible = showPanels;
     this.doorGroup.visible = showPanels;
+    this.caulkingGroup.visible = showPanels;
+    this.rubberPackingGroup.visible = showPanels;
   }
 
   /**
@@ -2006,6 +2031,208 @@ export class CageModel {
 
     // 7. M6 ボルト
     this.recordPart('M6 ボルト', 'M6 x L20mm', 2, '止まり木 φ30丸棒固定用ボルト', 'other');
+  }
+
+  /**
+   * 床面防水コーキング（標準装備）の生成
+   * - 床板と周囲フレーム（正面・背面・左・右）の入隅に幅5mm・薄グレーのシーリングを描画
+   * - 床面中央補強フレームがある場合はその左右両側の境界にも描画
+   */
+  buildCaulking() {
+    const { W, D, hasFloorReinforcement } = this.params;
+    const caulkingMat = this.materials.caulkingMaterial;
+    const w = 5; // コーキング幅 5mm
+    const h = 3; // コーキング高さ 3mm
+
+    // 三角柱押出しジオメトリ生成ヘルパー
+    // 断面: (0,0) -> (w, 0) -> (0, h)
+    // 押出し方向: Z軸 (長さ length)
+    const createCaulkingBead = (length) => {
+      const shape = new THREE.Shape();
+      shape.moveTo(0, 0);
+      shape.lineTo(w, 0);
+      shape.lineTo(0, h);
+      shape.closePath();
+      const geom = new THREE.ExtrudeGeometry(shape, { depth: length, bevelEnabled: false });
+      geom.translate(0, 0, -length / 2);
+      this.activeGeometries.push(geom);
+      return geom;
+    };
+
+    // 1. 背面側コーキング (X方向に長さ W - 40)
+    // 入隅: Y=20, Z = -D/2 + 20。+Z方向に幅5mm, +Y方向に高さ3mm
+    const backL = Math.max(10, W - 40);
+    const backGeom = createCaulkingBead(backL);
+    const backMesh = new THREE.Mesh(backGeom, caulkingMat);
+    backMesh.rotation.y = -Math.PI / 2;
+    backMesh.position.set(0, 20, -D / 2 + 20);
+    this.caulkingGroup.add(backMesh);
+
+    // 2. 正面側コーキング (X方向に長さ W - 40)
+    // 入隅: Y=20, Z = D/2 - 20。-Z方向に幅5mm, +Y方向に高さ3mm
+    const frontGeom = createCaulkingBead(backL);
+    const frontMesh = new THREE.Mesh(frontGeom, caulkingMat);
+    frontMesh.rotation.y = Math.PI / 2;
+    frontMesh.position.set(0, 20, D / 2 - 20);
+    this.caulkingGroup.add(frontMesh);
+
+    // 3. 側面側コーキング (Z方向に長さ D - 50: 前後コーキング幅5mmを避けて綺麗に接続)
+    const sideL = Math.max(10, D - 50);
+
+    // 左面: 入隅 X = -W/2 + 20, Y=20。+X方向に幅5mm, +Y方向に高さ3mm
+    const leftGeom = createCaulkingBead(sideL);
+    const leftMesh = new THREE.Mesh(leftGeom, caulkingMat);
+    leftMesh.position.set(-W / 2 + 20, 20, 0);
+    this.caulkingGroup.add(leftMesh);
+
+    // 右面: 入隅 X = W/2 - 20, Y=20。-X方向に幅5mm, +Y方向に高さ3mm
+    const rightGeom = createCaulkingBead(sideL);
+    const rightMesh = new THREE.Mesh(rightGeom, caulkingMat);
+    rightMesh.rotation.y = Math.PI;
+    rightMesh.position.set(W / 2 - 20, 20, 0);
+    this.caulkingGroup.add(rightMesh);
+
+    // 4. 床面中央補強フレームの境界 (左右両側)
+    if (hasFloorReinforcement) {
+      // 中央フレーム左側 (X = -10, -X方向に幅5mm)
+      const centerLeftGeom = createCaulkingBead(sideL);
+      const centerLeftMesh = new THREE.Mesh(centerLeftGeom, caulkingMat);
+      centerLeftMesh.rotation.y = Math.PI;
+      centerLeftMesh.position.set(-10, 20, 0);
+      this.caulkingGroup.add(centerLeftMesh);
+
+      // 中央フレーム右側 (X = +10, +X方向に幅5mm)
+      const centerRightGeom = createCaulkingBead(sideL);
+      const centerRightMesh = new THREE.Mesh(centerRightGeom, caulkingMat);
+      centerRightMesh.position.set(10, 20, 0);
+      this.caulkingGroup.add(centerRightMesh);
+    }
+  }
+
+  /**
+   * モレ対策ゴムパッキン（オプション）の生成
+   * - 側面・背面に組み込む（中空ポリカ面を除くアクリル等の面に施工）
+   * - 背面: 下側1本 + 左右立面2本 (3方施工、上側なし)
+   * - 側面: 下側1本 + 前後立面2本 (3方施工、上側なし。2分割時は上下各3方)
+   * - 色: グレー色 (型番 NSCP1H-S-6 はお客様非表示)
+   */
+  buildRubberPacking() {
+    const { W, D, H, hasSideReinforcement, sideOpeningH } = this.params;
+    const panelConfig = this.params.panelConfig || {};
+    const packingMat = this.materials.rubberPackingMaterial;
+
+    let totalLengthMm = 0;
+
+    // パッキンストリップ（直方体メッシュ）生成ヘルパー
+    const addPackingStrip = (sx, sy, sz, px, py, pz, lengthMm) => {
+      const geom = new THREE.BoxGeometry(sx, sy, sz);
+      this.activeGeometries.push(geom);
+      const mesh = new THREE.Mesh(geom, packingMat);
+      mesh.position.set(px, py, pz);
+      this.rubberPackingGroup.add(mesh);
+      totalLengthMm += lengthMm;
+    };
+
+    const stripT = 1.6; // パッキンの厚み (mm)
+    const stripW = 3.0; // パッキンの幅 (mm)
+
+    // 1. 背面パネルの3方施工 (中空ポリカ以外の場合)
+    const backMatType = panelConfig.back || 'acrylic';
+    if (backMatType !== 'polyca') {
+      const backL = Math.max(10, W - 40);
+      const backH = Math.max(10, H - 40);
+      const backZ = -D / 2 + 20 + stripT / 2; // フレーム内壁のすぐ手前
+
+      // (1) 背面・下辺 (長さ W - 40)
+      addPackingStrip(backL, stripW, stripT, 0, 20 + stripW / 2, backZ, backL);
+
+      // (2) 背面・左立辺 (長さ H - 40)
+      addPackingStrip(stripW, backH, stripT, -W / 2 + 20 + stripW / 2, H / 2, backZ, backH);
+
+      // (3) 背面・右立辺 (長さ H - 40)
+      addPackingStrip(stripW, backH, stripT, W / 2 - 20 - stripW / 2, H / 2, backZ, backH);
+    }
+
+    // 2. 側面パネルの3方施工 (中空ポリカ以外の場合)
+    const sideL = Math.max(10, D - 40);
+
+    if (!hasSideReinforcement) {
+      // 側面1枚仕様
+      const sideMatType = panelConfig.side || 'acrylic';
+      if (sideMatType !== 'polyca') {
+        const sideH = Math.max(10, H - 40);
+
+        // 左右2面分
+        for (const sign of [-1, 1]) {
+          const sideX = sign * (W / 2 - 20) - sign * (stripT / 2); // 左右フレーム内壁のすぐ内側
+
+          // (1) 側面・下辺 (長さ D - 40)
+          addPackingStrip(stripT, stripW, sideL, sideX, 20 + stripW / 2, 0, sideL);
+
+          // (2) 側面・後立辺 (長さ H - 40)
+          addPackingStrip(stripT, sideH, stripW, sideX, H / 2, -D / 2 + 20 + stripW / 2, sideH);
+
+          // (3) 側面・前立辺 (長さ H - 40)
+          addPackingStrip(stripT, sideH, stripW, sideX, H / 2, D / 2 - 20 - stripW / 2, sideH);
+        }
+      }
+    } else {
+      // 側面2分割仕様 (下側3方、上側3方)
+      const sideLowerMat = panelConfig.sideLower || 'acrylic';
+      const sideUpperMat = panelConfig.sideUpper || 'punching';
+
+      const lowerH = Math.max(10, sideOpeningH);
+      const upperH = Math.max(10, H - 60 - sideOpeningH);
+
+      // 下側パネル3方施工
+      if (sideLowerMat !== 'polyca') {
+        for (const sign of [-1, 1]) {
+          const sideX = sign * (W / 2 - 20) - sign * (stripT / 2);
+          const lowerCenterY = 20 + lowerH / 2;
+
+          // (1) 下側・下辺
+          addPackingStrip(stripT, stripW, sideL, sideX, 20 + stripW / 2, 0, sideL);
+          // (2) 下側・後立辺
+          addPackingStrip(stripT, lowerH, stripW, sideX, lowerCenterY, -D / 2 + 20 + stripW / 2, lowerH);
+          // (3) 下側・前立辺
+          addPackingStrip(stripT, lowerH, stripW, sideX, lowerCenterY, D / 2 - 20 - stripW / 2, lowerH);
+        }
+      }
+
+      // 上側パネル3方施工
+      if (sideUpperMat !== 'polyca') {
+        for (const sign of [-1, 1]) {
+          const sideX = sign * (W / 2 - 20) - sign * (stripT / 2);
+          const upperBaseY = 20 + lowerH + 20; // 側面補強フレーム上面
+          const upperCenterY = upperBaseY + upperH / 2;
+
+          // (1) 上側・下辺
+          addPackingStrip(stripT, stripW, sideL, sideX, upperBaseY + stripW / 2, 0, sideL);
+          // (2) 上側・後立辺
+          addPackingStrip(stripT, upperH, stripW, sideX, upperCenterY, -D / 2 + 20 + stripW / 2, upperH);
+          // (3) 上側・前立辺
+          addPackingStrip(stripT, upperH, stripW, sideX, upperCenterY, D / 2 - 20 - stripW / 2, upperH);
+        }
+      }
+    }
+
+    // 3. 部材集計（BOM）への登録
+    // ユーザー指定: 「1m単位での資材量で計算しましょう。」「型番はお客様に見えないようにしてください。」
+    if (totalLengthMm > 0) {
+      const billedM = Math.ceil(totalLengthMm / 1000);
+      this.recordPart(
+        'モレ対策ゴムパッキン (グレー)',
+        `${billedM} m`,
+        1,
+        `側面・背面 隙間モレ抑制用 (実施工長: ${Math.round(totalLengthMm)}mm / 1m単位積算)`,
+        'rail_cap',
+        {
+          partCode: 'NSCP1H-S-6',
+          lengthMm: billedM * 1000,
+          unitType: 'm'
+        }
+      );
+    }
   }
 
   /**

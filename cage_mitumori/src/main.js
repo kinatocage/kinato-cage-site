@@ -127,6 +127,12 @@ const toggleFrontWide3x = document.getElementById('toggle-front-wide-3x');
 const cardFrontWide3x = document.getElementById('card-front-wide-3x');
 const frontWide3xSub = document.getElementById('front-wide-3x-sub');
 
+// モレ対策ゴムパッキン
+const toggleRubberPacking = document.getElementById('toggle-rubber-packing');
+const cardRubberPacking = document.getElementById('card-rubber-packing');
+const rubberPackingBadge = document.getElementById('rubber-packing-badge');
+const rubberPackingSub = document.getElementById('rubber-packing-sub');
+
 // 警告バナー
 const floorWarningBanner = document.getElementById('floor-warning-banner');
 const seismicWarningBanner = document.getElementById('seismic-warning-banner');
@@ -187,6 +193,7 @@ const state = {
   hasDoorAntiFlex: false,      // 正面スライド扉たわみ防止レール (扉幅-2mm)
   hasSideVentCover: false,     // 側面換気量調整板 (t1.5外張りアクリル板)
   hasPerch: false,             // 止まり木（天板吊り下げ式・後付け対応）
+  hasRubberPacking: false,     // モレ対策ゴムパッキン (側面・背面 隙間モレ抑制)
   frontWideFrame: '2x',        // 正面下側幅広フレーム: '2x' (40mm・初期値) | '3x' (60mm) | 'none' (20mm標準)
   frontWindowH: 50,
   hasSideReinforcement: false, // 側面補強フレームの有無 (左右対称)
@@ -296,6 +303,7 @@ function syncUpdate() {
   // オプション選択可否の同期
   updateFrontWideFrameAvailability();
   updateSideVentCoverAvailability();
+  updateRubberPackingAvailability();
 
   // パネル設定UIの表示状態同期
   syncPanelConfigUI();
@@ -465,6 +473,65 @@ function updateFrontWideFrameAvailability() {
 }
 
 /**
+ * モレ対策ゴムパッキンの排他・バリデーション制御
+ * - 側面・背面のすべてが中空ポリカの場合のみ disabled（選択不可）
+ * - 背面または側面のいずれかにアクリル等の面がある場合は選択可能
+ * - 施工は中空ポリカ以外の面（アクリル等）に対してのみ適用される
+ */
+function updateRubberPackingAvailability() {
+  const isBackPolyca = state.panelConfig.back === 'polyca';
+  let isSideAllPolyca = false;
+
+  if (state.hasSideReinforcement) {
+    isSideAllPolyca = (state.panelConfig.sideLower === 'polyca' && state.panelConfig.sideUpper === 'polyca');
+  } else {
+    isSideAllPolyca = (state.panelConfig.side === 'polyca');
+  }
+
+  const isAllPolyca = isBackPolyca && isSideAllPolyca;
+
+  if (isAllPolyca) {
+    // 側面・背面のすべてが中空ポリカの場合は施工不可
+    toggleRubberPacking.checked = false;
+    state.hasRubberPacking = false;
+    toggleRubberPacking.disabled = true;
+    cardRubberPacking.classList.add('disabled');
+    cardRubberPacking.classList.remove('active');
+    rubberPackingBadge.textContent = '中空ポリカのみ時は施工不可';
+    rubberPackingBadge.className = 'option-cond-badge';
+    rubberPackingBadge.classList.remove('hidden');
+    rubberPackingSub.textContent = '※中空ポリカ仕様には施工できません（アクリル等の面がある場合に選択可）';
+  } else {
+    // 施工可能な面が存在する
+    toggleRubberPacking.disabled = false;
+    cardRubberPacking.classList.remove('disabled');
+    if (state.hasRubberPacking) {
+      cardRubberPacking.classList.add('active');
+      toggleRubberPacking.checked = true;
+    } else {
+      cardRubberPacking.classList.remove('active');
+      toggleRubberPacking.checked = false;
+    }
+
+    // 一部が中空ポリカの場合の親切なバッジ案内
+    const hasAnyPolyca = isBackPolyca || (state.hasSideReinforcement
+      ? (state.panelConfig.sideLower === 'polyca' || state.panelConfig.sideUpper === 'polyca')
+      : (state.panelConfig.side === 'polyca'));
+
+    if (hasAnyPolyca) {
+      rubberPackingBadge.textContent = '中空ポリカ除く面に施工';
+      rubberPackingBadge.className = 'option-cond-badge info';
+      rubberPackingBadge.classList.remove('hidden');
+      rubberPackingSub.textContent = '側面・背面からの水漏れの抑制（中空ポリカ面を除くアクリル面に施工）';
+    } else {
+      rubberPackingBadge.textContent = '';
+      rubberPackingBadge.classList.add('hidden');
+      rubberPackingSub.textContent = '側面・背面からの水漏れの抑制（完全に水漏れなしを保証するものではありません）';
+    }
+  }
+}
+
+/**
  * 資材マスタから型番・素材設定を取得
  */
 function getMaterialConfig(partCode) {
@@ -485,9 +552,13 @@ function getMaterialConfig(partCode) {
   if (materialsConfig.caps && materialsConfig.caps[partCode]) {
     return materialsConfig.caps[partCode];
   }
+  // 5. ゴムパッキンマスタ
+  if (materialsConfig.packings && materialsConfig.packings[partCode]) {
+    return materialsConfig.packings[partCode];
+  }
 
   // 部分一致フォールバック (コードまたは名称での照合)
-  for (const group of [materialsConfig.panels, materialsConfig.frames, materialsConfig.rails, materialsConfig.caps]) {
+  for (const group of [materialsConfig.panels, materialsConfig.frames, materialsConfig.rails, materialsConfig.caps, materialsConfig.packings]) {
     if (!group) continue;
     for (const [key, val] of Object.entries(group)) {
       if (partCode === key || partCode.startsWith(key) || key.startsWith(partCode)) {
@@ -567,6 +638,7 @@ function calculateGrandTotals() {
   const isCaster = state.footType === 'caster';
   const isSideVentCover = !!state.hasSideVentCover;
   const isPerch = !!state.hasPerch;
+  const isRubberPacking = !!state.hasRubberPacking;
 
   // 1. オプション加工工賃（資材費とは別で単純に販売価格へ加算）
   const splitFloorLabor = isFloorSplit ? (laborConfig.splitFloor?.price ?? 500) : 0;
@@ -575,8 +647,9 @@ function calculateGrandTotals() {
   const splitSideLabor = isSideSplit ? (laborConfig.splitSide?.price ?? 1000) : 0;
   const frontWide3xLabor = isFrontWide3x ? (laborConfig.frontWide3x?.price ?? 500) : 0;
   const perchLabor = isPerch ? (laborConfig.perch?.price ?? 1000) : 0;
+  const rubberPackingLabor = isRubberPacking ? (laborConfig.rubberPacking?.price ?? 800) : 0;
 
-  const totalLaborFee = splitFloorLabor + splitTopLabor + typeCLabor + splitSideLabor + frontWide3xLabor + perchLabor;
+  const totalLaborFee = splitFloorLabor + splitTopLabor + typeCLabor + splitSideLabor + frontWide3xLabor + perchLabor + rubberPackingLabor;
 
   // 2. 特定オプション部材（販売価格加算額および内部原価）
   const casterPrice = isCaster ? (itemConfig.caster?.price ?? 1500) : 0;
@@ -981,6 +1054,17 @@ toggleFrontWide3x.addEventListener('change', (e) => {
   syncUpdate();
 });
 
+// モレ対策ゴムパッキンのトグル
+toggleRubberPacking.addEventListener('change', (e) => {
+  state.hasRubberPacking = e.target.checked;
+  if (e.target.checked) {
+    cardRubberPacking.classList.add('active');
+  } else {
+    cardRubberPacking.classList.remove('active');
+  }
+  syncUpdate();
+});
+
 // タイプ切り替え
 btnTypeA.addEventListener('click', () => {
   state.cageType = 'A';
@@ -1142,6 +1226,10 @@ btnResetSpecs.addEventListener('click', () => {
   if (togglePerch) togglePerch.checked = false;
   if (cardPerch) cardPerch.classList.remove('active');
   state.hasPerch = false;
+
+  if (toggleRubberPacking) toggleRubberPacking.checked = false;
+  if (cardRubberPacking) cardRubberPacking.classList.remove('active');
+  state.hasRubberPacking = false;
 
   // パネル設定のリセット
   state.panelConfig = {
@@ -1786,6 +1874,11 @@ function getSelectedOptionsList() {
     const D_center = Math.floor(rawCenter / 7) * 7;
     const astpL = Math.max(10, D_center - 15);
     options.push(`止まり木（天板吊り下げ式・φ30アルミ丸棒 L=${astpL}mm・後付け可）`);
+  }
+
+  // 10. モレ対策ゴムパッキン
+  if (state.hasRubberPacking) {
+    options.push('モレ対策ゴムパッキン (側面・背面 隙間モレ抑制)');
   }
 
   return options;

@@ -156,6 +156,22 @@ export class MaterialFactory {
       metalness: 0.04,
       side: THREE.DoubleSide
     });
+
+    // 防水コーキング（薄いグレー・シリコンシーリング質感）
+    this.caulkingMaterial = new THREE.MeshStandardMaterial({
+      color: 0xd2d7dd,
+      roughness: 0.42,
+      metalness: 0.04,
+      envMapIntensity: 0.6
+    });
+
+    // モレ対策ゴムパッキン（NSCP1H-S-6 グレー・合成ゴム質感）
+    this.rubberPackingMaterial = new THREE.MeshStandardMaterial({
+      color: 0x727984,
+      roughness: 0.78,
+      metalness: 0.06,
+      envMapIntensity: 0.5
+    });
   }
 
   /**
