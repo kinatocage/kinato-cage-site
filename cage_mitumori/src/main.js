@@ -39,6 +39,31 @@ const sessionId = getOrCreateSessionId();
 let calculationSequence = 0;
 let lastEstimatedState = null;
 
+/**
+ * 画面中央上部のお知らせトースト通知
+ * @param {string} message
+ * @param {number} duration
+ */
+function showNoticeToast(message, duration = 5000) {
+  let toast = document.getElementById('app-notice-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'app-notice-toast';
+    toast.className = 'app-notice-toast hidden';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.remove('hidden');
+  requestAnimationFrame(() => {
+    toast.classList.add('show');
+  });
+  if (toast._timer) clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.classList.add('hidden'), 300);
+  }, duration);
+}
+
 // パラメータ入力
 const sliderW = document.getElementById('slider-w');
 const inputW = document.getElementById('input-w');
@@ -88,6 +113,10 @@ const toggleSideVentCover = document.getElementById('toggle-side-vent-cover');
 const cardSideVentCover = document.getElementById('card-side-vent-cover');
 const ventCoverBadge = document.getElementById('vent-cover-badge');
 const ventCoverSub = document.getElementById('vent-cover-sub');
+
+// 止まり木（天板吊り下げ式）
+const togglePerch = document.getElementById('toggle-perch');
+const cardPerch = document.getElementById('card-perch');
 
 // 正面下側幅広フレーム オプション（2倍幅 / 3倍幅）
 const toggleFrontWide2x = document.getElementById('toggle-front-wide-2x');
@@ -157,6 +186,7 @@ const state = {
   hasTopReinforcement: false,  // 天板中央補強フレーム (W>940mmで必須ON、940mm以下は任意)
   hasDoorAntiFlex: false,      // 正面スライド扉たわみ防止レール (扉幅-2mm)
   hasSideVentCover: false,     // 側面換気量調整板 (t1.5外張りアクリル板)
+  hasPerch: false,             // 止まり木（天板吊り下げ式・後付け対応）
   frontWideFrame: '2x',        // 正面下側幅広フレーム: '2x' (40mm・初期値) | '3x' (60mm) | 'none' (20mm標準)
   frontWindowH: 50,
   hasSideReinforcement: false, // 側面補強フレームの有無 (左右対称)
@@ -536,6 +566,7 @@ function calculateGrandTotals() {
   const isFrontWide3x = state.cageType === 'A' && state.frontWideFrame === '3x';
   const isCaster = state.footType === 'caster';
   const isSideVentCover = !!state.hasSideVentCover;
+  const isPerch = !!state.hasPerch;
 
   // 1. オプション加工工賃（資材費とは別で単純に販売価格へ加算）
   const splitFloorLabor = isFloorSplit ? (laborConfig.splitFloor?.price ?? 500) : 0;
@@ -543,8 +574,9 @@ function calculateGrandTotals() {
   const typeCLabor = isTypeC ? (laborConfig.typeC?.price ?? 500) : 0;
   const splitSideLabor = isSideSplit ? (laborConfig.splitSide?.price ?? 1000) : 0;
   const frontWide3xLabor = isFrontWide3x ? (laborConfig.frontWide3x?.price ?? 500) : 0;
+  const perchLabor = isPerch ? (laborConfig.perch?.price ?? 1000) : 0;
 
-  const totalLaborFee = splitFloorLabor + splitTopLabor + typeCLabor + splitSideLabor + frontWide3xLabor;
+  const totalLaborFee = splitFloorLabor + splitTopLabor + typeCLabor + splitSideLabor + frontWide3xLabor + perchLabor;
 
   // 2. 特定オプション部材（販売価格加算額および内部原価）
   const casterPrice = isCaster ? (itemConfig.caster?.price ?? 1500) : 0;
@@ -720,6 +752,9 @@ function updateSpecSummary() {
   if (state.hasSideVentCover) {
     optionsList.push('換気調整板');
   }
+  if (state.hasPerch) {
+    optionsList.push('止まり木');
+  }
   optionsList.push(state.footType === 'caster' ? 'キャスター' : 'ゴム脚');
 
   currentSpecSummary.innerHTML = `
@@ -893,6 +928,34 @@ toggleSideVentCover.addEventListener('change', (e) => {
   }
   syncUpdate();
 });
+
+// 止まり木（天板吊り下げ式）のトグル
+if (togglePerch) {
+  togglePerch.addEventListener('change', (e) => {
+    state.hasPerch = e.target.checked;
+    if (e.target.checked) {
+      if (cardPerch) cardPerch.classList.add('active');
+
+      // 天面が塩ビパンチングでない場合、自動で塩ビパンチングへ変更してお知らせトーストを表示
+      const isTopNotPunching = state.panelConfig.top !== 'punching' || 
+                               state.panelConfig.topLeft !== 'punching' || 
+                               state.panelConfig.topRight !== 'punching';
+      if (isTopNotPunching) {
+        state.panelConfig.top = 'punching';
+        state.panelConfig.topLeft = 'punching';
+        state.panelConfig.topRight = 'punching';
+        if (selectPanelTop) selectPanelTop.value = 'punching';
+        if (selectPanelTopLeft) selectPanelTopLeft.value = 'punching';
+        if (selectPanelTopRight) selectPanelTopRight.value = 'punching';
+
+        showNoticeToast('※天面パンチングボードの穴を利用して固定するため、天面を塩ビパンチングに変更しました。金網天板との組み合わせは直接DMにてご相談ください。', 6000);
+      }
+    } else {
+      if (cardPerch) cardPerch.classList.remove('active');
+    }
+    syncUpdate();
+  });
+}
 
 // 正面下側幅広フレーム2倍幅のトグル
 toggleFrontWide2x.addEventListener('change', (e) => {
@@ -1076,6 +1139,10 @@ btnResetSpecs.addEventListener('click', () => {
   cardSideVentCover.classList.remove('active');
   state.hasSideVentCover = false;
 
+  if (togglePerch) togglePerch.checked = false;
+  if (cardPerch) cardPerch.classList.remove('active');
+  state.hasPerch = false;
+
   // パネル設定のリセット
   state.panelConfig = {
     front: 'acrylic',
@@ -1129,16 +1196,25 @@ selectPanelSideLower.addEventListener('change', (e) => {
 
 selectPanelTop.addEventListener('change', (e) => {
   state.panelConfig.top = e.target.value;
+  if (state.hasPerch && e.target.value !== 'punching') {
+    showNoticeToast('※止まり木は天面パンチングボードの穴を利用します。金網天板やアクリル天板との組み合わせは直接DMにてご相談ください。', 5000);
+  }
   syncUpdate();
 });
 
 selectPanelTopLeft.addEventListener('change', (e) => {
   state.panelConfig.topLeft = e.target.value;
+  if (state.hasPerch && e.target.value !== 'punching') {
+    showNoticeToast('※止まり木は天面パンチングボードの穴を利用します。金網天板との組み合わせは直接DMにてご相談ください。', 5000);
+  }
   syncUpdate();
 });
 
 selectPanelTopRight.addEventListener('change', (e) => {
   state.panelConfig.topRight = e.target.value;
+  if (state.hasPerch && e.target.value !== 'punching') {
+    showNoticeToast('※止まり木は天面パンチングボードの穴を利用します。金網天板との組み合わせは直接DMにてご相談ください。', 5000);
+  }
   syncUpdate();
 });
 
@@ -1333,6 +1409,11 @@ function applyCreaturePreset(preset) {
   state.hasSideVentCover = !!preset.hasSideVentCover;
   if (toggleSideVentCover) toggleSideVentCover.checked = state.hasSideVentCover;
   if (cardSideVentCover) cardSideVentCover.classList.toggle('active', state.hasSideVentCover);
+
+  // 止まり木オプション
+  state.hasPerch = !!preset.hasPerch;
+  if (togglePerch) togglePerch.checked = state.hasPerch;
+  if (cardPerch) cardPerch.classList.toggle('active', state.hasPerch);
 
   // 9. パネル素材設定 (panelConfig)
   if (preset.panelConfig) {
@@ -1697,6 +1778,14 @@ function getSelectedOptionsList() {
   // 8. 足回り仕様 (キャスター変更)
   if (state.footType === 'caster') {
     options.push('自在キャスター仕様 (4輪・高さ66mm)');
+  }
+
+  // 9. 止まり木（天板吊り下げ式）
+  if (state.hasPerch) {
+    const rawCenter = state.W - 120;
+    const D_center = Math.floor(rawCenter / 7) * 7;
+    const astpL = Math.max(10, D_center - 15);
+    options.push(`止まり木（天板吊り下げ式・φ30アルミ丸棒 L=${astpL}mm・後付け可）`);
   }
 
   return options;
@@ -2195,29 +2284,33 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
 // ★本番デプロイ前チェック: ローカルでのデバッグログ送信を止める場合はここを true にします
 const SKIP_LOG_ON_LOCALHOST = true;
 
+/**
+ * ローカル開発環境の厳格判定
+ */
+function isLocalDevelopmentEnvironment() {
+  const hostname = window.location.hostname || '';
+  const port = window.location.port || '';
+  return hostname === 'localhost' ||
+         hostname === '127.0.0.1' ||
+         hostname === '[::1]' ||
+         hostname === '0.0.0.0' ||
+         hostname.endsWith('.local') ||
+         hostname.startsWith('192.168.') ||
+         hostname.startsWith('10.') ||
+         port === '5173' ||
+         port === '4173';
+}
+
 // =================================================================
 // 4. Googleスプレッドシート ログ収集（開発計画2用）
 // =================================================================
 async function maybeSendEstimateLog(estimateData) {
   // ローカル開発環境の判定
-  const hostname = window.location.hostname;
-  const port = window.location.port;
-  const isLocalhost = hostname === 'localhost' ||
-                      hostname === '127.0.0.1' ||
-                      hostname === '[::1]' ||
-                      hostname === '0.0.0.0' ||
-                      hostname.endsWith('.local') ||
-                      hostname.startsWith('192.168.') ||
-                      hostname.startsWith('10.') ||
-                      port === '5173' ||
-                      port === '4173';
-
-  if (isLocalhost) {
+  if (isLocalDevelopmentEnvironment()) {
     if (SKIP_LOG_ON_LOCALHOST) {
-      console.log(`[Log] ローカル開発環境のため、Googleスプレッドシートへの見積もりログ保存を自動スキップしました。`);
+      console.log('[Log] ローカル開発環境のため、Googleスプレッドシートへの見積もりログ保存を自動スキップしました。');
       return;
     }
-    console.log(`[Log] ローカル開発環境（${hostname || 'local'}:${port}）からGoogleスプレッドシートへ送信テストを実行します。`);
   }
 
   const endpoint = materialsConfig?.system?.gasLogEndpointUrl;
@@ -2334,6 +2427,7 @@ function checkInitialStateFromStorageOrUrl() {
       if (urlParams.has('foot')) incomingState.footType = urlParams.get('foot');
       if (urlParams.has('doorAntiFlex')) incomingState.hasDoorAntiFlex = urlParams.get('doorAntiFlex') === '1' || urlParams.get('doorAntiFlex') === 'true';
       if (urlParams.has('sideVentCover')) incomingState.hasSideVentCover = urlParams.get('sideVentCover') === '1' || urlParams.get('sideVentCover') === 'true';
+      if (urlParams.has('perch')) incomingState.hasPerch = urlParams.get('perch') === '1' || urlParams.get('perch') === 'true';
       if (urlParams.has('floorReinf')) incomingState.hasFloorReinforcement = urlParams.get('floorReinf') === '1' || urlParams.get('floorReinf') === 'true';
       if (urlParams.has('topReinf')) incomingState.hasTopReinforcement = urlParams.get('topReinf') === '1' || urlParams.get('topReinf') === 'true';
       if (urlParams.has('frontWide')) incomingState.frontWideFrame = urlParams.get('frontWide');
@@ -2407,6 +2501,11 @@ function checkInitialStateFromStorageOrUrl() {
       state.hasSideVentCover = incomingState.hasSideVentCover;
       if (toggleSideVentCover) toggleSideVentCover.checked = state.hasSideVentCover;
       if (cardSideVentCover) cardSideVentCover.classList.toggle('active', state.hasSideVentCover);
+    }
+    if (typeof incomingState.hasPerch === 'boolean') {
+      state.hasPerch = incomingState.hasPerch;
+      if (togglePerch) togglePerch.checked = state.hasPerch;
+      if (cardPerch) cardPerch.classList.toggle('active', state.hasPerch);
     }
     if (typeof incomingState.hasFloorReinforcement === 'boolean') {
       state.hasFloorReinforcement = incomingState.hasFloorReinforcement;
@@ -2509,9 +2608,7 @@ checkInitialStateFromStorageOrUrl();
       }
     };
 
-    const hostname = window.location.hostname;
-    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
-    if (isLocal && SKIP_LOG_ON_LOCALHOST) {
+    if (isLocalDevelopmentEnvironment() && SKIP_LOG_ON_LOCALHOST) {
       console.log('[Log] ローカル開発環境のため、シミュレーター訪問ログ送信をスキップしました。');
       return;
     }

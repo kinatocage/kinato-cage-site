@@ -428,4 +428,72 @@ export function create2060Geometry(length) {
   });
 }
 
+/**
+ * 15mm x 30mm アルミフレームの2D断面Shape (AFS-1530-6)
+ * - 厚み15mm (X: -7.5〜+7.5), 幅30mm (Y: -15〜+15)
+ * - X両面に開口幅6mm (slotW=3.0) のT溝、Y面はフラット、中心φ5穴
+ */
+export function create1530Shape() {
+  const shape = new THREE.Shape();
+  const halfX = 7.5;
+  const halfY = 15.0;
+  const slotW = 3.0;
+  const neckT = 1.5;
+  const innerW = 5.0;
+  const depth = 4.5;
+
+  // 右上 (7.5, 15)
+  shape.moveTo(halfX, halfY);
+
+  // 右辺 (X = 7.5): Y = 15 -> -15
+  shape.lineTo(halfX, slotW);
+  shape.lineTo(halfX - neckT, slotW);
+  shape.lineTo(halfX - neckT, innerW);
+  shape.lineTo(halfX - depth, innerW);
+  shape.lineTo(halfX - depth, -innerW);
+  shape.lineTo(halfX - neckT, -innerW);
+  shape.lineTo(halfX - neckT, -slotW);
+  shape.lineTo(halfX, -slotW);
+  shape.lineTo(halfX, -halfY); // 右下 (7.5, -15)
+
+  // 下辺 (フラット)
+  shape.lineTo(-halfX, -halfY); // 左下 (-7.5, -15)
+
+  // 左辺 (X = -7.5): Y = -15 -> 15
+  shape.lineTo(-halfX, -slotW);
+  shape.lineTo(-halfX + neckT, -slotW);
+  shape.lineTo(-halfX + neckT, -innerW);
+  shape.lineTo(-halfX + depth, -innerW);
+  shape.lineTo(-halfX + depth, innerW);
+  shape.lineTo(-halfX + neckT, innerW);
+  shape.lineTo(-halfX + neckT, slotW);
+  shape.lineTo(-halfX, slotW);
+  shape.lineTo(-halfX, halfY); // 左上 (-7.5, 15)
+
+  // 上辺 (フラット)
+  shape.lineTo(halfX, halfY);
+
+  // 中心φ5穴
+  const centerHole = new THREE.Path();
+  centerHole.absarc(0, 0, 2.5, 0, Math.PI * 2, true);
+  shape.holes.push(centerHole);
+
+  return shape;
+}
+
+const shape1530 = create1530Shape();
+
+/**
+ * 指定した長さの1530アルミフレームジオメトリを生成 (AFS-1530-6)
+ * @param {number} length 長さ (mm)
+ */
+export function create1530Geometry(length) {
+  return new THREE.ExtrudeGeometry(shape1530, {
+    depth: length,
+    bevelEnabled: false,
+    steps: 1
+  });
+}
+
+
 

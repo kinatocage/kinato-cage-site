@@ -106,6 +106,30 @@ export class MaterialFactory {
       envMapIntensity: 1.3
     });
 
+    // 止まり木用マテリアル（黒ケージ時でもシルバーアルマイト固定）
+    this.perchAluminum = new THREE.MeshStandardMaterial({
+      color: 0xc4cbd4,
+      metalness: 0.85,
+      roughness: 0.25,
+      envMapIntensity: 1.3
+    });
+    this.perchGrayCap = new THREE.MeshStandardMaterial({
+      color: 0x9aa0a6,
+      metalness: 0.1,
+      roughness: 0.65
+    });
+    this.perchBlackCap = new THREE.MeshStandardMaterial({
+      color: 0x222326,
+      metalness: 0.1,
+      roughness: 0.65
+    });
+    this.perchWhiteScrew = new THREE.MeshStandardMaterial({
+      color: 0xf5f6f8,
+      roughness: 0.35,
+      metalness: 0.1,
+      envMapIntensity: 1.0
+    });
+
     // 側面換気量調整板用アクリル (t1.5 外張り透明アクリル板)
     this.ventCoverAcrylic = new THREE.MeshStandardMaterial({
       color: 0x93c5fd, // 爽やかなライトブルー透明
@@ -216,6 +240,10 @@ export class MaterialFactory {
     this.casterBracket.dispose();
     this.wireMesh.dispose();
     this.silverInnerFrame.dispose();
+    this.perchAluminum.dispose();
+    this.perchGrayCap.dispose();
+    this.perchBlackCap.dispose();
+    this.perchWhiteScrew.dispose();
     this.ventCoverAcrylic.dispose();
     this.thumbScrewMaterial.dispose();
     this.blackMatteAcrylic.dispose();

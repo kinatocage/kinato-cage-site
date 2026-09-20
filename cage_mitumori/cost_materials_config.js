@@ -91,6 +91,22 @@ export const materialsConfig = {
       weightPerMeter: 0.404,   // 重量 (kg/m)
       pricePerMeter: 822,     // 税込単価 (円/m)
       note: '黒ケージ金網取付用インナー'
+    },
+
+    // 止まり木用フレーム・丸棒
+    'AFS-1530-6': {
+      name: '1530フレーム (シルバー)',
+      unit: 'm',
+      weightPerMeter: 0.684,   // 重量 (kg/m)
+      pricePerMeter: 1273,    // 税込単価 (円/m)
+      note: '止まり木垂直吊り下げ用フレーム'
+    },
+    'ASTP-30': {
+      name: 'φ30アルミパイプ (シルバー)',
+      unit: 'm',
+      weightPerMeter: 0.795,   // 重量 (kg/m)
+      pricePerMeter: 1874,    // 税込単価 (円/m)
+      note: '止まり木丸棒'
     }
   },
 
@@ -144,6 +160,20 @@ export const materialsConfig = {
       weightPerPiece: 0.0011,  // 重量 (kg/個) 約1.1g
       pricePerPiece: 143,     // 税込単価 (円/個)
       note: '奥行きフレーム両端用'
+    },
+    'ECP-2020-4-GY': {
+      name: '2020用エンドキャップ (グレー)',
+      unit: 'piece',
+      weightPerPiece: 0.0011,  // 重量 (kg/個) 約1.1g
+      pricePerPiece: 143,     // 税込単価 (円/個)
+      note: '止まり木天板固定フレーム両端用'
+    },
+    'ECP-1530-6': {
+      name: '1530用エンドキャップ (ブラック)',
+      unit: 'piece',
+      weightPerPiece: 0.0016,  // 重量 (kg/個) 1.6g
+      pricePerPiece: 143,     // 税込単価 (円/個)
+      note: '止まり木吊り下げフレーム下端用'
     }
   },
 
@@ -276,6 +306,11 @@ export const materialsConfig = {
         name: '正面下側幅広フレーム3倍幅 加工工賃',
         price: 500,     // 販売価格への加算額 (円)
         note: '正面下側フレームの3倍幅(60mm)特殊加工工賃'
+      },
+      perch: {
+        name: '止まり木 加工工賃',
+        price: 1000,    // 販売価格への加算額 (円)
+        note: '天板付け止まり木 穴あけ・組み立て加工工賃'
       }
     },
 

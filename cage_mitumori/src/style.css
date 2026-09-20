@@ -2821,4 +2821,33 @@ button.creature-card.active {
   color: #ffffff !important;
 }
 
+/* 画面中央上部のお知らせトースト通知（止まり木天面連動等） */
+.app-notice-toast {
+  position: fixed !important;
+  top: 24px !important;
+  left: 50% !important;
+  transform: translateX(-50%) translateY(-20px) !important;
+  background: rgba(15, 23, 42, 0.94) !important;
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(56, 189, 248, 0.55) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55), 0 0 16px rgba(56, 189, 248, 0.25) !important;
+  padding: 12px 22px !important;
+  border-radius: 12px !important;
+  font-size: 0.84rem !important;
+  font-weight: 500 !important;
+  line-height: 1.55 !important;
+  z-index: 99999 !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+  transition: opacity 0.25s ease, transform 0.25s ease !important;
+  max-width: 90vw !important;
+  text-align: center !important;
+  backdrop-filter: blur(12px) !important;
+}
+.app-notice-toast.show {
+  opacity: 1 !important;
+  transform: translateX(-50%) translateY(0) !important;
+}
+
+
 

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { create2020Geometry, create2020FlatGeometry, create2040Geometry, create2060Geometry } from './ProfileGeometry.js';
+import { create2020Geometry, create2020FlatGeometry, create2040Geometry, create2060Geometry, create1530Geometry } from './ProfileGeometry.js';
 import { createPunchingTexture } from './PunchingTexture.js';
 import { createHollowPolycaTexture } from './HollowPolycaTexture.js';
 
@@ -55,6 +55,10 @@ export class CageModel {
     this.feetGroup.name = 'Feet';
     this.root.add(this.feetGroup);
 
+    this.perchGroup = new THREE.Group();
+    this.perchGroup.name = 'Perch';
+    this.root.add(this.perchGroup);
+
     // 現在のパラメータ
     this.params = {
       W: 750,
@@ -68,6 +72,7 @@ export class CageModel {
       hasTopReinforcement: false,  // 天面中央補強フレーム (W>940mmで必須ON、940mm以下は任意)
       hasDoorAntiFlex: false,      // 強力爬虫類向けスライド扉たわみ防止レール (扉幅-2mm)
       hasSideVentCover: false,     // 側面換気量調整板 (t1.5外張りアクリル板)
+      hasPerch: false,             // 止まり木（天板吊り下げ式・後付け対応）
       frontWideFrame: '2x',        // 正面下側幅広フレーム: '2x' (40mm) | '3x' (60mm) | 'none' (20mm標準)
       footType: 'rubber',      // 'rubber' (ゴム脚) | 'caster' (キャスター)
       showPanels: true,
@@ -273,6 +278,7 @@ export class CageModel {
     this.clearGroup(this.panelGroup);
     this.clearGroup(this.doorGroup);
     this.clearGroup(this.feetGroup);
+    this.clearGroup(this.perchGroup);
     this.disposeResources();
 
     // 寸法変更時は扉アニメーション状態をリセット（新しい寸法で即時配置）
@@ -476,6 +482,13 @@ export class CageModel {
       this.buildCasters();
     } else {
       this.buildFeet();
+    }
+
+    // ==========================================
+    // 4. 止まり木オプションの構築 (天板吊り下げ式)
+    // ==========================================
+    if (this.params.hasPerch) {
+      this.buildPerch();
     }
 
     // 表示トグルの反映
@@ -1734,6 +1747,265 @@ export class CageModel {
     }
 
     this.recordPart('自在キャスター', '車輪径φ50 / 取付高66mm', 4, '床面 奥行きフレーム下面 (端から7mm控え)', 'other');
+  }
+
+  /**
+   * 止まり木用 2020グレーエンドキャップ（ECP-2020-4-GY）の生成・配置
+   */
+  addPerch2020GrayCap(x, y, z) {
+    const w = 20, h = 20, r = 2;
+    const shape = new THREE.Shape();
+    shape.moveTo(-w / 2 + r, -h / 2);
+    shape.lineTo(w / 2 - r, -h / 2);
+    shape.absarc(w / 2 - r, -h / 2 + r, r, -Math.PI / 2, 0, false);
+    shape.lineTo(w / 2, h / 2 - r);
+    shape.absarc(w / 2 - r, h / 2 - r, r, 0, Math.PI / 2, false);
+    shape.lineTo(-w / 2 + r, h / 2);
+    shape.absarc(-w / 2 + r, h / 2 - r, r, Math.PI / 2, Math.PI, false);
+    shape.lineTo(-w / 2, -h / 2 + r);
+    shape.absarc(-w / 2 + r, -h / 2 + r, r, Math.PI, Math.PI * 1.5, false);
+
+    const extrudeSettings = {
+      depth: 3,
+      bevelEnabled: true,
+      bevelSegments: 2,
+      steps: 1,
+      bevelSize: 0.25,
+      bevelThickness: 0.25
+    };
+    const geom = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    geom.translate(0, 0, -1.5);
+    this.activeGeometries.push(geom);
+
+    const mesh = new THREE.Mesh(geom, this.materials.perchGrayCap);
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.name = '止まり木・ECP-2020-4-GY';
+    this.perchGroup.add(mesh);
+    return mesh;
+  }
+
+  /**
+   * 止まり木用 1530ブラックエンドキャップ（ECP-1530-6）の生成・配置
+   * - 断面 15x30mm、厚み 3mm、角R1mm
+   */
+  addPerch1530BlackCap(x, y, z) {
+    const halfX = 7.5;
+    const halfZ = 15.0;
+    const r = 1.0;
+    const shape = new THREE.Shape();
+    shape.moveTo(-halfX + r, -halfZ);
+    shape.lineTo(halfX - r, -halfZ);
+    shape.absarc(halfX - r, -halfZ + r, r, -Math.PI / 2, 0, false);
+    shape.lineTo(halfX, halfZ - r);
+    shape.absarc(halfX - r, halfZ - r, r, 0, Math.PI / 2, false);
+    shape.lineTo(-halfX + r, halfZ);
+    shape.absarc(-halfX + r, halfZ - r, r, Math.PI / 2, Math.PI, false);
+    shape.lineTo(-halfX, -halfZ + r);
+    shape.absarc(-halfX + r, -halfZ + r, r, Math.PI, Math.PI * 1.5, false);
+
+    const extrudeSettings = {
+      depth: 3,
+      bevelEnabled: true,
+      bevelSegments: 2,
+      steps: 1,
+      bevelSize: 0.2,
+      bevelThickness: 0.2
+    };
+    const geom = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    // XZ平面に配置するためX軸回転
+    geom.rotateX(Math.PI / 2);
+    geom.translate(0, -1.5, 0);
+    this.activeGeometries.push(geom);
+
+    const mesh = new THREE.Mesh(geom, this.materials.perchBlackCap);
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.name = '止まり木・ECP-1530-6';
+    this.perchGroup.add(mesh);
+    return mesh;
+  }
+
+  /**
+   * 天板固定用 M3x8 つまみネジ（白）の生成・配置
+   */
+  addPerchThumbScrew(x, topY, z) {
+    const headD = 10;
+    const headH = 5;
+    const geom = new THREE.CylinderGeometry(headD / 2, headD / 2, headH, 24);
+    geom.translate(0, headH / 2, 0);
+    this.activeGeometries.push(geom);
+
+    const mesh = new THREE.Mesh(geom, this.materials.perchWhiteScrew);
+    // 天板パネルの上面（topY）の上に配置
+    mesh.position.set(x, topY, z);
+    mesh.castShadow = true;
+    mesh.name = '止まり木・M3つまみネジ';
+    this.perchGroup.add(mesh);
+    return mesh;
+  }
+
+  /**
+   * 止まり木オプション（天板吊り下げ式・後付け対応）の生成
+   */
+  buildPerch() {
+    const { W, D, H } = this.params;
+
+    // 1. 中央間距離 D_center (7mmピッチ整合: (W - 120) を7の倍数に切り捨て)
+    const rawCenter = W - 120;
+    const D_center = Math.floor(rawCenter / 7) * 7;
+
+    // 2. 丸棒 ASTP-30 の長さ
+    const astpL = Math.max(10, D_center - 15);
+
+    // 3. 吊り下げフレーム AFS-1530-6 の長さ (ケージ高さの半分)
+    const perchPillarL = Math.max(10, Math.round(H / 2));
+
+    // 4. 高さ調整穴ピッチ (下端から15mmが1穴目、上部50mm余白を残し10mm単位)
+    // 穴1: 15mm, 穴2: 15+pitch mm (中央・デフォルト配置位置), 穴3: 15+2*pitch mm
+    const availableRange = Math.max(0, (perchPillarL - 50) - 15);
+    const pitch = Math.max(10, Math.floor(availableRange / 20) * 10);
+    const perchBarHFromBottom = 15 + pitch; // 中央穴に固定配置
+
+    const perchMaterial = this.materials.perchAluminum;
+    const boltMat = this.materials.handleMaterial;
+
+    const halfDist = D_center / 2;
+    const topFrameY = H - 20 - 10; // 天板下面(H-20)に接する2020フレーム中心Y = H - 30
+    const topFrameL = 90; // AFSF-2020-4 固定長 90mm
+
+    const rotZ = new THREE.Euler(0, 0, 0); // Z方向（奥行）
+
+    // -------------------------------------------------------------
+    // A. 天板固定フレーム AFSF-2020-4 (左右2本、長さ90mm、奥行方向中央配置)
+    // 平らな面(溝なし面)が下向き(ケージ室内側)
+    // -------------------------------------------------------------
+    const xPositions = [-halfDist, halfDist];
+    for (const x of xPositions) {
+      // 2020_flat フレーム生成 (溝なし面: bottom)
+      const frameGeom = create2020FlatGeometry(topFrameL, 'bottom');
+      frameGeom.translate(0, 0, -topFrameL / 2);
+      this.activeGeometries.push(frameGeom);
+
+      const frameMesh = new THREE.Mesh(frameGeom, perchMaterial);
+      frameMesh.position.set(x, topFrameY, 0);
+      frameMesh.rotation.copy(rotZ);
+      frameMesh.castShadow = true;
+      frameMesh.receiveShadow = true;
+      frameMesh.name = '止まり木・天板固定フレーム2020';
+      this.perchGroup.add(frameMesh);
+
+      // ECP-2020-4-GY (前後両端に各1個、計2個)
+      this.addPerch2020GrayCap(x, topFrameY, topFrameL / 2);
+      this.addPerch2020GrayCap(x, topFrameY, -topFrameL / 2);
+
+      // M3x8 つまみネジ (各フレーム前後2箇所、計4個)
+      const screwZOffsets = [25, -25];
+      for (const sz of screwZOffsets) {
+        this.addPerchThumbScrew(x, H - 20, sz);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // B. 垂直吊り下げフレーム AFS-1530-6 (左右2本、長さ perchPillarL)
+    // AFSF-2020-4の下面 (Y = H - 40) から下向きに伸びる
+    // 断面: 幅30mm(Z方向), 厚み15mm(X方向)
+    // -------------------------------------------------------------
+    const pillarTopY = H - 40;
+    const pillarCenterY = pillarTopY - perchPillarL / 2;
+    const pillarBottomY = pillarTopY - perchPillarL;
+
+    for (const x of xPositions) {
+      const pillarGeom = create1530Geometry(perchPillarL);
+      pillarGeom.translate(0, 0, -perchPillarL / 2);
+      // create1530ShapeはXY平面でX:15mm, Y:30mm。Z方向にExtrude。
+      // これを垂直下向き（Y軸方向）に配置するため、X軸で90度回転
+      pillarGeom.rotateX(Math.PI / 2);
+      this.activeGeometries.push(pillarGeom);
+
+      const pillarMesh = new THREE.Mesh(pillarGeom, perchMaterial);
+      pillarMesh.position.set(x, pillarCenterY, 0);
+      pillarMesh.castShadow = true;
+      pillarMesh.receiveShadow = true;
+      pillarMesh.name = '止まり木・吊り下げフレーム1530';
+      this.perchGroup.add(pillarMesh);
+
+      // 下端エンドキャップ ECP-1530-6 (ブラック)
+      this.addPerch1530BlackCap(x, pillarBottomY, 0);
+
+      // 3箇所の穴位置の表現 (15mm, 15+pitch, 15+2*pitch)
+      const holeHeights = [
+        pillarBottomY + 15,
+        pillarBottomY + 15 + pitch,
+        pillarBottomY + 15 + 2 * pitch
+      ];
+      for (let i = 0; i < holeHeights.length; i++) {
+        const hy = holeHeights[i];
+        // 外側側面にφ6穴の視覚表現
+        const dir = x > 0 ? 1 : -1;
+        const holeGeom = new THREE.CylinderGeometry(3, 3, 0.4, 16);
+        holeGeom.rotateZ(Math.PI / 2);
+        this.activeGeometries.push(holeGeom);
+        const holeMesh = new THREE.Mesh(holeGeom, this.materials.railMaterial);
+        holeMesh.position.set(x + dir * 7.4, hy, 0);
+        this.perchGroup.add(holeMesh);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // C. 止まり木丸棒 ASTP-30 (φ30アルミ丸パイプ、長さ astpL)
+    // 左右垂直フレームの内側面間に渡す
+    // 配置高さ: 中央穴 (pillarBottomY + perchBarHFromBottom)
+    // -------------------------------------------------------------
+    const barCenterY = pillarBottomY + perchBarHFromBottom;
+    const barGeom = new THREE.CylinderGeometry(15, 15, astpL, 32);
+    barGeom.rotateZ(Math.PI / 2); // X軸方向に沿わせる
+    this.activeGeometries.push(barGeom);
+
+    const barMesh = new THREE.Mesh(barGeom, perchMaterial);
+    barMesh.position.set(0, barCenterY, 0);
+    barMesh.castShadow = true;
+    barMesh.receiveShadow = true;
+    barMesh.name = '止まり木・アルミ丸パイプASTP-30';
+    this.perchGroup.add(barMesh);
+
+    // M6 ボルト頭の表現 (左右フレームの外側)
+    for (const x of xPositions) {
+      const dir = x > 0 ? 1 : -1;
+      const boltHeadGeom = new THREE.CylinderGeometry(5.0, 5.0, 3.5, 16);
+      boltHeadGeom.rotateZ(Math.PI / 2);
+      this.activeGeometries.push(boltHeadGeom);
+      const boltHeadMesh = new THREE.Mesh(boltHeadGeom, boltMat);
+      boltHeadMesh.position.set(x + dir * 9.2, barCenterY, 0);
+      boltHeadMesh.castShadow = true;
+      this.perchGroup.add(boltHeadMesh);
+    }
+
+    // -------------------------------------------------------------
+    // D. 部材集計への登録 (原価・重量計算用)
+    // -------------------------------------------------------------
+    // 1. 天板固定フレーム AFSF-2020-4
+    this.recordPart('AFSF-2020-4-90', 90, 2, '止まり木 天板固定フレーム (溝なし下面・シルバー)', 'frame');
+
+    // 2. 垂直吊り下げフレーム AFS-1530-6
+    this.recordPart(`AFS-1530-6-${perchPillarL}`, perchPillarL, 2, '止まり木 垂直吊り下げフレーム (高さ調整3穴加工・シルバー)', 'frame');
+
+    // 3. アルミ丸パイプ ASTP-30
+    this.recordPart(`ASTP-30-${astpL}`, astpL, 1, '止まり木 φ30アルミ丸パイプ (シルバー)', 'frame');
+
+    // 4. エンドキャップ ECP-2020-4-GY
+    this.recordPart('ECP-2020-4-GY', '20x20mm (グレー)', 4, '止まり木 天板固定フレーム両端用エンドキャップ', 'rail_cap');
+
+    // 5. エンドキャップ ECP-1530-6
+    this.recordPart('ECP-1530-6', '15x30mm (ブラック)', 2, '止まり木 吊り下げフレーム下端用エンドキャップ', 'rail_cap');
+
+    // 6. M3x8 つまみネジ (白)
+    this.recordPart('M3x8 つまみネジ (白)', 'M3 x L8mm', 4, '止まり木 天板パンチング固定用つまみネジ', 'other');
+
+    // 7. M6 ボルト
+    this.recordPart('M6 ボルト', 'M6 x L20mm', 2, '止まり木 φ30丸棒固定用ボルト', 'other');
   }
 
   /**
