@@ -2193,7 +2193,7 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
 }
 
 // ★本番デプロイ前チェック: ローカルでのデバッグログ送信を止める場合はここを true にします
-const SKIP_LOG_ON_LOCALHOST = false;
+const SKIP_LOG_ON_LOCALHOST = true;
 
 // =================================================================
 // 4. Googleスプレッドシート ログ収集（開発計画2用）

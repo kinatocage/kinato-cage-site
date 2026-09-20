@@ -159,7 +159,7 @@ const gasEndpoint = Astro.props.endpointUrl || import.meta.env.PUBLIC_GAS_LOG_EN
       }
 
       // ★本番デプロイ前チェック: ローカルでのデバッグログ送信を止める場合はここを true にします
-      const SKIP_LOG_ON_LOCALHOST = false; 
+      const SKIP_LOG_ON_LOCALHOST = true; 
 
       const hostname = window.location.hostname;
       const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
