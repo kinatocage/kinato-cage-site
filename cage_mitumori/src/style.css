@@ -2849,5 +2849,26 @@ button.creature-card.active {
   transform: translateX(-50%) translateY(0) !important;
 }
 
+/* ２室分けオプショントグルカードおよび排他制御disabledスタイル */
+.room-divider-card {
+  border: 1px solid rgba(59, 130, 246, 0.25) !important;
+  background: rgba(15, 23, 42, 0.4) !important;
+  border-radius: 8px !important;
+  padding: 10px 12px !important;
+  transition: all 0.2s ease !important;
+}
+.room-divider-card:hover {
+  border-color: rgba(59, 130, 246, 0.45) !important;
+  background: rgba(30, 41, 59, 0.5) !important;
+}
+.room-divider-card.disabled,
+#card-perch.disabled {
+  opacity: 0.48 !important;
+  pointer-events: none !important;
+  filter: grayscale(0.6) !important;
+  cursor: not-allowed !important;
+}
+
+
 
 

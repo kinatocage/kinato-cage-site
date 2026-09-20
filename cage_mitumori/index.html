@@ -181,6 +181,20 @@
                 <p class="type-desc">床面均一2020<br>前窓（はめ殺し）＋スライド扉</p>
               </button>
             </div>
+
+            <!-- ２室分けオプション（Type A / Type C 両対応） -->
+            <div class="option-inline-card room-divider-card" id="card-room-divider" style="margin-top: 10px;">
+              <label class="option-checkbox-label">
+                <input type="checkbox" id="toggle-room-divider" class="custom-checkbox" />
+                <div class="option-text-wrap">
+                  <div class="option-title-row" style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                    <span class="option-title">２室分け</span>
+                    <span class="type-badge-mini" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3);">後付け対応</span>
+                  </div>
+                  <span class="option-sub room-divider-notice" id="room-divider-sub" style="color: #f59e0b; font-size: 0.78rem; line-height: 1.35; margin-top: 2px;">正面扉戸の隙間が7mmあります。小さい生体にはご注意ください</span>
+                </div>
+              </label>
+            </div>
           </section>
 
           <!-- 2. フレームカラー選択 -->
@@ -428,6 +442,19 @@
                       </select>
                     </div>
                   </div>
+                </div>
+
+                <!-- 仕切り板 (2室分けオプションON時に表示) -->
+                <div class="panel-select-row hidden" id="row-panel-partition">
+                  <div class="panel-select-header">
+                    <span class="panel-select-label">仕切り板</span>
+                    <span class="type-badge-mini" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);">2室分け仕様</span>
+                  </div>
+                  <select class="custom-select" id="select-panel-partition">
+                    <option value="black_matte" selected>アクリル黒両面マット 3.0mm (標準)</option>
+                    <option value="acrylic">透明アクリル 3.0mm</option>
+                    <option value="punching">塩ビパンチングボード 透明 3.0mm</option>
+                  </select>
                 </div>
               </div>
             </div>

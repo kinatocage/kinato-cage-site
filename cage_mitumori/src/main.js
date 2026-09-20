@@ -174,11 +174,21 @@ const selectPanelSideLower = document.getElementById('select-panel-side-lower');
 const selectPanelTop = document.getElementById('select-panel-top');
 const selectPanelTopLeft = document.getElementById('select-panel-top-left');
 const selectPanelTopRight = document.getElementById('select-panel-top-right');
+const selectPanelPartition = document.getElementById('select-panel-partition');
 
 const rowPanelSide = document.getElementById('row-panel-side');
 const rowPanelSideSplit = document.getElementById('row-panel-side-split');
 const rowPanelTop = document.getElementById('row-panel-top');
 const rowPanelTopSplit = document.getElementById('row-panel-top-split');
+const rowPanelPartition = document.getElementById('row-panel-partition');
+
+// ２室分け（後付け仕切り板）
+const toggleRoomDivider = document.getElementById('toggle-room-divider');
+const cardRoomDivider = document.getElementById('card-room-divider');
+const roomDividerSub = document.getElementById('room-divider-sub');
+
+// 止まり木サブテキスト要素
+const perchSub = document.getElementById('perch-sub');
 
 // アプリケーション状態
 const state = {
@@ -194,6 +204,7 @@ const state = {
   hasSideVentCover: false,     // 側面換気量調整板 (t1.5外張りアクリル板)
   hasPerch: false,             // 止まり木（天板吊り下げ式・後付け対応）
   hasRubberPacking: false,     // モレ対策ゴムパッキン (側面・背面 隙間モレ抑制)
+  hasRoomDivider: false,       // ２室分け（後付け仕切り板・Type A/C両対応）
   frontWideFrame: '2x',        // 正面下側幅広フレーム: '2x' (40mm・初期値) | '3x' (60mm) | 'none' (20mm標準)
   frontWindowH: 50,
   hasSideReinforcement: false, // 側面補強フレームの有無 (左右対称)
@@ -210,7 +221,8 @@ const state = {
     sideLower: 'acrylic',
     top: 'punching',
     topLeft: 'punching',
-    topRight: 'punching'
+    topRight: 'punching',
+    partition: 'black_matte'
   }
 };
 
@@ -639,6 +651,7 @@ function calculateGrandTotals() {
   const isSideVentCover = !!state.hasSideVentCover;
   const isPerch = !!state.hasPerch;
   const isRubberPacking = !!state.hasRubberPacking;
+  const isRoomDivider = !!state.hasRoomDivider;
 
   // 1. オプション加工工賃（資材費とは別で単純に販売価格へ加算）
   const splitFloorLabor = isFloorSplit ? (laborConfig.splitFloor?.price ?? 500) : 0;
@@ -648,8 +661,9 @@ function calculateGrandTotals() {
   const frontWide3xLabor = isFrontWide3x ? (laborConfig.frontWide3x?.price ?? 500) : 0;
   const perchLabor = isPerch ? (laborConfig.perch?.price ?? 1000) : 0;
   const rubberPackingLabor = isRubberPacking ? (laborConfig.rubberPacking?.price ?? 800) : 0;
+  const roomDividerLabor = isRoomDivider ? (laborConfig.roomDivider?.price ?? 500) : 0;
 
-  const totalLaborFee = splitFloorLabor + splitTopLabor + typeCLabor + splitSideLabor + frontWide3xLabor + perchLabor + rubberPackingLabor;
+  const totalLaborFee = splitFloorLabor + splitTopLabor + typeCLabor + splitSideLabor + frontWide3xLabor + perchLabor + rubberPackingLabor + roomDividerLabor;
 
   // 2. 特定オプション部材（販売価格加算額および内部原価）
   const casterPrice = isCaster ? (itemConfig.caster?.price ?? 1500) : 0;
@@ -827,6 +841,9 @@ function updateSpecSummary() {
   }
   if (state.hasPerch) {
     optionsList.push('止まり木');
+  }
+  if (state.hasRoomDivider) {
+    optionsList.push('２室分け');
   }
   optionsList.push(state.footType === 'caster' ? 'キャスター' : 'ゴム脚');
 
@@ -1009,6 +1026,23 @@ if (togglePerch) {
     if (e.target.checked) {
       if (cardPerch) cardPerch.classList.add('active');
 
+      // ２室分けオプションとの排他制御：止まり木ON時は２室分けをdisable
+      if (toggleRoomDivider) {
+        if (state.hasRoomDivider) {
+          state.hasRoomDivider = false;
+          toggleRoomDivider.checked = false;
+          if (rowPanelPartition) rowPanelPartition.classList.add('hidden');
+        }
+        toggleRoomDivider.disabled = true;
+      }
+      if (cardRoomDivider) {
+        cardRoomDivider.classList.add('disabled');
+        cardRoomDivider.classList.remove('active');
+      }
+      if (roomDividerSub) {
+        roomDividerSub.textContent = '※止まり木オプション選択時は利用できません';
+      }
+
       // 天面が塩ビパンチングでない場合、自動で塩ビパンチングへ変更してお知らせトーストを表示
       const isTopNotPunching = state.panelConfig.top !== 'punching' || 
                                state.panelConfig.topLeft !== 'punching' || 
@@ -1025,7 +1059,76 @@ if (togglePerch) {
       }
     } else {
       if (cardPerch) cardPerch.classList.remove('active');
+
+      // ２室分けオプションのdisabled解除
+      if (toggleRoomDivider) {
+        toggleRoomDivider.disabled = false;
+      }
+      if (cardRoomDivider) {
+        cardRoomDivider.classList.remove('disabled');
+      }
+      if (roomDividerSub) {
+        roomDividerSub.textContent = '正面扉戸の隙間が7mmあります。小さい生体にはご注意ください';
+      }
     }
+    syncUpdate();
+  });
+}
+
+// ２室分け（後付け仕切り板）のトグル
+if (toggleRoomDivider) {
+  toggleRoomDivider.addEventListener('change', (e) => {
+    state.hasRoomDivider = e.target.checked;
+    if (e.target.checked) {
+      if (cardRoomDivider) cardRoomDivider.classList.add('active');
+      if (rowPanelPartition) rowPanelPartition.classList.remove('hidden');
+
+      // 止まり木オプションとの排他制御：２室分けON時は止まり木をdisable
+      if (togglePerch) {
+        if (state.hasPerch) {
+          state.hasPerch = false;
+          togglePerch.checked = false;
+          if (cardPerch) cardPerch.classList.remove('active');
+        }
+        togglePerch.disabled = true;
+      }
+      if (cardPerch) {
+        cardPerch.classList.add('disabled');
+      }
+      if (perchSub) {
+        perchSub.textContent = '※２室分けオプション選択時は利用できません';
+      }
+
+      // 天面チェック（強制変更はせずプレビューさせ、DM誘導トーストを表示）
+      const isTopNotPunching = state.panelConfig.top !== 'punching' || 
+                               state.panelConfig.topLeft !== 'punching' || 
+                               state.panelConfig.topRight !== 'punching';
+      if (isTopNotPunching) {
+        showNoticeToast('天板は塩ビパンチングパネル仕様前提でのオプションとなっています。金網での実装方法の詳細はDMにてお問い合わせください。', 7000);
+      }
+    } else {
+      if (cardRoomDivider) cardRoomDivider.classList.remove('active');
+      if (rowPanelPartition) rowPanelPartition.classList.add('hidden');
+
+      // 止まり木オプションのdisabled解除
+      if (togglePerch) {
+        togglePerch.disabled = false;
+      }
+      if (cardPerch) {
+        cardPerch.classList.remove('disabled');
+      }
+      if (perchSub) {
+        perchSub.textContent = '天板固定・φ30アルミ丸棒 / 高さ3段階調整可能 / 後付け対応';
+      }
+    }
+    syncUpdate();
+  });
+}
+
+// ２室分け仕切り板の素材選択
+if (selectPanelPartition) {
+  selectPanelPartition.addEventListener('change', (e) => {
+    state.panelConfig.partition = e.target.value;
     syncUpdate();
   });
 }
@@ -1223,9 +1326,23 @@ btnResetSpecs.addEventListener('click', () => {
   cardSideVentCover.classList.remove('active');
   state.hasSideVentCover = false;
 
-  if (togglePerch) togglePerch.checked = false;
-  if (cardPerch) cardPerch.classList.remove('active');
+  if (togglePerch) {
+    togglePerch.checked = false;
+    togglePerch.disabled = false;
+  }
+  if (cardPerch) cardPerch.classList.remove('active', 'disabled');
+  if (perchSub) perchSub.textContent = '天板固定・φ30アルミ丸棒 / 高さ3段階調整可能 / 後付け対応';
   state.hasPerch = false;
+
+  if (toggleRoomDivider) {
+    toggleRoomDivider.checked = false;
+    toggleRoomDivider.disabled = false;
+  }
+  if (cardRoomDivider) cardRoomDivider.classList.remove('active', 'disabled');
+  if (roomDividerSub) roomDividerSub.textContent = '正面扉戸の隙間が7mmあります。小さい生体にはご注意ください';
+  if (rowPanelPartition) rowPanelPartition.classList.add('hidden');
+  if (selectPanelPartition) selectPanelPartition.value = 'black_matte';
+  state.hasRoomDivider = false;
 
   if (toggleRubberPacking) toggleRubberPacking.checked = false;
   if (cardRubberPacking) cardRubberPacking.classList.remove('active');
@@ -1241,7 +1358,8 @@ btnResetSpecs.addEventListener('click', () => {
     sideLower: 'acrylic',
     top: 'punching',
     topLeft: 'punching',
-    topRight: 'punching'
+    topRight: 'punching',
+    partition: 'black_matte'
   };
 
   // 正面幅広フレームのリセット (Type A デフォルト: 2倍幅)
@@ -1286,6 +1404,8 @@ selectPanelTop.addEventListener('change', (e) => {
   state.panelConfig.top = e.target.value;
   if (state.hasPerch && e.target.value !== 'punching') {
     showNoticeToast('※止まり木は天面パンチングボードの穴を利用します。金網天板やアクリル天板との組み合わせは直接DMにてご相談ください。', 5000);
+  } else if (state.hasRoomDivider && e.target.value !== 'punching') {
+    showNoticeToast('天板は塩ビパンチングパネル仕様前提でのオプションとなっています。金網での実装方法の詳細はDMにてお問い合わせください。', 7000);
   }
   syncUpdate();
 });
@@ -1294,6 +1414,8 @@ selectPanelTopLeft.addEventListener('change', (e) => {
   state.panelConfig.topLeft = e.target.value;
   if (state.hasPerch && e.target.value !== 'punching') {
     showNoticeToast('※止まり木は天面パンチングボードの穴を利用します。金網天板との組み合わせは直接DMにてご相談ください。', 5000);
+  } else if (state.hasRoomDivider && e.target.value !== 'punching') {
+    showNoticeToast('天板は塩ビパンチングパネル仕様前提でのオプションとなっています。金網での実装方法の詳細はDMにてお問い合わせください。', 7000);
   }
   syncUpdate();
 });
@@ -1302,6 +1424,8 @@ selectPanelTopRight.addEventListener('change', (e) => {
   state.panelConfig.topRight = e.target.value;
   if (state.hasPerch && e.target.value !== 'punching') {
     showNoticeToast('※止まり木は天面パンチングボードの穴を利用します。金網天板との組み合わせは直接DMにてご相談ください。', 5000);
+  } else if (state.hasRoomDivider && e.target.value !== 'punching') {
+    showNoticeToast('天板は塩ビパンチングパネル仕様前提でのオプションとなっています。金網での実装方法の詳細はDMにてお問い合わせください。', 7000);
   }
   syncUpdate();
 });
@@ -1813,6 +1937,14 @@ function getSelectedPanelsList() {
     });
   }
 
+  // 仕切り板（２室分け選択時・寸法はノウハウのため非表示）
+  if (state.hasRoomDivider) {
+    panels.push({
+      face: '仕切り板',
+      name: getPanelMaterialName(state.panelConfig.partition || 'black_matte')
+    });
+  }
+
   return panels;
 }
 
@@ -1879,6 +2011,11 @@ function getSelectedOptionsList() {
   // 10. モレ対策ゴムパッキン
   if (state.hasRubberPacking) {
     options.push('モレ対策ゴムパッキン (側面・背面 隙間モレ抑制)');
+  }
+
+  // 11. ２室分け（後付け仕切り板）
+  if (state.hasRoomDivider) {
+    options.push('２室分け（後付け仕切り板仕様）');
   }
 
   return options;
@@ -2521,6 +2658,7 @@ function checkInitialStateFromStorageOrUrl() {
       if (urlParams.has('doorAntiFlex')) incomingState.hasDoorAntiFlex = urlParams.get('doorAntiFlex') === '1' || urlParams.get('doorAntiFlex') === 'true';
       if (urlParams.has('sideVentCover')) incomingState.hasSideVentCover = urlParams.get('sideVentCover') === '1' || urlParams.get('sideVentCover') === 'true';
       if (urlParams.has('perch')) incomingState.hasPerch = urlParams.get('perch') === '1' || urlParams.get('perch') === 'true';
+      if (urlParams.has('roomDivider')) incomingState.hasRoomDivider = urlParams.get('roomDivider') === '1' || urlParams.get('roomDivider') === 'true';
       if (urlParams.has('floorReinf')) incomingState.hasFloorReinforcement = urlParams.get('floorReinf') === '1' || urlParams.get('floorReinf') === 'true';
       if (urlParams.has('topReinf')) incomingState.hasTopReinforcement = urlParams.get('topReinf') === '1' || urlParams.get('topReinf') === 'true';
       if (urlParams.has('frontWide')) incomingState.frontWideFrame = urlParams.get('frontWide');
@@ -2599,6 +2737,18 @@ function checkInitialStateFromStorageOrUrl() {
       state.hasPerch = incomingState.hasPerch;
       if (togglePerch) togglePerch.checked = state.hasPerch;
       if (cardPerch) cardPerch.classList.toggle('active', state.hasPerch);
+    }
+    if (typeof incomingState.hasRoomDivider === 'boolean') {
+      state.hasRoomDivider = incomingState.hasRoomDivider;
+      if (toggleRoomDivider) toggleRoomDivider.checked = state.hasRoomDivider;
+      if (cardRoomDivider) cardRoomDivider.classList.toggle('active', state.hasRoomDivider);
+      if (rowPanelPartition) rowPanelPartition.classList.toggle('hidden', !state.hasRoomDivider);
+      if (state.hasRoomDivider && togglePerch) {
+        state.hasPerch = false;
+        togglePerch.checked = false;
+        togglePerch.disabled = true;
+        if (cardPerch) cardPerch.classList.add('disabled');
+      }
     }
     if (typeof incomingState.hasFloorReinforcement === 'boolean') {
       state.hasFloorReinforcement = incomingState.hasFloorReinforcement;

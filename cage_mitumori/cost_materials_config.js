@@ -188,6 +188,13 @@ export const materialsConfig = {
       weightPerPiece: 0.0016,  // 重量 (kg/個) 1.6g
       pricePerPiece: 143,     // 税込単価 (円/個)
       note: '止まり木吊り下げフレーム下端用'
+    },
+    'ABL-2015-4': {
+      name: 'L字ブラケット ABL-2015-4 (シルバー)',
+      unit: 'piece',
+      weightPerPiece: 0.0041,  // 重量 (kg/個) 4.1g
+      pricePerPiece: 201,     // 税込単価 (円/個)
+      note: '2室分け仕切り板固定用L字ブラケット (シルバー固定)'
     }
   },
 
@@ -330,6 +337,11 @@ export const materialsConfig = {
         name: 'モレ対策ゴムパッキン 加工工賃',
         price: 800,     // 販売価格への加算額 (円)
         note: '側面・背面隙間モレ抑制ゴムパッキン施工工賃 (施工面数に関わらず一律)'
+      },
+      roomDivider: {
+        name: '2室分け仕切り板 加工工賃',
+        price: 500,     // 販売価格への加算額 (円)
+        note: '仕切り板C面カット・取付穴あけ・組み立て加工工賃'
       }
     },
 

@@ -67,6 +67,10 @@ export class CageModel {
     this.rubberPackingGroup.name = 'RubberPacking';
     this.root.add(this.rubberPackingGroup);
 
+    this.dividerGroup = new THREE.Group();
+    this.dividerGroup.name = 'RoomDivider';
+    this.root.add(this.dividerGroup);
+
     // 現在のパラメータ
     this.params = {
       W: 750,
@@ -82,6 +86,7 @@ export class CageModel {
       hasSideVentCover: false,     // 側面換気量調整板 (t1.5外張りアクリル板)
       hasPerch: false,             // 止まり木（天板吊り下げ式・後付け対応）
       hasRubberPacking: false,     // モレ対策ゴムパッキン (側面・背面 隙間モレ抑制)
+      hasRoomDivider: false,       // ２室分け（後付け仕切り板・Type A/C両対応）
       frontWideFrame: '2x',        // 正面下側幅広フレーム: '2x' (40mm) | '3x' (60mm) | 'none' (20mm標準)
       footType: 'rubber',      // 'rubber' (ゴム脚) | 'caster' (キャスター)
       showPanels: true,
@@ -96,7 +101,8 @@ export class CageModel {
         sideLower: 'acrylic',
         top: 'punching',
         topLeft: 'punching',
-        topRight: 'punching'
+        topRight: 'punching',
+        partition: 'black_matte'
       }
     };
 
@@ -288,6 +294,7 @@ export class CageModel {
     this.clearGroup(this.doorGroup);
     this.clearGroup(this.feetGroup);
     this.clearGroup(this.perchGroup);
+    this.clearGroup(this.dividerGroup);
     this.clearGroup(this.caulkingGroup);
     this.clearGroup(this.rubberPackingGroup);
     this.disposeResources();
@@ -514,11 +521,19 @@ export class CageModel {
       this.buildRubberPacking();
     }
 
+    // ==========================================
+    // 7. ２室分け仕切り板オプションの構築
+    // ==========================================
+    if (this.params.hasRoomDivider) {
+      this.buildRoomDivider();
+    }
+
     // 表示トグルの反映
     this.panelGroup.visible = showPanels;
     this.doorGroup.visible = showPanels;
     this.caulkingGroup.visible = showPanels;
     this.rubberPackingGroup.visible = showPanels;
+    this.dividerGroup.visible = showPanels;
   }
 
   /**
@@ -2233,6 +2248,250 @@ export class CageModel {
         }
       );
     }
+  }
+
+  /**
+   * ２室分けオプション（仕切り板・L字ブラケット・化粧つまみネジ）の生成
+   */
+  buildRoomDivider() {
+    const { W, D, H, cageType, frontWideFrame, frontWindowH } = this.params;
+    const panelConfig = this.params.panelConfig || {};
+    const partitionMatType = panelConfig.partition || 'black_matte';
+
+    // 1. 仕切りパネルの寸法
+    // 750x450x300の場合: 418.0x276.5 (奥行 D - 32mm, 高さ H - 23.5mm)
+    const panelD = Math.max(10, D - 32);
+    const panelH = Math.max(10, H - 23.5);
+    const panelT = 3.0; // アクリル・パネル厚み 3.0mm
+
+    // パネルマテリアルの選択
+    let partitionMat = this.materials.blackMatteAcrylic;
+    let matCode = 'acrylic_black_matte_3_0';
+    let matName = 'アクリル黒両面マット 3.0mm';
+    if (partitionMatType === 'acrylic') {
+      partitionMat = this.materials.acrylic;
+      matCode = 'acrylic_extrusion_3_0';
+      matName = '透明アクリル 3.0mm';
+    } else if (partitionMatType === 'punching') {
+      const punchingTex = createPunchingTexture(panelD, panelH, false);
+      this.activeTextures.push(punchingTex);
+      partitionMat = this.materials.createPunchingMaterial(punchingTex);
+      this.activeMaterials.push(partitionMat);
+      matCode = 'pvc_punching_3_0';
+      matName = '塩ビパンチングボード 透明 3.0mm';
+    }
+
+    // 2. パネル形状（C面18mmカット加工）
+    // ユーザー厳密指定:
+    // ・正面側下＝切り欠きあり (18x18mm C面)
+    // ・正面側上＝切り欠きなし (直角角)
+    // ・背面側下＝切り欠きあり (18x18mm C面)
+    // ・背面側上＝切り欠きあり (18x18mm C面)
+    // ・奥行方向位置: 正面フレーム外側より20mm内側がパネル端 => zFront = D/2 - 20
+    // ・上下方向位置: 床面外側フレームより11.5mmがパネル下端 => yBottom = 11.5mm
+    const zFront = D / 2 - 20;
+    const zBack = zFront - panelD; // D/2 - 20 - (D - 32) = -D/2 + 12
+    const yBottom = 11.5;
+    const yTop = yBottom + panelH; // 11.5 + (H - 23.5) = H - 12.0mm
+    const cSize = 18; // 18mmカット
+
+    const shape = new THREE.Shape();
+    // (Z, Y) 平面で正確にパスを作成
+    // 1. 正面側下C面の始点 (Z = zFront, Y = yBottom + cSize)
+    shape.moveTo(zFront, yBottom + cSize);
+    // 2. 正面側上 (直角角・切り欠きなし): (Z = zFront, Y = yTop)
+    shape.lineTo(zFront, yTop);
+    // 3. 背面側上C面の始点: (Z = zBack + cSize, Y = yTop)
+    shape.lineTo(zBack + cSize, yTop);
+    // 4. 背面側上C面: (Z = zBack, Y = yTop - cSize)
+    shape.lineTo(zBack, yTop - cSize);
+    // 5. 背面側下C面の始点: (Z = zBack, Y = yBottom + cSize)
+    shape.lineTo(zBack, yBottom + cSize);
+    // 6. 背面側下C面: (Z = zBack + cSize, Y = yBottom)
+    shape.lineTo(zBack + cSize, yBottom);
+    // 7. 正面側下C面の始点: (Z = zFront - cSize, Y = yBottom)
+    shape.lineTo(zFront - cSize, yBottom);
+    // 8. 正面側下C面で閉じる: (Z = zFront, Y = yBottom + cSize)
+    shape.lineTo(zFront, yBottom + cSize);
+
+    const panelGeom = new THREE.ExtrudeGeometry(shape, { depth: panelT, bevelEnabled: false });
+    // 回転の符号反転を防ぐため、頂点属性を直接ワールド座標系に正確にマッピング
+    // X = 厚み方向 (中心0: -panelT/2 〜 +panelT/2)
+    // Y = 高さ方向 (yBottom: 11.5mm 〜 yTop: H - 12.0mm)
+    // Z = 奥行方向 (奥: zBack 〜 手前: zFront)
+    const posAttr = panelGeom.attributes.position;
+    for (let i = 0; i < posAttr.count; i++) {
+      const xs = posAttr.getX(i);
+      const ys = posAttr.getY(i);
+      const ze = posAttr.getZ(i);
+      posAttr.setXYZ(i, ze - panelT / 2, ys, xs);
+    }
+    posAttr.needsUpdate = true;
+
+    // UV座標を [0, 1] 範囲（奥行きZ: zBack〜zFront, 高さY: yBottom〜yTop）に正確にマッピング
+    const uvAttr = panelGeom.attributes.uv;
+    if (uvAttr) {
+      for (let i = 0; i < uvAttr.count; i++) {
+        const curZ = posAttr.getZ(i);
+        const curY = posAttr.getY(i);
+        const u = (curZ - zBack) / panelD;
+        const v = (curY - yBottom) / panelH;
+        uvAttr.setXY(i, u, v);
+      }
+      uvAttr.needsUpdate = true;
+    }
+
+    panelGeom.computeVertexNormals();
+    this.activeGeometries.push(panelGeom);
+
+    const panelMesh = new THREE.Mesh(panelGeom, partitionMat);
+    panelMesh.castShadow = true;
+    panelMesh.receiveShadow = true;
+    panelMesh.name = '２室分け仕切り板';
+    this.dividerGroup.add(panelMesh);
+
+    // 3. 部品集計（パネル）
+    this.recordPart(
+      `２室分け仕切り板 (${matName})`,
+      `${panelD} x ${panelH}`,
+      1,
+      `２室分け仕切り板後付け仕様 (${matName})`,
+      'panel',
+      {
+        panelCode: matCode,
+        partCode: matCode,
+        widthMm: panelD,
+        heightMm: panelH
+      }
+    );
+
+    // 4. L字ブラケット ABL-2015-4 の生成・配置
+    // 実機写真に完全準拠：
+    // - パネル左側 (-X側) に配置
+    // - 面A (フレーム固定・真円穴): 正面フレーム室内側垂直面に密着 (+Z向きネジ締め)
+    // - 面B (パネル固定・長穴): パネル側面に沿って奥 (-Z向き) へ伸び、横から白いM3つまみネジで固定
+    // - ブラケット高さ: 正面フレームの上段溝の中心高さに合わせる
+    let bracketCenterY = 30;
+    if (cageType === 'A') {
+      const wide = frontWideFrame || '2x';
+      if (wide === '3x') bracketCenterY = 50; // 3倍幅 (上段溝 Y=50)
+      else if (wide === '2x') bracketCenterY = 30; // 2倍幅 (上段溝 Y=30)
+      else bracketCenterY = 10; // 標準 (溝 Y=10)
+    } else {
+      // Type C: スライド扉下フレーム (中桟 2020) の溝
+      bracketCenterY = 20 + (frontWindowH || 50) + 10;
+    }
+
+    const bH = 18; // ブラケット上下高さ 18mm
+    const bW = 18; // フレーム面幅 18mm (-X方向)
+    const bL = 18; // パネル面奥行 18mm (-Z方向)
+    const bT = 3.5; // アルミ板厚 3.5mm
+
+    // 水平面 (XZ) でL字を作成し、Y方向に押し出し
+    // 角は (X = -panelT/2, Z = zFront)
+    const bracketShape = new THREE.Shape();
+    bracketShape.moveTo(0, 0);
+    bracketShape.lineTo(-bW, 0);
+    bracketShape.lineTo(-bW, -bT);
+    bracketShape.lineTo(-bT, -bT);
+    bracketShape.lineTo(-bT, -bL);
+    bracketShape.lineTo(0, -bL);
+    bracketShape.closePath();
+
+    const bGeom = new THREE.ExtrudeGeometry(bracketShape, { depth: bH, bevelEnabled: false });
+    const bPos = bGeom.attributes.position;
+    for (let i = 0; i < bPos.count; i++) {
+      const bx = bPos.getX(i);
+      const by = bPos.getY(i);
+      const bz = bPos.getZ(i);
+      bPos.setXYZ(i, -panelT / 2 + bx, bracketCenterY - bH / 2 + bz, zFront + by);
+    }
+    bPos.needsUpdate = true;
+    bGeom.computeVertexNormals();
+    this.activeGeometries.push(bGeom);
+
+    const bracketMesh = new THREE.Mesh(bGeom, this.materials.perchAluminum);
+    bracketMesh.castShadow = true;
+    bracketMesh.name = '２室分け・ABL-2015-4';
+    this.dividerGroup.add(bracketMesh);
+
+    // 固定ネジの配置 (実機写真と100%同一の向き・形状)
+    // 1) フレーム固定用 +ネジ (真円穴・トラス頭プラスネジ、室内側 -Z を向く)
+    const screwHeadX = -panelT / 2 - bW / 2;
+    const screwHeadY = bracketCenterY;
+    const screwHeadZ = zFront - bT - 1.0;
+
+    const screwHeadGeom = new THREE.CylinderGeometry(3.5, 3.5, 1.8, 16);
+    screwHeadGeom.rotateX(Math.PI / 2);
+    screwHeadGeom.translate(screwHeadX, screwHeadY, screwHeadZ);
+    this.activeGeometries.push(screwHeadGeom);
+    const screwHeadMesh = new THREE.Mesh(screwHeadGeom, this.materials.handleMaterial);
+    screwHeadMesh.name = '２室分け・フレーム固定プラスネジ';
+    this.dividerGroup.add(screwHeadMesh);
+
+    // プラスネジの十字穴
+    const crossGeom1 = new THREE.BoxGeometry(4.0, 0.8, 0.5);
+    crossGeom1.translate(screwHeadX, screwHeadY, screwHeadZ - 0.7);
+    this.activeGeometries.push(crossGeom1);
+    const crossMesh1 = new THREE.Mesh(crossGeom1, this.materials.wireMesh);
+    this.dividerGroup.add(crossMesh1);
+
+    const crossGeom2 = new THREE.BoxGeometry(0.8, 4.0, 0.5);
+    crossGeom2.translate(screwHeadX, screwHeadY, screwHeadZ - 0.7);
+    this.activeGeometries.push(crossGeom2);
+    const crossMesh2 = new THREE.Mesh(crossGeom2, this.materials.wireMesh);
+    this.dividerGroup.add(crossMesh2);
+
+    // 2) パネル固定用 M3化粧つまみネジ (白ノブ、ブラケット長穴から横向きにパネルへ締結)
+    const knobX = -panelT / 2 - bT - 2.5;
+    const knobY = bracketCenterY;
+    const knobZ = zFront - bL / 2;
+
+    const knobGeom = new THREE.CylinderGeometry(4.8, 4.8, 5, 18);
+    knobGeom.rotateZ(Math.PI / 2);
+    knobGeom.translate(knobX, knobY, knobZ);
+    this.activeGeometries.push(knobGeom);
+    const knobMesh = new THREE.Mesh(knobGeom, this.materials.perchWhiteScrew);
+    knobMesh.name = '２室分け・M3つまみネジ(ブラケット固定)';
+    this.dividerGroup.add(knobMesh);
+
+    // 5. 天板のM3つまみネジ (白) 4本 (奥側2本、手前側2本で仕切り板を挟み込み)
+    // 天板パネル上面位置: H - 20 + panelT = H - 17mm
+    const topPanelY = H - 20 + panelT;
+    const topKnobY = topPanelY + 2.0; // 頭部中心Y
+    const topScrewPositions = [
+      // 奥側 (Z = -D/2 + 50) 互い違いにパネルを挟む
+      { x: -3.5, z: -D / 2 + 50 },
+      { x: 3.5, z: -D / 2 + 65 },
+      // 手前側 (Z = D/2 - 60) 互い違いにパネルを挟む
+      { x: -3.5, z: D / 2 - 60 },
+      { x: 3.5, z: D / 2 - 75 }
+    ];
+
+    for (const pos of topScrewPositions) {
+      // つまみネジの頭部 (白ノブ)
+      const topKnobGeom = new THREE.CylinderGeometry(4.5, 4.5, 4, 16);
+      topKnobGeom.translate(pos.x, topKnobY, pos.z);
+      this.activeGeometries.push(topKnobGeom);
+      const topKnobMesh = new THREE.Mesh(topKnobGeom, this.materials.perchWhiteScrew);
+      topKnobMesh.name = '２室分け・天板M3つまみネジ';
+      this.dividerGroup.add(topKnobMesh);
+
+      // つまみネジの軸 (M3シャフト・下方に貫通して仕切り板を挟み込む)
+      const shaftGeom = new THREE.CylinderGeometry(1.5, 1.5, 7, 12);
+      shaftGeom.translate(pos.x, topPanelY - 3.5, pos.z);
+      this.activeGeometries.push(shaftGeom);
+      const shaftMesh = new THREE.Mesh(shaftGeom, this.materials.handleMaterial);
+      this.dividerGroup.add(shaftMesh);
+    }
+
+    // 6. 部品集計（ブラケット・ネジ）
+    this.recordPart('ABL-2015-4', '20x15x15mm', 1, '２室分け L字ブラケット ABL-2015-4 (シルバー)', 'rail_cap', {
+      partCode: 'ABL-2015-4',
+      unitType: 'piece'
+    });
+    this.recordPart('M3 つまみネジ (白)', 'M3 x L8mm', 5, '２室分け固定・倒れ防止用つまみネジ', 'other');
+    this.recordPart('M4 皿ネジ', 'M4 x L8mm', 1, '２室分けフレーム固定用皿ネジ', 'other');
   }
 
   /**
