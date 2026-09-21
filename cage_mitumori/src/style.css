@@ -2715,6 +2715,93 @@ button.creature-card.active {
   margin: 0 auto !important;
 }
 
+/* 🖼️ スマホ向け画像プレビュー ＆ 写真アプリ保存ガイド */
+.modal-preview-section {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  margin-top: 8px !important;
+  padding: 12px !important;
+  background: rgba(15, 23, 42, 0.75) !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  border-radius: 12px !important;
+  animation: fadeInOutShort 0.35s ease-out !important;
+}
+
+.modal-preview-section.hidden {
+  display: none !important;
+}
+
+.preview-guide-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%) !important;
+  border: 1px solid rgba(244, 167, 185, 0.25) !important;
+  border-radius: 10px !important;
+  padding: 10px 12px !important;
+}
+
+.guide-badge {
+  display: inline-block !important;
+  font-size: 0.76rem !important;
+  font-weight: 700 !important;
+  color: #fb7185 !important;
+  background: rgba(244, 63, 94, 0.12) !important;
+  border: 1px solid rgba(244, 63, 94, 0.3) !important;
+  padding: 2px 8px !important;
+  border-radius: 6px !important;
+  margin-bottom: 6px !important;
+}
+
+.guide-steps {
+  margin: 0 !important;
+  padding-left: 16px !important;
+  font-size: 0.73rem !important;
+  line-height: 1.55 !important;
+  color: #cbd5e1 !important;
+}
+
+.guide-steps li {
+  margin-bottom: 3px !important;
+}
+
+.guide-steps strong {
+  color: #f8fafc !important;
+  font-weight: 700 !important;
+}
+
+.preview-img-wrap {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 8px !important;
+  background: rgba(2, 6, 23, 0.6) !important;
+  border: 1px dashed rgba(148, 163, 184, 0.25) !important;
+  border-radius: 10px !important;
+}
+
+.modal-preview-img {
+  max-width: 220px !important;
+  width: 100% !important;
+  height: auto !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  transition: transform 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+.modal-preview-img:active {
+  transform: scale(0.98) !important;
+}
+
+.preview-press-hint {
+  font-size: 0.7rem !important;
+  color: #38bdf8 !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  letter-spacing: 0.02em !important;
+}
+
 /* 📋 仕様テキスト＆コピー */
 .modal-spec-section {
   display: flex !important;

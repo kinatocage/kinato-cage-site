@@ -28,7 +28,10 @@ const btnCloseModal = document.getElementById('btn-close-modal');
 const btnDismissModal = document.getElementById('btn-dismiss-modal');
 const btnOpenEstimateModal = document.getElementById('btn-open-estimate-modal');
 const modalDownloadSuccess = document.getElementById('modal-download-success');
+const downloadSuccessTitle = document.getElementById('download-success-title');
 const downloadFilenameLabel = document.getElementById('download-filename-label');
+const modalPreviewSection = document.getElementById('modal-preview-section');
+const modalPreviewImg = document.getElementById('modal-preview-img');
 
 // 見積IDおよび最新計算データの保持変数
 let currentEstimateId = null;
@@ -377,6 +380,8 @@ function syncPanelConfigUI() {
       backName = '背面中空ポリカ';
     } else if (state.panelConfig.back === 'black_matte') {
       backName = '背面ブラックマット';
+    } else if (state.panelConfig.back === 'smoke_gray') {
+      backName = '背面グレースモーク';
     }
 
     panelSummaryBadge.textContent = `${backName} / ${topName}`;
@@ -630,6 +635,10 @@ function calculateGrandTotals() {
         if (!isVentCoverPart) {
           const singleCost = Math.round(config.pricePerM2 * areaM2);
           totalPanelCost += singleCost * part.count;
+          // 固定原価（正面スライド扉 2枚1式あたりの基本原価など）が設定されている場合は加算
+          if (config.baseCost) {
+            totalPanelCost += config.baseCost;
+          }
         }
         totalPanelWeight += config.weightPerM2 * areaM2 * part.count;
       }
@@ -675,9 +684,13 @@ function calculateGrandTotals() {
   const totalOptionPrice = casterPrice + ventCoverPrice;
   const totalOptionCost = casterCost + ventCoverCost;
 
-  // 3. 資材原価および基本販売価格（原価 × 1.5倍を100円単位で切り上げ）
+  // 3. 資材原価および基本販売価格（設定ファイルのmarkupRate倍・roundingUnit単位で切り上げ）
+  const pricingConfig = materialsConfig.pricing || {};
+  const markupRate = typeof pricingConfig.markupRate === 'number' ? pricingConfig.markupRate : 1.4;
+  const roundingUnit = typeof pricingConfig.roundingUnit === 'number' ? pricingConfig.roundingUnit : 100;
+
   const baseMaterialsCost = totalFrameCost + totalPanelCost;
-  const basePriceWithMarkup = Math.ceil((baseMaterialsCost * 1.5) / 100) * 100;
+  const basePriceWithMarkup = Math.ceil((baseMaterialsCost * markupRate) / roundingUnit) * roundingUnit;
 
   // 4. 総合計の算出 (※内訳金額はDOM・UI上には表示せず、合計金額のみに反映)
   const grandTotalCost = baseMaterialsCost + totalOptionCost;
@@ -1767,6 +1780,18 @@ function finalizeEstimateCalculation(totals) {
     if (state.hasSideVentCover !== lastEstimatedState.hasSideVentCover) {
       diffs.push(state.hasSideVentCover ? '換気調整板追加' : '換気調整板解除');
     }
+    if (state.hasPerch !== lastEstimatedState.hasPerch) {
+      diffs.push(state.hasPerch ? '止まり木追加' : '止まり木解除');
+    }
+    if (state.hasRubberPacking !== lastEstimatedState.hasRubberPacking) {
+      diffs.push(state.hasRubberPacking ? 'ゴムパッキン追加' : 'ゴムパッキン解除');
+    }
+    if (state.hasRoomDivider !== lastEstimatedState.hasRoomDivider) {
+      diffs.push(state.hasRoomDivider ? '2室分け追加' : '2室分け解除');
+    }
+    if (state.hasSideReinforcement && state.sideOpeningH !== lastEstimatedState.sideOpeningH) {
+      diffs.push(`側開口高:${lastEstimatedState.sideOpeningH}→${state.sideOpeningH}`);
+    }
 
     // パネル素材の差分検知
     const lastP = lastEstimatedState.panelConfig || {};
@@ -1795,6 +1820,12 @@ function finalizeEstimateCalculation(totals) {
       diffs.push(`天:${getPanelShortName(lastP.top)}→${getPanelShortName(currP.top)}`);
     }
 
+    if (state.hasRoomDivider) {
+      if (currP.partition !== lastP.partition) {
+        diffs.push(`仕切り:${getPanelShortName(lastP.partition)}→${getPanelShortName(currP.partition)}`);
+      }
+    }
+
     if (diffs.length > 0) {
       diffNote = diffs.join(', ');
     } else {
@@ -1811,11 +1842,15 @@ function finalizeEstimateCalculation(totals) {
   if (modalWeightTotal) modalWeightTotal.textContent = `${totals.weight.toFixed(1)} kg`;
   if (modalSpecTextarea) modalSpecTextarea.value = specText;
 
-  // モーダルを自動でオープン表示（前回のダウンロード完了通知はリセット）
+  // モーダルを自動でオープン表示（前回のダウンロード完了通知およびプレビューはリセット）
   if (estimateResultModal) {
     if (modalDownloadSuccess) {
       modalDownloadSuccess.classList.add('hidden');
     }
+    if (modalPreviewSection) {
+      modalPreviewSection.classList.add('hidden');
+    }
+    window.lastGeneratedEstimateImage = null;
     estimateResultModal.classList.remove('hidden');
   }
 
@@ -1852,6 +1887,7 @@ function getPanelMaterialName(key) {
   switch (key) {
     case 'acrylic': return '透明アクリル 3.0mm';
     case 'black_matte': return 'アクリル黒両面マット 3.0mm';
+    case 'smoke_gray': return 'アクリル グレースモーク半透明 3.0mm';
     case 'punching': return '塩ビパンチングボード 3.0mm';
     case 'polyca': return '中空ポリカ 4.0mm';
     case 'mesh15': return '金網15mmピッチ (黒粉体塗装)';
@@ -1868,6 +1904,7 @@ function getPanelShortName(key) {
   switch (key) {
     case 'acrylic': return '透明アクリル';
     case 'black_matte': return '黒マット';
+    case 'smoke_gray': return 'グレースモーク';
     case 'punching': return 'パンチング';
     case 'polyca': return '中空ポリカ';
     case 'mesh15': return '金網15mm';
@@ -2118,6 +2155,16 @@ if (btnSaveImageModal) {
     exportEstimateCardImage();
   });
 }
+
+// プレビュー画像をタップした際に新規タブで画像を開く
+if (modalPreviewImg) {
+  modalPreviewImg.addEventListener('click', () => {
+    if (modalPreviewImg.src) {
+      window.open(modalPreviewImg.src, '_blank');
+    }
+  });
+}
+
 
 // =================================================================
 // 3. 見積もり結果カード（スマホ向け縦型 9:16 画像保存）機能
@@ -2438,31 +2485,98 @@ async function exportEstimateCardImage() {
       ctx.drawImage(charImg, charX, charY, charW, charH);
     }
 
-    // 9. 画像のダウンロード（ファイル名が絶対に文字化けせず、UUIDにもならず指定通り保存されるData URL方式）
+    // 9. 画像の出力・保存処理（スマホ写真アプリ対応 ＆ PCダウンロード）
     const downloadFileName = `Cage_Estimate_${currentEstimateId}.png`;
 
     try {
       const dataUrl = canvas.toDataURL('image/png');
       window.lastGeneratedEstimateImage = dataUrl;
-      const a = document.createElement('a');
-      a.href = dataUrl;
-      a.download = downloadFileName;
-      a.target = '_self';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      console.log('Downloaded estimate card image via DataURL:', downloadFileName);
 
-      // モーダル内のダウンロード完了メッセージを表示
-      if (modalDownloadSuccess && downloadFilenameLabel) {
-        downloadFilenameLabel.textContent = downloadFileName;
-        modalDownloadSuccess.classList.remove('hidden');
-        setTimeout(() => {
-          if (modalDownloadSuccess) modalDownloadSuccess.classList.add('hidden');
-        }, 7000);
+      // 🖼️ モーダル内にプレビュー画像をセットして表示（長押し写真保存を可能に）
+      if (modalPreviewImg) {
+        modalPreviewImg.src = dataUrl;
+      }
+      if (modalPreviewSection) {
+        modalPreviewSection.classList.remove('hidden');
+      }
+
+      // CanvasからBlobとFileオブジェクトを生成
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      let file = null;
+      if (blob && window.File) {
+        try {
+          file = new File([blob], downloadFileName, { type: 'image/png' });
+        } catch (fileErr) {
+          console.warn('File constructor failed:', fileErr);
+        }
+      }
+
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      let sharedSuccessfully = false;
+
+      // 📱 モバイル端末で Web Share API (ファイル共有) がサポートされている場合
+      // iOS Safari では「画像を保存」を選ぶことで「写真」アプリ（カメラロール）に直接保存されます
+      if (isMobile && file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: 'きなとのケージ屋さん お見積もり結果カード',
+            text: `ケージお見積もり結果カード（${currentEstimateId}）です。`
+          });
+          sharedSuccessfully = true;
+          console.log('Shared estimate card image via Web Share API successfully');
+
+          if (modalDownloadSuccess && downloadFilenameLabel) {
+            downloadFilenameLabel.textContent = downloadFileName;
+            if (downloadSuccessTitle) {
+              downloadSuccessTitle.textContent = '✅ 共有メニューを開きました（「画像を保存」で写真アプリに保存されます）';
+            }
+            modalDownloadSuccess.classList.remove('hidden');
+          }
+        } catch (shareErr) {
+          // ユーザーが共有シートを閉じた場合 (AbortError) はエラーにせず、プレビュー長押し案内を維持
+          if (shareErr.name === 'AbortError') {
+            console.log('User closed the share sheet');
+            if (modalDownloadSuccess && downloadFilenameLabel) {
+              downloadFilenameLabel.textContent = downloadFileName;
+              if (downloadSuccessTitle) {
+                downloadSuccessTitle.textContent = '💡 共有メニューを閉じました。下の画像を長押しして「写真」に追加も可能です';
+              }
+              modalDownloadSuccess.classList.remove('hidden');
+            }
+            sharedSuccessfully = true; // 意図的キャンセルなので追加ダウンロードは走らせない
+          } else {
+            console.warn('navigator.share failed, falling back to download:', shareErr);
+          }
+        }
+      }
+
+      // 💻 PC環境、または Web Share API非対応環境 / 共有エラー時のダウンロード処理
+      if (!sharedSuccessfully) {
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = downloadFileName;
+        a.target = '_self';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        console.log('Downloaded estimate card image via DataURL:', downloadFileName);
+
+        if (modalDownloadSuccess && downloadFilenameLabel) {
+          downloadFilenameLabel.textContent = downloadFileName;
+          if (downloadSuccessTitle) {
+            downloadSuccessTitle.textContent = isMobile 
+              ? '✅ 画像をダウンロードしました（下の画像を長押しして「写真」に追加も可能です）'
+              : '✅ ダウンロード完了（保存先: ダウンロードフォルダ）';
+          }
+          modalDownloadSuccess.classList.remove('hidden');
+          setTimeout(() => {
+            if (modalDownloadSuccess) modalDownloadSuccess.classList.add('hidden');
+          }, 7000);
+        }
       }
     } catch (e) {
-      console.warn('toDataURL failed, falling back to Blob:', e);
+      console.warn('toDataURL / export failed, falling back to Blob URL:', e);
       if (canvas.toBlob) {
         canvas.toBlob((blob) => {
           if (!blob) {

@@ -554,12 +554,22 @@ export class CageModel {
     const topLeftMatType = panelConfig.topLeft || 'punching';
     const topRightMatType = panelConfig.topRight || 'punching';
 
-    // 1. 底面パネル（透明アクリル または ブラックマット地アクリル: 間口+10mm）
+    // 1. 底面パネル（透明アクリル / ブラックマット地アクリル / グレースモーク半透明アクリル: 間口+10mm）
     const floorMatD = D - 30; // (D - 40) + 10
     const isFloorBlackMatte = (floorMatType === 'black_matte');
-    const floorMat = isFloorBlackMatte ? this.materials.blackMatteAcrylic : this.materials.acrylic;
-    const floorPartName = isFloorBlackMatte ? 'アクリル黒両面マット 3.0mm 底板' : '透明アクリル 3.0mm 底板';
-    const floorCode = isFloorBlackMatte ? 'acrylic_black_matte_3_0' : 'acrylic_extrusion_3_0';
+    const isFloorSmokeGray = (floorMatType === 'smoke_gray');
+    let floorMat = this.materials.acrylic;
+    let floorPartName = '透明アクリル 3.0mm 底板';
+    let floorCode = 'acrylic_extrusion_3_0';
+    if (isFloorBlackMatte) {
+      floorMat = this.materials.blackMatteAcrylic;
+      floorPartName = 'アクリル黒両面マット 3.0mm 底板';
+      floorCode = 'acrylic_black_matte_3_0';
+    } else if (isFloorSmokeGray) {
+      floorMat = this.materials.smokeGrayAcrylic;
+      floorPartName = 'アクリル グレースモーク半透明 3.0mm 底板';
+      floorCode = 'acrylic_smoke_gray_3_0';
+    }
 
     if (hasFloorReinforcement) {
       // 2分割底板
@@ -651,6 +661,20 @@ export class CageModel {
       this.recordPart('アクリル黒両面マット 3.0mm 背板', `${backMatW} x ${backMatH} mm`, 1, '背面', 'panel', {
         panelCode: 'acrylic_black_matte_3_0',
         partCode: 'acrylic_black_matte_3_0',
+        widthMm: backMatW,
+        heightMm: backMatH,
+        unitType: 'm2'
+      });
+    } else if (backMatType === 'smoke_gray') {
+      // グレースモーク半透明アクリル
+      const backGeom = new THREE.BoxGeometry(backMatW, backMatH, panelT);
+      this.activeGeometries.push(backGeom);
+      const backMesh = new THREE.Mesh(backGeom, this.materials.smokeGrayAcrylic);
+      backMesh.position.set(0, H / 2, -D / 2 + 10);
+      this.panelGroup.add(backMesh);
+      this.recordPart('アクリル グレースモーク半透明 3.0mm 背板', `${backMatW} x ${backMatH} mm`, 1, '背面', 'panel', {
+        panelCode: 'acrylic_smoke_gray_3_0',
+        partCode: 'acrylic_smoke_gray_3_0',
         widthMm: backMatW,
         heightMm: backMatH,
         unitType: 'm2'
@@ -784,6 +808,26 @@ export class CageModel {
         this.recordPart(`アクリル黒両面マット 3.0mm 側板 (${prefix})`, `${panelDepth} x ${panelHeight} mm`, 2, `左右側面 ${labelDesc}`, 'panel', {
           panelCode: 'acrylic_black_matte_3_0',
           partCode: 'acrylic_black_matte_3_0',
+          widthMm: panelDepth,
+          heightMm: panelHeight,
+          unitType: 'm2'
+        });
+      } else if (matType === 'smoke_gray') {
+        // グレースモーク半透明アクリル
+        const geom = new THREE.BoxGeometry(panelT, panelHeight, panelDepth);
+        this.activeGeometries.push(geom);
+
+        const leftMesh = new THREE.Mesh(geom, this.materials.smokeGrayAcrylic);
+        leftMesh.position.set(-W / 2 + 10, posY, 0);
+        this.panelGroup.add(leftMesh);
+
+        const rightMesh = new THREE.Mesh(geom, this.materials.smokeGrayAcrylic);
+        rightMesh.position.set(W / 2 - 10, posY, 0);
+        this.panelGroup.add(rightMesh);
+
+        this.recordPart(`アクリル グレースモーク半透明 3.0mm 側板 (${prefix})`, `${panelDepth} x ${panelHeight} mm`, 2, `左右側面 ${labelDesc}`, 'panel', {
+          panelCode: 'acrylic_smoke_gray_3_0',
+          partCode: 'acrylic_smoke_gray_3_0',
           widthMm: panelDepth,
           heightMm: panelHeight,
           unitType: 'm2'
@@ -2272,6 +2316,10 @@ export class CageModel {
       partitionMat = this.materials.acrylic;
       matCode = 'acrylic_extrusion_3_0';
       matName = '透明アクリル 3.0mm';
+    } else if (partitionMatType === 'smoke_gray') {
+      partitionMat = this.materials.smokeGrayAcrylic;
+      matCode = 'acrylic_smoke_gray_3_0';
+      matName = 'アクリル グレースモーク半透明 3.0mm';
     } else if (partitionMatType === 'punching') {
       const punchingTex = createPunchingTexture(panelD, panelH, false);
       this.activeTextures.push(punchingTex);

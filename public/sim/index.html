@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="./assets/index-CHeCIi9J.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-BYqkw4hJ.css">
+  <script type="module" crossorigin src="./assets/index-BAfX1Oda.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-IIm0HCZ4.css">
 </head>
 <body>
   <div id="app" class="app-layout">
@@ -346,6 +346,7 @@
                   <select class="custom-select" id="select-panel-floor">
                     <option value="acrylic" selected>透明アクリル 3.0mm</option>
                     <option value="black_matte">アクリル黒両面マット 3.0mm</option>
+                    <option value="smoke_gray">アクリル グレースモーク半透明 3.0mm</option>
                   </select>
                 </div>
 
@@ -359,6 +360,7 @@
                     <option value="punching">塩ビパンチングボード 透明 3.0mm</option>
                     <option value="polyca">中空ポリカ 4.0mm</option>
                     <option value="black_matte">アクリル黒両面マット 3.0mm</option>
+                    <option value="smoke_gray">アクリル グレースモーク半透明 3.0mm</option>
                   </select>
                 </div>
 
@@ -375,6 +377,7 @@
                         <option value="acrylic">透明アクリル 3.0mm</option>
                         <option value="polyca">中空ポリカ 4.0mm</option>
                         <option value="black_matte">アクリル黒両面マット 3.0mm</option>
+                        <option value="smoke_gray">アクリル グレースモーク半透明 3.0mm</option>
                       </select>
                     </div>
                     <div class="split-select-item">
@@ -384,6 +387,7 @@
                         <option value="punching">塩ビパンチングボード 透明 3.0mm</option>
                         <option value="polyca">中空ポリカ 4.0mm</option>
                         <option value="black_matte">アクリル黒両面マット 3.0mm</option>
+                        <option value="smoke_gray">アクリル グレースモーク半透明 3.0mm</option>
                       </select>
                     </div>
                   </div>
@@ -399,6 +403,7 @@
                     <option value="punching">塩ビパンチングボード 透明 3.0mm</option>
                     <option value="polyca">中空ポリカ 4.0mm (横筋)</option>
                     <option value="black_matte">アクリル黒両面マット 3.0mm</option>
+                    <option value="smoke_gray">アクリル グレースモーク半透明 3.0mm</option>
                   </select>
                 </div>
 
@@ -453,6 +458,7 @@
                   </div>
                   <select class="custom-select" id="select-panel-partition">
                     <option value="black_matte" selected>アクリル黒両面マット 3.0mm (標準)</option>
+                    <option value="smoke_gray">アクリル グレースモーク半透明 3.0mm</option>
                     <option value="acrylic">透明アクリル 3.0mm</option>
                     <option value="punching">塩ビパンチングボード 透明 3.0mm</option>
                   </select>
@@ -663,10 +669,26 @@
             <span>見積もりカードを画像保存 (PNG)</span>
           </button>
           <div class="modal-download-success hidden" id="modal-download-success">
-            <span class="download-success-title">✅ ダウンロード完了（保存先: ダウンロードフォルダ）</span>
+            <span class="download-success-title" id="download-success-title">✅ 保存処理を実行しました</span>
             <span class="download-filename" id="download-filename-label">Cage_Estimate_EST-XXXX.png</span>
           </div>
-          <span class="modal-action-hint">※お使いの端末（PC・スマホ）の「ダウンロード」フォルダにPNG画像を出力保存します</span>
+          <span class="modal-action-hint" id="modal-action-hint">※PCは「ダウンロード」フォルダ、iPhone/Androidは「写真」アプリへの保存または共有メニューが開きます</span>
+
+          <!-- 🖼️ 生成画像のプレビュー＆長押し保存ガイド（保存ボタン押下後に表示） -->
+          <div class="modal-preview-section hidden" id="modal-preview-section">
+            <div class="preview-guide-card">
+              <div class="guide-badge">📱 写真アプリへの保存方法</div>
+              <ul class="guide-steps">
+                <li><strong>iPhone</strong>: 共有メニューの<strong>「画像を保存」</strong>をタップ（または下の画像を長押し ➜ <strong>「"写真"に追加」</strong>）</li>
+                <li><strong>Android</strong>: 共有メニューから<strong>「フォトに保存」</strong>等を選択（または下の画像を長押し ➜ <strong>「画像を保存」</strong>）</li>
+                <li><strong>PC</strong>: 自動で「ダウンロード」フォルダに保存されています</li>
+              </ul>
+            </div>
+            <div class="preview-img-wrap">
+              <img id="modal-preview-img" src="" alt="お見積もり結果カードプレビュー" class="modal-preview-img" />
+              <div class="preview-press-hint">👆 画像を長押しして「写真」に保存も可能です</div>
+            </div>
+          </div>
         </div>
 
         <!-- 📋 仕様テキスト＆コピー -->

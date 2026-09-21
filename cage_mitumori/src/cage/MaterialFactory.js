@@ -157,6 +157,17 @@ export class MaterialFactory {
       side: THREE.DoubleSide
     });
 
+    // グレースモーク半透明アクリル (t3: コモグラス 530K グレースモーク・暗めの半透明板)
+    this.smokeGrayAcrylic = new THREE.MeshStandardMaterial({
+      color: 0x2b2e35, // 暗めのスモークグレー
+      transparent: true,
+      opacity: 0.60,   // 半透明（透け感がありつつ暗い）
+      roughness: 0.12,  // アクリルのツヤ・光沢
+      metalness: 0.1,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+
     // 防水コーキング（薄いグレー・シリコンシーリング質感）
     this.caulkingMaterial = new THREE.MeshStandardMaterial({
       color: 0xd2d7dd,
@@ -263,5 +274,6 @@ export class MaterialFactory {
     this.ventCoverAcrylic.dispose();
     this.thumbScrewMaterial.dispose();
     this.blackMatteAcrylic.dispose();
+    this.smokeGrayAcrylic.dispose();
   }
 }
