@@ -119,13 +119,14 @@ export class DimensionLines {
       this.group.add(spriteFW);
     }
 
-    // 5. 側面補強フレーム 開口寸法ラベル
+    // 5. 側面補強フレーム 側面上部開口寸法ラベル
     if (hasSideReinforcement) {
       const xSide = -W / 2 - 50;
       const zSide = 0;
-      const yMid = 20 + sideOpeningH / 2;
-      const spriteSide = this.createTextSprite(`側面開口: ${sideOpeningH} mm`, '#34d399', '#ffffff', 'rgba(12, 32, 24, 0.9)');
-      spriteSide.scale.set(85, 27, 1);
+      const upperH = sideOpeningH;
+      const yMid = H - 20 - upperH / 2;
+      const spriteSide = this.createTextSprite(`側面上部開口: ${upperH} mm`, '#34d399', '#ffffff', 'rgba(12, 32, 24, 0.9)');
+      spriteSide.scale.set(95, 27, 1);
       spriteSide.position.set(xSide, yMid, zSide);
       this.group.add(spriteSide);
     }

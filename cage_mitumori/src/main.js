@@ -211,7 +211,7 @@ const state = {
   frontWideFrame: '2x',        // 正面下側幅広フレーム: '2x' (40mm・初期値) | '3x' (60mm) | 'none' (20mm標準)
   frontWindowH: 50,
   hasSideReinforcement: false, // 側面補強フレームの有無 (左右対称)
-  sideOpeningH: 120,           // デフォルト: 上下均等中央 (H=300mm時 120mm)
+  sideOpeningH: 120,           // 側面上部開口高さ (デフォルト: 上下均等中央 H=300mm時 120mm)
   showPanels: true,
   showDimensions: true,
   doorState: 'closed',         // 'closed' | 'left_open' | 'right_open'
@@ -844,7 +844,7 @@ function updateSpecSummary() {
     optionsList.push('天板補強: あり');
   }
   if (state.hasSideReinforcement) {
-    optionsList.push(`側面補強: ${state.sideOpeningH}mm`);
+    optionsList.push(`側面補強(上部開口): ${state.sideOpeningH}mm`);
   }
   if (state.hasDoorAntiFlex) {
     optionsList.push('扉たわみ防止');
@@ -952,22 +952,30 @@ bindInputPair(sliderH, inputH, 'H', (newH) => {
     inputFW.value = maxFw;
   }
 
-  // 側面開口高さの最大値と中央等分値の連動
+  // 側面上部開口高さの範囲と連動 (どちらかの開口高さが50mmを下回るまで調整可能)
+  const minSideH = 50;
+  const maxSideH = Math.max(minSideH, newH - 110);
   const centerSideH = Math.round((newH - 60) / 20) * 10;
-  const maxSideH = Math.max(30, newH - 100);
+  inputSideH.min = minSideH;
   inputSideH.max = maxSideH;
-  if (!state.hasSideReinforcement || state.sideOpeningH > maxSideH) {
-    state.sideOpeningH = Math.min(maxSideH, centerSideH);
-    inputSideH.value = state.sideOpeningH;
+  if (!state.hasSideReinforcement) {
+    state.sideOpeningH = centerSideH;
+    inputSideH.value = centerSideH;
+  } else if (state.sideOpeningH > maxSideH) {
+    state.sideOpeningH = maxSideH;
+    inputSideH.value = maxSideH;
+  } else if (state.sideOpeningH < minSideH) {
+    state.sideOpeningH = minSideH;
+    inputSideH.value = minSideH;
   }
 });
 bindInputPair(sliderFW, inputFW, 'frontWindowH');
 
-// 側面補強 開口高さの入力イベント
+// 側面補強 側面上部開口高さの入力イベント
 inputSideH.addEventListener('change', (e) => {
   let val = parseInt(e.target.value, 10);
-  const min = parseInt(inputSideH.min, 10) || 30;
-  const max = parseInt(inputSideH.max, 10) || (state.H - 100);
+  const min = 50;
+  const max = Math.max(min, state.H - 110);
   const step = 10;
 
   if (isNaN(val)) val = min;
@@ -985,9 +993,13 @@ toggleSideReinforce.addEventListener('change', (e) => {
   if (state.hasSideReinforcement) {
     cardSideReinforce.classList.add('active');
     boxSideH.classList.remove('disabled');
+    const minSideH = 50;
+    const maxSideH = Math.max(minSideH, state.H - 110);
+    inputSideH.min = minSideH;
+    inputSideH.max = maxSideH;
     // デフォルトは上下均等になる中央配置
     const centerSideH = Math.round((state.H - 60) / 20) * 10;
-    if (state.sideOpeningH <= 0 || state.sideOpeningH > state.H - 100) {
+    if (state.sideOpeningH < minSideH || state.sideOpeningH > maxSideH) {
       state.sideOpeningH = centerSideH;
       inputSideH.value = centerSideH;
     }
@@ -1313,6 +1325,8 @@ btnResetSpecs.addEventListener('click', () => {
   toggleSideReinforce.checked = false;
   cardSideReinforce.classList.remove('active');
   boxSideH.classList.add('disabled');
+  inputSideH.min = 50;
+  inputSideH.max = 190;
   inputSideH.value = 120;
 
   toggleFloorReinforce.checked = false;
@@ -1502,6 +1516,13 @@ if (optionsToggleBtn) {
   });
 }
 
+// 側面補強フレームの初期設定 (H=300mm時 min=50, max=190)
+if (inputSideH) {
+  inputSideH.min = 50;
+  inputSideH.max = Math.max(50, state.H - 110);
+  inputSideH.value = state.sideOpeningH;
+}
+
 // 初回レンダリング
 syncUpdate();
 viewer.setViewPreset('iso', state);
@@ -1616,9 +1637,15 @@ function applyCreaturePreset(preset) {
   if (toggleSideReinforce) toggleSideReinforce.checked = state.hasSideReinforcement;
   if (cardSideReinforce) cardSideReinforce.classList.toggle('active', state.hasSideReinforcement);
   if (boxSideH) boxSideH.classList.toggle('disabled', !state.hasSideReinforcement);
+  const minSideH = 50;
+  const maxSideH = Math.max(minSideH, state.H - 110);
+  if (inputSideH) {
+    inputSideH.min = minSideH;
+    inputSideH.max = maxSideH;
+  }
   if (preset.sideOpeningH != null) {
-    state.sideOpeningH = preset.sideOpeningH;
-    if (inputSideH) inputSideH.value = preset.sideOpeningH;
+    state.sideOpeningH = Math.max(minSideH, Math.min(maxSideH, preset.sideOpeningH));
+    if (inputSideH) inputSideH.value = state.sideOpeningH;
   } else if (state.hasSideReinforcement) {
     const centerSideH = Math.round((state.H - 60) / 20) * 10;
     state.sideOpeningH = centerSideH;
@@ -1790,7 +1817,7 @@ function finalizeEstimateCalculation(totals) {
       diffs.push(state.hasRoomDivider ? '2室分け追加' : '2室分け解除');
     }
     if (state.hasSideReinforcement && state.sideOpeningH !== lastEstimatedState.sideOpeningH) {
-      diffs.push(`側開口高:${lastEstimatedState.sideOpeningH}→${state.sideOpeningH}`);
+      diffs.push(`側上部開口:${lastEstimatedState.sideOpeningH}→${state.sideOpeningH}`);
     }
 
     // パネル素材の差分検知
@@ -2007,7 +2034,7 @@ function getSelectedOptionsList() {
 
   // 3. 側面補強フレーム (左右2分割)
   if (state.hasSideReinforcement) {
-    options.push(`側面補強フレーム (開口部高 ${state.sideOpeningH}mm・左右2分割)`);
+    options.push(`側面補強フレーム (側面上部開口 ${state.sideOpeningH}mm・左右2分割)`);
   }
 
   // 4. 側面換気量調整板 (左右外張り)

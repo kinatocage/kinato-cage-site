@@ -11,7 +11,7 @@
  * - frontWindowH: Type C時の前窓開口高さ (mm)
  * - frontWideFrame: Type A正面下側幅広フレーム ('none', '2x', '3x')
  * - hasSideReinforcement: 側面補強フレーム (側面2分割) の有無 (boolean)
- * - sideOpeningH: 側面下部開口高さ (mm)
+ * - sideOpeningH: 側面上部開口高さ (mm)
  * - hasDoorAntiFlex: 正面スライド扉たわみ防止レール (boolean)
  * - hasSideVentCover: 側面換気量調整板 (boolean)
  * - hasFloorReinforcement: 床面中央補強フレーム (boolean)

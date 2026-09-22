@@ -79,7 +79,7 @@ export class CageModel {
       cageType: 'A',          // 'A' または 'C'
       frontWindowH: 50,        // Type Cの前窓フレーム間開口高さ (mm)
       hasSideReinforcement: false, // 側面補強フレームの有無 (左右対称)
-      sideOpeningH: 120,       // 側面下部フレーム間開口高さ (デフォルト: 上下均等 120mm)
+      sideOpeningH: 120,       // 側面上部フレーム間開口高さ (デフォルト: 上下均等 120mm)
       hasFloorReinforcement: false, // 床面中央補強フレーム (床面積 > 750×450mm で推奨ON)
       hasTopReinforcement: false,  // 天面中央補強フレーム (W>940mmで必須ON、940mm以下は任意)
       hasDoorAntiFlex: false,      // 強力爬虫類向けスライド扉たわみ防止レール (扉幅-2mm)
@@ -479,7 +479,9 @@ export class CageModel {
     // 溝のない面をケージ室内側（左フレーム: 右向き/right、右フレーム: 左向き/left）に配置
     if (hasSideReinforcement) {
       const sideReinfL = Math.max(10, D - 40);
-      const sideReinfY = 20 + sideOpeningH + 10;
+      const upperH = sideOpeningH;
+      const lowerH = Math.max(10, H - 60 - upperH);
+      const sideReinfY = 20 + lowerH + 10;
       const reinfProfile = isSilver ? '2020_flat' : '2020';
       this.addFrameMember(reinfProfile, sideReinfL, new THREE.Vector3(-W / 2 + 10, sideReinfY, 0), rotZ, '側面補強・左2020', null, 'right');
       this.addFrameMember(reinfProfile, sideReinfL, new THREE.Vector3(W / 2 - 10, sideReinfY, 0), rotZ, '側面補強・右2020', null, 'left');
@@ -856,9 +858,9 @@ export class CageModel {
     };
 
     if (hasSideReinforcement) {
-      // 側面補強あり：上部・下部を個別に選択可能
-      const lowerH = sideOpeningH; // 下部開口間口高さ
-      const upperH = Math.max(10, H - 60 - sideOpeningH); // 上部開口間口高さ
+      // 側面補強あり：上部・下部を個別に選択可能 (sideOpeningH = 側面上部開口高さ)
+      const upperH = sideOpeningH; // 上部開口間口高さ
+      const lowerH = Math.max(10, H - 60 - upperH); // 下部開口間口高さ
       const lowerMatH = Math.round(lowerH + 10); // 下部材料高さ (溝5mm x 2)
       const upperMatH = Math.round(upperH + 10); // 上部材料高さ (溝5mm x 2)
 
@@ -866,7 +868,7 @@ export class CageModel {
       addSidePanelPair(sideMatD, lowerMatH, 20 + lowerH / 2, sideLowerMatType, '下部');
 
       // --- 上部パネル ---
-      const upperCenterY = (40 + sideOpeningH + (H - 20)) / 2;
+      const upperCenterY = H - 20 - upperH / 2;
       addSidePanelPair(sideMatD, upperMatH, upperCenterY, sideUpperMatType, '上部');
 
       // --- 側面換気量調整板 (オプション: 側面2分割かつ側面上部が塩ビパンチング時に外張り追加) ---
@@ -2240,8 +2242,8 @@ export class CageModel {
       const sideLowerMat = panelConfig.sideLower || 'acrylic';
       const sideUpperMat = panelConfig.sideUpper || 'punching';
 
-      const lowerH = Math.max(10, sideOpeningH);
-      const upperH = Math.max(10, H - 60 - sideOpeningH);
+      const upperH = Math.max(10, sideOpeningH);
+      const lowerH = Math.max(10, H - 60 - upperH);
 
       // 下側パネル3方施工
       if (sideLowerMat !== 'polyca') {
