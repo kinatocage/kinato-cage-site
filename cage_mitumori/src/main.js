@@ -88,6 +88,7 @@ const inputSideH = document.getElementById('input-side-h');
 
 // タイプ選択
 const btnTypeA = document.getElementById('btn-type-a');
+const btnTypeAFront = document.getElementById('btn-type-a-front');
 const btnTypeC = document.getElementById('btn-type-c');
 const typeBadge = document.getElementById('type-badge');
 
@@ -141,11 +142,16 @@ const floorWarningBanner = document.getElementById('floor-warning-banner');
 const seismicWarningBanner = document.getElementById('seismic-warning-banner');
 const seismicWarningText = document.getElementById('seismic-warning-text');
 
-// 扉開閉モードボタン（排他制御）
+// 扉開閉モードボタン（スライド扉 & 前開き扉）
 const btnDoorClosed = document.getElementById('btn-door-closed');
 const btnDoorLeft = document.getElementById('btn-door-left');
 const btnDoorRight = document.getElementById('btn-door-right');
-const doorModeBtns = [btnDoorClosed, btnDoorLeft, btnDoorRight];
+const btnFrontDoorClosed = document.getElementById('btn-front-door-closed');
+const btnFrontDoorOpen = document.getElementById('btn-front-door-open');
+const slideDoorGroup = document.getElementById('slide-door-group');
+const frontDoorGroup = document.getElementById('front-door-group');
+const doorControlTitle = document.getElementById('door-control-title');
+const doorModeBtns = [btnDoorClosed, btnDoorLeft, btnDoorRight, btnFrontDoorClosed, btnFrontDoorOpen].filter(Boolean);
 
 // 状態サマリー & 補強バッジ
 const reinforceTip = document.getElementById('reinforce-tip');
@@ -573,9 +579,13 @@ function getMaterialConfig(partCode) {
   if (materialsConfig.packings && materialsConfig.packings[partCode]) {
     return materialsConfig.packings[partCode];
   }
+  // 6. 金物マスタ (ヒンジ・打掛など)
+  if (materialsConfig.hardware && materialsConfig.hardware[partCode]) {
+    return materialsConfig.hardware[partCode];
+  }
 
   // 部分一致フォールバック (コードまたは名称での照合)
-  for (const group of [materialsConfig.panels, materialsConfig.frames, materialsConfig.rails, materialsConfig.caps, materialsConfig.packings]) {
+  for (const group of [materialsConfig.panels, materialsConfig.frames, materialsConfig.rails, materialsConfig.caps, materialsConfig.packings, materialsConfig.hardware]) {
     if (!group) continue;
     for (const [key, val] of Object.entries(group)) {
       if (partCode === key || partCode.startsWith(key) || key.startsWith(partCode)) {
@@ -604,7 +614,7 @@ function calculateGrandTotals() {
   let totalPanelWeight = 0;
 
   for (const part of parts) {
-    if (part.category === 'frame' || part.category === 'rail_cap') {
+    if (part.category === 'frame' || part.category === 'rail_cap' || part.category === 'hardware') {
       const config = getMaterialConfig(part.partCode || part.name);
       if (config) {
         if (config.unit === 'm') {
@@ -661,6 +671,7 @@ function calculateGrandTotals() {
   const isPerch = !!state.hasPerch;
   const isRubberPacking = !!state.hasRubberPacking;
   const isRoomDivider = !!state.hasRoomDivider;
+  const isTypeAFront = state.cageType === 'A_FRONT';
 
   // 1. オプション加工工賃（資材費とは別で単純に販売価格へ加算）
   const splitFloorLabor = isFloorSplit ? (laborConfig.splitFloor?.price ?? 500) : 0;
@@ -671,8 +682,9 @@ function calculateGrandTotals() {
   const perchLabor = isPerch ? (laborConfig.perch?.price ?? 1000) : 0;
   const rubberPackingLabor = isRubberPacking ? (laborConfig.rubberPacking?.price ?? 800) : 0;
   const roomDividerLabor = isRoomDivider ? (laborConfig.roomDivider?.price ?? 500) : 0;
+  const frontOpenDoorLabor = isTypeAFront ? (laborConfig.frontOpenDoor?.price ?? 3000) : 0;
 
-  const totalLaborFee = splitFloorLabor + splitTopLabor + typeCLabor + splitSideLabor + frontWide3xLabor + perchLabor + rubberPackingLabor + roomDividerLabor;
+  const totalLaborFee = splitFloorLabor + splitTopLabor + typeCLabor + splitSideLabor + frontWide3xLabor + perchLabor + rubberPackingLabor + roomDividerLabor + frontOpenDoorLabor;
 
   // 2. 特定オプション部材（販売価格加算額および内部原価）
   const casterPrice = isCaster ? (itemConfig.caster?.price ?? 1500) : 0;
@@ -1022,8 +1034,72 @@ toggleTopReinforce.addEventListener('change', (e) => {
   syncUpdate();
 });
 
+// 正面スライド扉 たわみ防止レールの利用可否制御（前開き選択時は選択不可）
+function updateDoorAntiFlexAvailability() {
+  if (!toggleDoorAntiFlex || !cardDoorAntiFlex) return;
+
+  const isFrontOpen = state.cageType === 'A_FRONT';
+  const doorAntiFlexSub = document.getElementById('door-anti-flex-sub');
+
+  if (isFrontOpen) {
+    if (state.hasDoorAntiFlex) {
+      state.hasDoorAntiFlex = false;
+      toggleDoorAntiFlex.checked = false;
+    }
+    toggleDoorAntiFlex.disabled = true;
+    cardDoorAntiFlex.classList.add('disabled');
+    cardDoorAntiFlex.classList.remove('active');
+    if (doorAntiFlexSub) {
+      doorAntiFlexSub.textContent = '※前開き（横開き扉）仕様のためスライド扉用レールは選択不可';
+    }
+  } else {
+    toggleDoorAntiFlex.disabled = false;
+    cardDoorAntiFlex.classList.remove('disabled');
+    if (doorAntiFlexSub) {
+      doorAntiFlexSub.textContent = '強力生体向け。左右端に縦レールを追加し内側からの変形を防止';
+    }
+  }
+}
+
+// ２室分けオプションの利用可否制御（前開き選択時・止まり木ON時は選択不可）
+function updateRoomDividerAvailability() {
+  if (!toggleRoomDivider || !cardRoomDivider) return;
+
+  const isFrontOpen = state.cageType === 'A_FRONT';
+  const isPerchActive = state.hasPerch;
+
+  if (isFrontOpen || isPerchActive) {
+    if (state.hasRoomDivider) {
+      state.hasRoomDivider = false;
+      toggleRoomDivider.checked = false;
+      if (rowPanelPartition) rowPanelPartition.classList.add('hidden');
+    }
+    toggleRoomDivider.disabled = true;
+    cardRoomDivider.classList.add('disabled');
+    cardRoomDivider.classList.remove('active');
+    if (roomDividerSub) {
+      if (isFrontOpen) {
+        roomDividerSub.textContent = '※前開き仕様では2室分け仕切り板は選択不可';
+      } else {
+        roomDividerSub.textContent = '※止まり木オプション選択時は利用できません';
+      }
+    }
+  } else {
+    toggleRoomDivider.disabled = false;
+    cardRoomDivider.classList.remove('disabled');
+    if (roomDividerSub) {
+      roomDividerSub.textContent = '正面扉戸の隙間が7mmあります。小さい生体にはご注意ください';
+    }
+  }
+}
+
 // 正面スライド扉 たわみ防止レールのトグル
 toggleDoorAntiFlex.addEventListener('change', (e) => {
+  if (state.cageType === 'A_FRONT') {
+    e.target.checked = false;
+    state.hasDoorAntiFlex = false;
+    return;
+  }
   state.hasDoorAntiFlex = e.target.checked;
   if (e.target.checked) {
     cardDoorAntiFlex.classList.add('active');
@@ -1051,22 +1127,8 @@ if (togglePerch) {
     if (e.target.checked) {
       if (cardPerch) cardPerch.classList.add('active');
 
-      // ２室分けオプションとの排他制御：止まり木ON時は２室分けをdisable
-      if (toggleRoomDivider) {
-        if (state.hasRoomDivider) {
-          state.hasRoomDivider = false;
-          toggleRoomDivider.checked = false;
-          if (rowPanelPartition) rowPanelPartition.classList.add('hidden');
-        }
-        toggleRoomDivider.disabled = true;
-      }
-      if (cardRoomDivider) {
-        cardRoomDivider.classList.add('disabled');
-        cardRoomDivider.classList.remove('active');
-      }
-      if (roomDividerSub) {
-        roomDividerSub.textContent = '※止まり木オプション選択時は利用できません';
-      }
+      // ２室分けオプションとの排他制御
+      updateRoomDividerAvailability();
 
       // 天面が塩ビパンチングでない場合、自動で塩ビパンチングへ変更してお知らせトーストを表示
       const isTopNotPunching = state.panelConfig.top !== 'punching' || 
@@ -1084,17 +1146,7 @@ if (togglePerch) {
       }
     } else {
       if (cardPerch) cardPerch.classList.remove('active');
-
-      // ２室分けオプションのdisabled解除
-      if (toggleRoomDivider) {
-        toggleRoomDivider.disabled = false;
-      }
-      if (cardRoomDivider) {
-        cardRoomDivider.classList.remove('disabled');
-      }
-      if (roomDividerSub) {
-        roomDividerSub.textContent = '正面扉戸の隙間が7mmあります。小さい生体にはご注意ください';
-      }
+      updateRoomDividerAvailability();
     }
     syncUpdate();
   });
@@ -1198,9 +1250,23 @@ btnTypeA.addEventListener('click', () => {
   state.cageType = 'A';
   state.frontWideFrame = lastTypeAFrontWideFrame; // 前回のType A設定を復元
   btnTypeA.classList.add('active');
+  btnTypeAFront?.classList.remove('active');
   btnTypeC.classList.remove('active');
   rowFrontWindow.classList.add('hidden');
   typeBadge.textContent = 'Type A 選択中 (全面スライド扉)';
+  updateDoorUI();
+  syncUpdate();
+});
+
+btnTypeAFront?.addEventListener('click', () => {
+  state.cageType = 'A_FRONT';
+  state.frontWideFrame = lastTypeAFrontWideFrame; // 前回のType A設定を復元
+  btnTypeAFront.classList.add('active');
+  btnTypeA.classList.remove('active');
+  btnTypeC.classList.remove('active');
+  rowFrontWindow.classList.add('hidden');
+  typeBadge.textContent = 'Type A 前開き 選択中 (左ヒンジ・右打掛)';
+  updateDoorUI();
   syncUpdate();
 });
 
@@ -1209,10 +1275,69 @@ btnTypeC.addEventListener('click', () => {
   state.frontWideFrame = 'none'; // Type Cは前窓構造のため幅広フレームなし
   btnTypeC.classList.add('active');
   btnTypeA.classList.remove('active');
+  btnTypeAFront?.classList.remove('active');
   rowFrontWindow.classList.remove('hidden');
   typeBadge.textContent = 'Type C 選択中 (前窓＋扉)';
+  updateDoorUI();
   syncUpdate();
 });
+
+const FRONT_OPEN_MAX_W = 600;
+const FRONT_OPEN_MAX_H = 700; // 高さ制限: 最大700mm
+const STANDARD_MAX_W = 1800;
+const STANDARD_MAX_H = 900;
+
+/**
+ * ケージタイプに応じた寸法上限（幅・高さ）の制限更新
+ * - TypeA 前開き: 幅600mmまで、高さ700mmまで
+ * - 標準ケージ: 幅1800mmまで、高さ900mmまで
+ */
+function updateDimensionLimits() {
+  const isFrontOpen = state.cageType === 'A_FRONT';
+  const maxW = isFrontOpen ? FRONT_OPEN_MAX_W : STANDARD_MAX_W;
+  const maxH = isFrontOpen ? FRONT_OPEN_MAX_H : STANDARD_MAX_H;
+
+  if (sliderW && inputW) {
+    sliderW.max = maxW;
+    inputW.max = maxW;
+    if (state.W > maxW) {
+      state.W = maxW;
+      sliderW.value = maxW;
+      inputW.value = maxW;
+      updateFloorReinforceByArea();
+    }
+  }
+
+  if (sliderH && inputH) {
+    sliderH.max = maxH;
+    inputH.max = maxH;
+    if (state.H > maxH) {
+      state.H = maxH;
+      sliderH.value = maxH;
+      inputH.value = maxH;
+    }
+  }
+}
+
+function updateDoorUI() {
+  const isFrontOpen = state.cageType === 'A_FRONT';
+  updateDimensionLimits();
+  updateDoorAntiFlexAvailability();
+  updateRoomDividerAvailability();
+
+  if (slideDoorGroup && frontDoorGroup) {
+    slideDoorGroup.style.display = isFrontOpen ? 'none' : 'grid';
+    frontDoorGroup.style.display = isFrontOpen ? 'grid' : 'none';
+  }
+  if (doorControlTitle) {
+    doorControlTitle.textContent = isFrontOpen ? '前開き扉 開閉' : '引き違いスライド扉 開閉';
+  }
+  // ドアモードの表示を同期
+  const currentMode = state.doorState || 'closed';
+  doorModeBtns.forEach((btn) => {
+    btn.classList.toggle('active', btn.getAttribute('data-mode') === currentMode);
+  });
+}
 
 // フレームカラー切り替え（シルバー / ブラック[将来プレビュー]）
 btnFrameSilver.addEventListener('click', () => {
@@ -1272,6 +1397,8 @@ function setDoorMode(mode) {
 btnDoorClosed.addEventListener('click', () => setDoorMode('closed'));
 btnDoorLeft.addEventListener('click', () => setDoorMode('left_open'));
 btnDoorRight.addEventListener('click', () => setDoorMode('right_open'));
+btnFrontDoorClosed?.addEventListener('click', () => setDoorMode('closed'));
+btnFrontDoorOpen?.addEventListener('click', () => setDoorMode('open'));
 
 // 自動回転ボタン
 function setAutoRotateMode(active) {
@@ -1592,17 +1719,23 @@ function applyCreaturePreset(preset) {
   state.H = preset.H;
 
   // 2. ケージタイプ（指定があれば連動）
-  if (preset.cageType && (preset.cageType === 'A' || preset.cageType === 'C')) {
+  if (preset.cageType && (preset.cageType === 'A' || preset.cageType === 'A_FRONT' || preset.cageType === 'C')) {
     state.cageType = preset.cageType;
     if (btnTypeA && btnTypeC) {
       btnTypeA.classList.toggle('active', state.cageType === 'A');
+      btnTypeAFront?.classList.toggle('active', state.cageType === 'A_FRONT');
       btnTypeC.classList.toggle('active', state.cageType === 'C');
       if (typeBadge) {
-        typeBadge.textContent = state.cageType === 'A' ? 'Type A 選択中 (全面スライド扉)' : 'Type C 選択中 (前窓＋扉)';
+        if (state.cageType === 'A_FRONT') {
+          typeBadge.textContent = 'Type A 前開き 選択中 (左ヒンジ・右打掛)';
+        } else {
+          typeBadge.textContent = state.cageType === 'A' ? 'Type A 選択中 (全面スライド扉)' : 'Type C 選択中 (前窓＋扉)';
+        }
       }
       if (rowFrontWindow) {
         rowFrontWindow.classList.toggle('hidden', state.cageType !== 'C');
       }
+      updateDoorUI();
     }
   }
 
@@ -2839,17 +2972,23 @@ function checkInitialStateFromStorageOrUrl() {
       if (inputH) inputH.value = state.H;
       if (sliderH) sliderH.value = state.H;
     }
-    if (incomingState.cageType === 'A' || incomingState.cageType === 'C') {
+    if (incomingState.cageType === 'A' || incomingState.cageType === 'A_FRONT' || incomingState.cageType === 'C') {
       state.cageType = incomingState.cageType;
       if (btnTypeA && btnTypeC) {
         btnTypeA.classList.toggle('active', state.cageType === 'A');
+        btnTypeAFront?.classList.toggle('active', state.cageType === 'A_FRONT');
         btnTypeC.classList.toggle('active', state.cageType === 'C');
         if (typeBadge) {
-          typeBadge.textContent = state.cageType === 'A' ? 'Type A 選択中 (全面スライド扉)' : 'Type C 選択中 (前窓＋扉)';
+          if (state.cageType === 'A_FRONT') {
+            typeBadge.textContent = 'Type A 前開き 選択中 (左ヒンジ・右打掛)';
+          } else {
+            typeBadge.textContent = state.cageType === 'A' ? 'Type A 選択中 (全面スライド扉)' : 'Type C 選択中 (前窓＋扉)';
+          }
         }
         if (rowFrontWindow) {
           rowFrontWindow.classList.toggle('hidden', state.cageType !== 'C');
         }
+        updateDoorUI();
       }
     }
     if (incomingState.frameColor === 'silver' || incomingState.frameColor === 'black') {

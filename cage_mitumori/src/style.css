@@ -605,8 +605,8 @@ body {
 /* 1. Cage Type Cards */
 .type-selector {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
 }
 
 .type-card {

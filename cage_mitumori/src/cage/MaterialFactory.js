@@ -56,6 +56,21 @@ export class MaterialFactory {
       envMapIntensity: 1.2
     });
 
+    // 皿ネジ用シルバー（金具本体と差別化した落ち着きのあるスチールシルバー調）
+    this.screwSilver = new THREE.MeshStandardMaterial({
+      color: 0xa8b0b8,
+      metalness: 0.85,
+      roughness: 0.22,
+      envMapIntensity: 1.0
+    });
+
+    // 皿ネジのプラス十字溝（深い影色）
+    this.screwSlot = new THREE.MeshStandardMaterial({
+      color: 0x1c1f22,
+      metalness: 0.1,
+      roughness: 0.9
+    });
+
     // 天面コード通し用ゴムグロメット（マットブラック）
     this.grommetMaterial = new THREE.MeshStandardMaterial({
       color: 0x18181b,
@@ -273,6 +288,8 @@ export class MaterialFactory {
     this.perchWhiteScrew.dispose();
     this.ventCoverAcrylic.dispose();
     this.thumbScrewMaterial.dispose();
+    this.screwSilver.dispose();
+    this.screwSlot.dispose();
     this.blackMatteAcrylic.dispose();
     this.smokeGrayAcrylic.dispose();
   }
