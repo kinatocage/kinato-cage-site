@@ -838,12 +838,25 @@ async function runStructuralAndCostSimulation() {
 }
 
 /**
+ * ケージタイプの表示名を取得
+ * @param {boolean} detailed - 詳細（仕様テキスト・カード画像用）かどうか
+ */
+function getCageTypeDisplayName(detailed = false) {
+  if (state.cageType === 'A_FRONT') {
+    return detailed ? 'Type A 前開き（左ヒンジ・右打掛仕様）' : 'Type A 前開き（左ヒンジ・右打掛）';
+  } else if (state.cageType === 'C') {
+    return detailed ? 'Type C（下部前窓＋扉仕様）' : 'Type C（前窓＋扉）';
+  }
+  return detailed ? 'Type A（全面スライド扉仕様）' : 'Type A（全面スライド扉）';
+}
+
+/**
  * 現在サイズ・オプションスペックサマリーの描画（価格表カード幅に合わせた改行配慮）
  */
 function updateSpecSummary() {
   if (!currentSpecSummary) return;
 
-  const typeName = state.cageType === 'A' ? 'Type A（全面扉）' : 'Type C（前窓＋扉）';
+  const typeName = getCageTypeDisplayName(false);
   const sizeText = `W${state.W} × D${state.D} × H${state.H} mm`;
 
   const optionsList = [];
@@ -2082,10 +2095,12 @@ function getSelectedPanelsList() {
 
   // 正面
   if (state.cageType === 'C') {
-    panels.push({ face: '正面扉', name: '透明アクリル 3.0mm' });
+    panels.push({ face: '正面扉', name: '透明アクリル 3.0mm (スライド扉)' });
     panels.push({ face: '正面固定窓', name: `透明アクリル 3.0mm (開口高 ${state.frontWindowH}mm)` });
+  } else if (state.cageType === 'A_FRONT') {
+    panels.push({ face: '正面扉', name: '透明アクリル 3.0mm (前開き扉・左ヒンジ/右打掛錠)' });
   } else {
-    panels.push({ face: '正面扉', name: '透明アクリル 3.0mm (全面スライド)' });
+    panels.push({ face: '正面扉', name: '透明アクリル 3.0mm (全面スライド扉)' });
   }
 
   // 床面
@@ -2150,6 +2165,11 @@ function getSelectedPanelsList() {
  */
 function getSelectedOptionsList() {
   const options = [];
+
+  // 0. 前開き扉仕様 (Type A 前開き専用)
+  if (state.cageType === 'A_FRONT') {
+    options.push('前開き扉仕様 (TH-31ステンレス蝶番×2 / C-1249-4ステンレス打掛錠×2 / 取付座板付)');
+  }
 
   // 1. 正面幅広フレーム (Type A専用)
   if (state.cageType === 'A') {
@@ -2222,7 +2242,7 @@ function getSelectedOptionsList() {
  * 問い合わせ用フォーマットテキスト生成
  */
 function generateInquirySpecText(estimateId, totals) {
-  const typeName = state.cageType === 'A' ? 'Type A（全面スライド扉仕様）' : 'Type C（下部前窓＋扉仕様）';
+  const typeName = getCageTypeDisplayName(true);
   const frameColorName = getFrameColorDisplayName();
 
   const panels = getSelectedPanelsList();
@@ -2506,7 +2526,7 @@ async function exportEstimateCardImage() {
     ctx.lineTo(specBoxX + specBoxW - 25, specBoxY + 56);
     ctx.stroke();
 
-    const typeName = state.cageType === 'A' ? 'Type A（全面スライド扉仕様）' : 'Type C（下部前窓＋スライド扉仕様）';
+    const typeName = getCageTypeDisplayName(true);
     const frameColor = getFrameColorDisplayName();
     const panelsList = getSelectedPanelsList();
     const optionsList = getSelectedOptionsList();
