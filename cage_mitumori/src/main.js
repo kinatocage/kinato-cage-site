@@ -2098,7 +2098,7 @@ function getSelectedPanelsList() {
     panels.push({ face: '正面扉', name: '透明アクリル 3.0mm (スライド扉)' });
     panels.push({ face: '正面固定窓', name: `透明アクリル 3.0mm (開口高 ${state.frontWindowH}mm)` });
   } else if (state.cageType === 'A_FRONT') {
-    panels.push({ face: '正面扉', name: '透明アクリル 3.0mm (前開き扉・左ヒンジ/右打掛錠)' });
+    panels.push({ face: '正面扉', name: '透明アクリル 3.0mm (前開き扉)' });
   } else {
     panels.push({ face: '正面扉', name: '透明アクリル 3.0mm (全面スライド扉)' });
   }
@@ -2168,7 +2168,7 @@ function getSelectedOptionsList() {
 
   // 0. 前開き扉仕様 (Type A 前開き専用)
   if (state.cageType === 'A_FRONT') {
-    options.push('前開き扉仕様 (TH-31ステンレス蝶番×2 / C-1249-4ステンレス打掛錠×2 / 取付座板付)');
+    options.push('前開き扉仕様');
   }
 
   // 1. 正面幅広フレーム (Type A専用)
