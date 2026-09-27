@@ -202,7 +202,17 @@ function handleEstimateLog(ss, data, rawJson) {
   const dev = data.device || {};
   const meta = data.meta || {};
 
-  const typeName = spec.cageType === 'A' ? 'Type A（全面扉）' : 'Type C（前窓＋扉）';
+  let typeName = spec.typeName || '';
+  if (!typeName) {
+    if (spec.cageType === 'A_FRONT') {
+      const hinge = spec.doorHingeDisplayName || (spec.doorHingeSide === 'right' ? '左打掛、右ヒンジ' : '左ヒンジ、右打掛');
+      typeName = `Type A 前開き (${hinge})`;
+    } else if (spec.cageType === 'C') {
+      typeName = 'Type C（前窓＋扉）';
+    } else {
+      typeName = 'Type A（全面扉）';
+    }
+  }
   const frameColorName = spec.frameColorDisplayName || (spec.frameColor === 'black' ? 'ブラック' : 'シルバー');
   const panelsText = spec.panelsSummary || '標準仕様';
   const optText = spec.optionsSummary || 'なし';

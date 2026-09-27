@@ -88,6 +88,7 @@ export class CageModel {
       hasRubberPacking: false,     // モレ対策ゴムパッキン (側面・背面 隙間モレ抑制)
       hasRoomDivider: false,       // ２室分け（後付け仕切り板・Type A/C両対応）
       frontWideFrame: '2x',        // 正面下側幅広フレーム: '2x' (40mm) | '3x' (60mm) | 'none' (20mm標準)
+      doorHingeSide: 'left',       // 前開き扉開き方向: 'left' (左ヒンジ・右打掛) | 'right' (左打掛・右ヒンジ)
       footType: 'rubber',      // 'rubber' (ゴム脚) | 'caster' (キャスター)
       showPanels: true,
       doorState: 'closed',     // 'closed' | 'left_open' | 'right_open' (排他制御)
@@ -282,7 +283,7 @@ export class CageModel {
     } else if (newParams) {
       Object.assign(this.params, newParams);
     }
-    const { W, D, H, cageType, frontWindowH, hasSideReinforcement, sideOpeningH, showPanels, frameColor, hasFloorReinforcement, hasTopReinforcement, footType } = this.params;
+    const { W, D, H, cageType, frontWindowH, hasSideReinforcement, sideOpeningH, showPanels, frameColor, hasFloorReinforcement, hasTopReinforcement, footType, doorHingeSide } = this.params;
     const isSilver = (frameColor === 'silver');
 
     if (frameColor) {
@@ -931,6 +932,92 @@ export class CageModel {
       // 側面補強なし：全面選択
       const sideMatH = H - 30; // (H - 40) + 10
       addSidePanelPair(sideMatD, sideMatH, H / 2, sideMatType, '');
+
+      // --- 側面換気量調整板 (オプション: 側面補強なしで塩ビパンチング時に高さ2分割・計4枚外張り追加) ---
+      if (this.params.hasSideVentCover && sideMatType === 'punching') {
+        const ventCoverT = 1.5; // 厚み 1.5mm 透明アクリル
+        const openingH = H - 40; // 間口高さ (上下フレーム内寸)
+        // 間口半分 + 10mm余裕 (上下フレームに10mmずつ被り、中央Y=H/2で突き合わせ)
+        const ventCoverH = Math.round(openingH / 2 + 10);
+        const ventCoverD = D - 2; // ケージサイズに対して-2mm (前後各1mm逃がし)
+
+        const ventGeom = new THREE.BoxGeometry(ventCoverT, ventCoverH, ventCoverD);
+        this.activeGeometries.push(ventGeom);
+
+        // 外張り配置: フレーム外側 (X = ±W/2) の外表面に密着 (突き合わせのため左右Xは同一)
+        const leftVentX = -W / 2 - ventCoverT / 2;
+        const rightVentX = W / 2 + ventCoverT / 2;
+
+        // 中心Y座標 (下段: Y=10〜H/2, 上段: Y=H/2〜H-10)
+        const lowerCenterY = 10 + ventCoverH / 2;
+        const upperCenterY = H - 10 - ventCoverH / 2;
+
+        // 1. 下段パネル (左右)
+        const leftLowerMesh = new THREE.Mesh(ventGeom, this.materials.ventCoverAcrylic);
+        leftLowerMesh.position.set(leftVentX, lowerCenterY, 0);
+        leftLowerMesh.castShadow = true;
+        this.panelGroup.add(leftLowerMesh);
+
+        const rightLowerMesh = new THREE.Mesh(ventGeom, this.materials.ventCoverAcrylic);
+        rightLowerMesh.position.set(rightVentX, lowerCenterY, 0);
+        rightLowerMesh.castShadow = true;
+        this.panelGroup.add(rightLowerMesh);
+
+        // 2. 上段パネル (左右)
+        const leftUpperMesh = new THREE.Mesh(ventGeom, this.materials.ventCoverAcrylic);
+        leftUpperMesh.position.set(leftVentX, upperCenterY, 0);
+        leftUpperMesh.castShadow = true;
+        this.panelGroup.add(leftUpperMesh);
+
+        const rightUpperMesh = new THREE.Mesh(ventGeom, this.materials.ventCoverAcrylic);
+        rightUpperMesh.position.set(rightVentX, upperCenterY, 0);
+        rightUpperMesh.castShadow = true;
+        this.panelGroup.add(rightUpperMesh);
+
+        // No.1 化粧つまみネジの生成と配置 (各パネル4箇所、左右計16個)
+        const screwZFront = (D - 2) / 2 - 9; // = D/2 - 10 (柱中心溝位置)
+        const screwZBack = -(D - 2) / 2 + 9;  // = -D/2 + 10 (柱中心溝位置)
+
+        // 柱溝 (Y=20〜H-20) の範囲内で各パネルの上下端からバランスよく配置
+        const lowerScrewYBottom = Math.max(25, 10 + Math.min(30, ventCoverH * 0.2));
+        const lowerScrewYTop = Math.min(H / 2 - 15, H / 2 - Math.min(25, ventCoverH * 0.2));
+        const upperScrewYBottom = Math.max(H / 2 + 15, H / 2 + Math.min(25, ventCoverH * 0.2));
+        const upperScrewYTop = Math.min(H - 25, H - 10 - Math.min(30, ventCoverH * 0.2));
+
+        const screwPositions = [
+          // 下段パネル用 (4箇所)
+          { y: lowerScrewYTop, z: screwZFront },
+          { y: lowerScrewYTop, z: screwZBack },
+          { y: lowerScrewYBottom, z: screwZFront },
+          { y: lowerScrewYBottom, z: screwZBack },
+          // 上段パネル用 (4箇所)
+          { y: upperScrewYTop, z: screwZFront },
+          { y: upperScrewYTop, z: screwZBack },
+          { y: upperScrewYBottom, z: screwZFront },
+          { y: upperScrewYBottom, z: screwZBack },
+        ];
+
+        // 左右側面それぞれ8箇所につまみネジを配置 (計16個)
+        for (const pos of screwPositions) {
+          // 左側面 (X = -W/2 - ventCoverT から外側 -X 方向へ)
+          this.addThumbScrew(-W / 2 - ventCoverT, pos.y, pos.z, -1);
+          // 右側面 (X = W/2 + ventCoverT から外側 +X 方向へ)
+          this.addThumbScrew(W / 2 + ventCoverT, pos.y, pos.z, 1);
+        }
+
+        // BOM記録: 換気量調整板 4枚 (左右各2枚)
+        this.recordPart('側面換気量調整板 (透明アクリル 1.5mm)', `${ventCoverH} x ${ventCoverD} mm`, 4, '左右側面外張り (上下各2枚・保温・換気量調整用)', 'panel', {
+          panelCode: 'acrylic_extrusion_1_5',
+          partCode: 'acrylic_extrusion_1_5',
+          widthMm: ventCoverH,
+          heightMm: ventCoverD,
+          unitType: 'm2'
+        });
+
+        // BOM記録: 化粧つまみネジ 16個
+        const screwColorName = frameColor === 'black' ? 'ブラック' : 'ホワイト';
+        this.recordPart(`No.1 化粧つまみネジ (${screwColorName})`, '外径φ15mm / M4 (手締め・工具不要)', 16, '側面換気量調整板 固定用 (左右計16箇所)', 'other');
+      }
     }
 
     // 5. 天板パネルの構築ヘルパー
@@ -1569,54 +1656,54 @@ export class CageModel {
     const topNotchY1 = panelH / 4 + notchH / 2;  // 上側切欠き上端
     const topNotchY2 = panelH / 4 - notchH / 2;  // 上側切欠き下端
 
-    // 3. 4隅R10角丸＋右辺2箇所切欠きのパネル外形Shapeを生成
+    // 3. 4隅R10角丸＋切欠き（ヒンジ逆側の辺に2箇所）のパネル外形Shapeを生成
     const cornerR = 10.0;
     const halfW = panelW / 2;
     const halfH = panelH / 2;
     const r = Math.min(cornerR, halfW / 4, halfH / 4);
 
+    const isRightHinge = (this.params.doorHingeSide === 'right');
     const shape = new THREE.Shape();
 
-    // 1) 底辺: 左下R終わりから右下R始まりへ
-    shape.moveTo(-halfW + r, -halfH);
-    shape.lineTo(halfW - r, -halfH);
-
-    // 2) 右下角 (R10)
-    shape.absarc(halfW - r, -halfH + r, r, -Math.PI / 2, 0, false);
-
-    // 3) 右辺下部: 右下R終わりから下側切欠き下端へ
-    shape.lineTo(halfW, btmNotchY2);
-
-    // 4) 下側切欠き (幅19mm, 高さ52mm)
-    shape.lineTo(halfW - notchW, btmNotchY2);
-    shape.lineTo(halfW - notchW, btmNotchY1);
-    shape.lineTo(halfW, btmNotchY1);
-
-    // 5) 右辺中間: 下側切欠き上端から上側切欠き下端へ
-    shape.lineTo(halfW, topNotchY2);
-
-    // 6) 上側切欠き (幅19mm, 高さ52mm)
-    shape.lineTo(halfW - notchW, topNotchY2);
-    shape.lineTo(halfW - notchW, topNotchY1);
-    shape.lineTo(halfW, topNotchY1);
-
-    // 7) 右辺上部: 上側切欠き上端から右上R始まりへ
-    shape.lineTo(halfW, halfH - r);
-
-    // 8) 右上角 (R10)
-    shape.absarc(halfW - r, halfH - r, r, 0, Math.PI / 2, false);
-
-    // 9) 上辺: 右上R終わりから左上R始まりへ
-    shape.lineTo(-halfW + r, halfH);
-
-    // 10) 左上角 (R10)
-    shape.absarc(-halfW + r, halfH - r, r, Math.PI / 2, Math.PI, false);
-
-    // 11) 左辺: 左上R終わりから左下R始まりへ
-    shape.lineTo(-halfW, -halfH + r);
-
-    // 12) 左下角 (R10)
-    shape.absarc(-halfW + r, -halfH + r, r, Math.PI, Math.PI * 1.5, false);
+    if (!isRightHinge) {
+      // 左ヒンジ・右打掛 (右辺に切欠き2箇所)
+      shape.moveTo(-halfW + r, -halfH);
+      shape.lineTo(halfW - r, -halfH);
+      shape.absarc(halfW - r, -halfH + r, r, -Math.PI / 2, 0, false);
+      shape.lineTo(halfW, btmNotchY2);
+      shape.lineTo(halfW - notchW, btmNotchY2);
+      shape.lineTo(halfW - notchW, btmNotchY1);
+      shape.lineTo(halfW, btmNotchY1);
+      shape.lineTo(halfW, topNotchY2);
+      shape.lineTo(halfW - notchW, topNotchY2);
+      shape.lineTo(halfW - notchW, topNotchY1);
+      shape.lineTo(halfW, topNotchY1);
+      shape.lineTo(halfW, halfH - r);
+      shape.absarc(halfW - r, halfH - r, r, 0, Math.PI / 2, false);
+      shape.lineTo(-halfW + r, halfH);
+      shape.absarc(-halfW + r, halfH - r, r, Math.PI / 2, Math.PI, false);
+      shape.lineTo(-halfW, -halfH + r);
+      shape.absarc(-halfW + r, -halfH + r, r, Math.PI, Math.PI * 1.5, false);
+    } else {
+      // 左打掛・右ヒンジ (左辺に切欠き2箇所)
+      shape.moveTo(-halfW + r, -halfH);
+      shape.lineTo(halfW - r, -halfH);
+      shape.absarc(halfW - r, -halfH + r, r, -Math.PI / 2, 0, false);
+      shape.lineTo(halfW, halfH - r);
+      shape.absarc(halfW - r, halfH - r, r, 0, Math.PI / 2, false);
+      shape.lineTo(-halfW + r, halfH);
+      shape.absarc(-halfW + r, halfH - r, r, Math.PI / 2, Math.PI, false);
+      shape.lineTo(-halfW, topNotchY1);
+      shape.lineTo(-halfW + notchW, topNotchY1);
+      shape.lineTo(-halfW + notchW, topNotchY2);
+      shape.lineTo(-halfW, topNotchY2);
+      shape.lineTo(-halfW, btmNotchY1);
+      shape.lineTo(-halfW + notchW, btmNotchY1);
+      shape.lineTo(-halfW + notchW, btmNotchY2);
+      shape.lineTo(-halfW, btmNotchY2);
+      shape.lineTo(-halfW, -halfH + r);
+      shape.absarc(-halfW + r, -halfH + r, r, Math.PI, Math.PI * 1.5, false);
+    }
 
     const extrudeSettings = {
       steps: 1,
@@ -1630,10 +1717,8 @@ export class CageModel {
     panelMesh.castShadow = false;
 
     // 4. 回転軸（ヒンジピン軸）ピボットグループの構築
-    // パネル背面をフレーム前面 (frontZ) に隙間なくピッタリ密着配置 (浮き解消)
-    // パネル前面は frontZ + panelT (= frontZ + 3.0mm)
-    // 蝶番ピン軸位置: X = -W/2 + 21.25, Z = frontZ + panelT
-    const pivotX = -W / 2 + 10 + 11.25;
+    // 蝶番ピン軸位置: 左ヒンジ時は X = -W/2 + 21.25, 右ヒンジ時は X = W/2 - 21.25
+    const pivotX = isRightHinge ? (W / 2 - 10 - 11.25) : (-W / 2 + 10 + 11.25);
     const pivotZ = frontZ + panelT;
     const doorPivot = new THREE.Group();
     doorPivot.name = 'FrontOpenDoorPivot';
@@ -1642,22 +1727,24 @@ export class CageModel {
     panelMesh.position.set(panelCenterX - pivotX, panelCenterY, -panelT);
     doorPivot.add(panelMesh);
 
-    // 5. TH-31 ステンレス蝶番の配置（左柱・4等分線の上下2箇所・座板スペーサー・皿プラスネジ）
-    this.addHingeTH31(pivotX, upperFeatureY, frontZ, panelT, doorPivot);
-    this.addHingeTH31(pivotX, lowerFeatureY, frontZ, panelT, doorPivot);
+    const hingeFrameX = isRightHinge ? (W / 2 - 10) : (-W / 2 + 10);
+    const lockFrameX = isRightHinge ? (-W / 2 + 10) : (W / 2 - 10);
 
-    // 6. C-1249-4 ステンレス打掛の配置（右柱・4等分線の上下2箇所・座板スペーサー・皿プラスネジ）
-    const rightFrameLockX = W / 2 - 10;
+    // 5. TH-31 ステンレス蝶番の配置
+    this.addHingeTH31(hingeFrameX, pivotX, upperFeatureY, frontZ, panelT, doorPivot, isRightHinge);
+    this.addHingeTH31(hingeFrameX, pivotX, lowerFeatureY, frontZ, panelT, doorPivot, isRightHinge);
+
+    // 6. C-1249-4 ステンレス打掛の配置
     const lockPivots = [];
-    this.addLockC1249(rightFrameLockX, upperFeatureY, frontZ, panelT, pivotX, doorPivot, lockPivots);
-    this.addLockC1249(rightFrameLockX, lowerFeatureY, frontZ, panelT, pivotX, doorPivot, lockPivots);
+    this.addLockC1249(lockFrameX, upperFeatureY, frontZ, panelT, pivotX, doorPivot, lockPivots, isRightHinge);
+    this.addLockC1249(lockFrameX, lowerFeatureY, frontZ, panelT, pivotX, doorPivot, lockPivots, isRightHinge);
 
     this.doorGroup.add(doorPivot);
 
     // 7. 開閉アニメーション設定（打掛ロック270度回転 ＋ 扉120度スイング回転）
     const isDoorOpen = doorState === 'open' || doorState === 'left_open' || doorState === 'right_open';
-    const targetRotY = isDoorOpen ? -Math.PI * (120 / 180) : 0; // 120度回転
-    const targetLockRotZ = isDoorOpen ? Math.PI * 1.5 : 0; // 270度 = 1.5π
+    const targetRotY = isDoorOpen ? (isRightHinge ? Math.PI * (120 / 180) : -Math.PI * (120 / 180)) : 0;
+    const targetLockRotZ = isDoorOpen ? (isRightHinge ? -Math.PI * 1.5 : Math.PI * 1.5) : 0;
 
     let currentRotY = targetRotY;
     let currentLockRotZ = targetLockRotZ;
@@ -1689,12 +1776,8 @@ export class CageModel {
 
   /**
    * TH-31 ステンレス蝶番の精密モデリング・配置
-   * - フレーム側固定ネジ: 左柱中心溝 (X = -W/2 + 10) に皿プラスネジ配置
-   * - 座板スペーサー: フレームと固定羽の間に透明アクリル 16 x 52 x 3.0mm を敷く
-   * - 蝶番ピン軸: X = pivotX (-W/2 + 21.25), Z = frontZ + spacerT
-   * - 扉側可動ネジ: X = -W/2 + 32.5 (パネル端から11.2mm加工位置) に皿プラスネジ配置
    */
-  addHingeTH31(pivotX, y, frontZ, spacerT, doorPivot) {
+  addHingeTH31(frameX, pivotX, y, frontZ, spacerT, doorPivot, isRightHinge = false) {
     const hingeMat = this.materials.handleMaterial;
     const baseZ = frontZ + spacerT;
 
@@ -1702,22 +1785,20 @@ export class CageModel {
     const hingeSpacerGeom = new THREE.BoxGeometry(16, 52, spacerT);
     this.activeGeometries.push(hingeSpacerGeom);
     const hingeSpacerMesh = new THREE.Mesh(hingeSpacerGeom, this.materials.acrylic);
-    hingeSpacerMesh.position.set(-this.params.W / 2 + 10, y, frontZ + spacerT / 2);
+    hingeSpacerMesh.position.set(frameX, y, frontZ + spacerT / 2);
     this.doorGroup.add(hingeSpacerMesh);
 
     // A. フレーム側固定ピース (非回転、doorGroupに追加、座板の上に密着)
-    // 幅18mm, 高さ50mm, 厚み1.5mm
-    // ピン軸 pivotX から左へ18mm伸びるため、中心Xは pivotX - 9
     const fixedGeom = new THREE.BoxGeometry(18, 50, 1.5);
     this.activeGeometries.push(fixedGeom);
     const fixedMesh = new THREE.Mesh(fixedGeom, hingeMat);
-    fixedMesh.position.set(pivotX - 9, y, baseZ + 0.75);
+    const fixedCenterX = isRightHinge ? (pivotX + 9) : (pivotX - 9);
+    fixedMesh.position.set(fixedCenterX, y, baseZ + 0.75);
     fixedMesh.castShadow = true;
     this.doorGroup.add(fixedMesh);
 
-    // 固定側皿プラスネジ 2箇所 (TH-31図面: 下端から8mm, ピッチ25.5mm => 中心yから -17.0mm, +8.5mm で低めに配置)
-    // ピン軸 pivotX から左へ 11.25mm => フレーム中心溝 (-W/2 + 10) に完全一致！
-    const frameScrewX = pivotX - 11.25;
+    // 固定側皿プラスネジ 2箇所
+    const frameScrewX = frameX;
     for (const dy of [-17.0, 8.5]) {
       this.addCountersunkPhillipsScrew(this.doorGroup, frameScrewX, y + dy, baseZ + 1.5, Math.PI / 4);
     }
@@ -1730,28 +1811,25 @@ export class CageModel {
     doorPivot.add(pinMesh);
 
     // C. 扉側可動ピース (回転軸doorPivotに追加、パネル前面に密着)
-    // ピン軸から右へ18mm伸びるため、ローカル中心Xは 9
     const movingGeom = new THREE.BoxGeometry(18, 50, 1.5);
     this.activeGeometries.push(movingGeom);
     const movingMesh = new THREE.Mesh(movingGeom, hingeMat);
-    movingMesh.position.set(9, y, 0.75);
+    const movingLocalX = isRightHinge ? -9 : 9;
+    movingMesh.position.set(movingLocalX, y, 0.75);
     movingMesh.castShadow = true;
     doorPivot.add(movingMesh);
 
-    // 扉側皿プラスネジ 2箇所 (TH-31図面: 上端から8mm, ピッチ25.5mm => 中心yから -8.5mm, +17.0mm で高めに配置)
+    // 扉側皿プラスネジ 2箇所
+    const screwLocalX = isRightHinge ? -11.25 : 11.25;
     for (const dy of [-8.5, 17.0]) {
-      this.addCountersunkPhillipsScrew(doorPivot, 11.25, y + dy, 1.5, Math.PI / 6);
+      this.addCountersunkPhillipsScrew(doorPivot, screwLocalX, y + dy, 1.5, Math.PI / 6);
     }
   }
 
   /**
    * C-1249-4 ステンレス打掛の精密モデリング・配置
-   * - 受具下スペーサー板: フレームと受具の隙間を埋める透明アクリル 16 x 48 x 3.0mm
-   * - フレーム側受具: 座板の上に密着配置 ＋ 上下2箇所に皿プラスネジ配置
-   * - 扉側本体: パネル表面に密着配置 ＋ 上下2箇所に皿プラスネジ配置
-   * - 掛金アーム: 支点ピンを中心に270度旋回可能
    */
-  addLockC1249(rightFrameX, y, frontZ, spacerT, pivotX, doorPivot, lockPivots) {
+  addLockC1249(frameX, y, frontZ, spacerT, pivotX, doorPivot, lockPivots, isRightHinge = false) {
     const lockMat = this.materials.handleMaterial;
     const baseZ = frontZ + spacerT;
 
@@ -1759,30 +1837,29 @@ export class CageModel {
     const lockSpacerGeom = new THREE.BoxGeometry(16, 48, spacerT);
     this.activeGeometries.push(lockSpacerGeom);
     const lockSpacerMesh = new THREE.Mesh(lockSpacerGeom, this.materials.acrylic);
-    lockSpacerMesh.position.set(rightFrameX, y, frontZ + spacerT / 2);
+    lockSpacerMesh.position.set(frameX, y, frontZ + spacerT / 2);
     this.doorGroup.add(lockSpacerMesh);
 
     // 1. フレーム側受具 (非回転、doorGroupに追加、座板の上に密着)
     const catchBaseGeom = new THREE.BoxGeometry(16, 46, 2.0);
     this.activeGeometries.push(catchBaseGeom);
     const catchBaseMesh = new THREE.Mesh(catchBaseGeom, lockMat);
-    catchBaseMesh.position.set(rightFrameX, y, baseZ + 1.0);
+    catchBaseMesh.position.set(frameX, y, baseZ + 1.0);
     this.doorGroup.add(catchBaseMesh);
 
-    // 受具側 皿プラスネジ 2箇所 (上下ピッチ 30mm)
+    // 受具側 皿プラスネジ 2箇所
     for (const dy of [-15, 15]) {
-      this.addCountersunkPhillipsScrew(this.doorGroup, rightFrameX, y + dy, baseZ + 2.0, Math.PI / 4);
+      this.addCountersunkPhillipsScrew(this.doorGroup, frameX, y + dy, baseZ + 2.0, Math.PI / 4);
     }
 
     const hookGeom = new THREE.BoxGeometry(14, 16, 12);
     this.activeGeometries.push(hookGeom);
     const hookMesh = new THREE.Mesh(hookGeom, lockMat);
-    hookMesh.position.set(rightFrameX, y, baseZ + 2.0 + 6.0);
+    hookMesh.position.set(frameX, y, baseZ + 2.0 + 6.0);
     this.doorGroup.add(hookMesh);
 
     // 2. 扉側本体 (doorPivotに追加、パネル表面に密着)
-    // パネルの切欠き内端 (X = W/2 - 21.0) の内側に打掛本体を配置
-    const bodyWorldX = this.params.W / 2 - 29.0;
+    const bodyWorldX = isRightHinge ? (-this.params.W / 2 + 29.0) : (this.params.W / 2 - 29.0);
     const bodyLocalX = bodyWorldX - pivotX;
 
     const bodyBaseGeom = new THREE.BoxGeometry(16, 46, 2.0);
@@ -1791,7 +1868,7 @@ export class CageModel {
     bodyBaseMesh.position.set(bodyLocalX, y, 1.0);
     doorPivot.add(bodyBaseMesh);
 
-    // 本体側 皿プラスネジ 2箇所 (上下ピッチ 30mm)
+    // 本体側 皿プラスネジ 2箇所
     for (const dy of [-15, 15]) {
       this.addCountersunkPhillipsScrew(doorPivot, bodyLocalX, y + dy, 2.0, Math.PI / 3);
     }
@@ -1801,7 +1878,7 @@ export class CageModel {
     armPivot.name = 'LockArmPivot';
     armPivot.position.set(bodyLocalX, y, 2.0);
 
-    // 支点軸ピン (φ6mm x 厚み3mm)
+    // 支点軸ピン
     const pinGeom = new THREE.CylinderGeometry(3, 3, 3, 16);
     pinGeom.rotateX(Math.PI / 2);
     this.activeGeometries.push(pinGeom);
@@ -1809,20 +1886,21 @@ export class CageModel {
     pinMesh.position.set(0, 0, 1.5);
     armPivot.add(pinMesh);
 
-    // 掛金バー (アーム: 長さ38mm, 幅14mm, 厚み2.5mm)
-    // 支点(0, 0)から右(+X方向)へ伸びる。中心は +19mm
+    // 掛金バー
     const armGeom = new THREE.BoxGeometry(38, 14, 2.5);
     this.activeGeometries.push(armGeom);
     const armMesh = new THREE.Mesh(armGeom, lockMat);
-    armMesh.position.set(19.0, 0, 2.0 + 4.0);
+    const armCenterX = isRightHinge ? -19.0 : 19.0;
+    armMesh.position.set(armCenterX, 0, 2.0 + 4.0);
     armPivot.add(armMesh);
 
-    // アームつまみ (X = 18mm 付近に手前突出)
+    // アームつまみ
     const knobGeom = new THREE.CylinderGeometry(3.5, 3.5, 14, 16);
     knobGeom.rotateX(Math.PI / 2);
     this.activeGeometries.push(knobGeom);
     const knobMesh = new THREE.Mesh(knobGeom, lockMat);
-    knobMesh.position.set(18.0, 0, 2.0 + 4.0 + 7.0);
+    const knobX = isRightHinge ? -18.0 : 18.0;
+    knobMesh.position.set(knobX, 0, 2.0 + 4.0 + 7.0);
     armPivot.add(knobMesh);
 
     doorPivot.add(armPivot);
@@ -1849,7 +1927,9 @@ export class CageModel {
       const panelH = openingH + 36; // 間口から上下18mmずつかぶり
 
       // 前開きアクリル扉 3.0mm (1枚)
-      this.recordPart('前開きアクリル扉 3.0mm (切欠き・穴加工済)', `${Math.round(panelW * 10) / 10} x ${Math.round(panelH)} mm`, 1, '正面 左ヒンジ・右打掛オープン扉', 'panel', {
+      const isRightHinge = (this.params.doorHingeSide === 'right');
+      const doorDesc = isRightHinge ? '正面 右ヒンジ・左打掛オープン扉' : '正面 左ヒンジ・右打掛オープン扉';
+      this.recordPart('前開きアクリル扉 3.0mm (切欠き・穴加工済)', `${Math.round(panelW * 10) / 10} x ${Math.round(panelH)} mm`, 1, doorDesc, 'panel', {
         panelCode: 'acrylic_cast_3_0',
         partCode: 'acrylic_cast_3_0',
         widthMm: Math.round(panelW * 10) / 10,
@@ -1858,21 +1938,24 @@ export class CageModel {
       });
 
       // 金物: TH-31 ステンレス蝶番 (2個)
-      this.recordPart('TH-31 ステンレス蝶番', '50 x 36 mm (SUS304)', 2, '前開き扉 左ヒンジ (2箇所)', 'rail_cap', {
+      const hingeDesc = isRightHinge ? '前開き扉 右ヒンジ (2箇所)' : '前開き扉 左ヒンジ (2箇所)';
+      this.recordPart('TH-31 ステンレス蝶番', '50 x 36 mm (SUS304)', 2, hingeDesc, 'rail_cap', {
         partCode: 'TH-31',
         lengthMm: null,
         unitType: 'piece'
       });
 
       // 金物: C-1249-4 ステンレス打掛 (2個)
-      this.recordPart('C-1249-4 ステンレス打掛', '58 x 46 mm (SUS304)', 2, '前開き扉 右打掛ロック (2箇所)', 'rail_cap', {
+      const lockDesc = isRightHinge ? '前開き扉 左打掛ロック (2箇所)' : '前開き扉 右打掛ロック (2箇所)';
+      this.recordPart('C-1249-4 ステンレス打掛', '58 x 46 mm (SUS304)', 2, lockDesc, 'rail_cap', {
         partCode: 'C-1249-4',
         lengthMm: null,
         unitType: 'piece'
       });
 
       // ヒンジ下スペーサー板 (透明アクリル 3.0mm, 16 x 52 mm, 2枚)
-      this.recordPart('透明アクリル 3.0mm ヒンジ座板 (切削加工)', '16 x 52 mm', 2, '前開き扉 左ヒンジ固定座 (フレーム隙間埋め用)', 'panel', {
+      const hingeSpacerDesc = isRightHinge ? '前開き扉 右ヒンジ固定座 (フレーム隙間埋め用)' : '前開き扉 左ヒンジ固定座 (フレーム隙間埋め用)';
+      this.recordPart('透明アクリル 3.0mm ヒンジ座板 (切削加工)', '16 x 52 mm', 2, hingeSpacerDesc, 'panel', {
         panelCode: 'acrylic_cast_3_0',
         partCode: 'acrylic_cast_3_0',
         widthMm: 16,
@@ -1881,7 +1964,8 @@ export class CageModel {
       });
 
       // ロック受具下スペーサー板 (透明アクリル 3.0mm, 16 x 48 mm, 2枚)
-      this.recordPart('透明アクリル 3.0mm ロック受座板 (切削加工)', '16 x 48 mm', 2, '前開き扉 右打掛受具座 (フレーム隙間埋め用)', 'panel', {
+      const lockSpacerDesc = isRightHinge ? '前開き扉 左打掛受具座 (フレーム隙間埋め用)' : '前開き扉 右打掛受具座 (フレーム隙間埋め用)';
+      this.recordPart('透明アクリル 3.0mm ロック受座板 (切削加工)', '16 x 48 mm', 2, lockSpacerDesc, 'panel', {
         panelCode: 'acrylic_cast_3_0',
         partCode: 'acrylic_cast_3_0',
         widthMm: 16,

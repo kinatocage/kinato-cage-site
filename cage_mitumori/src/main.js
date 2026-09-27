@@ -96,6 +96,11 @@ const typeBadge = document.getElementById('type-badge');
 const btnFrameSilver = document.getElementById('btn-frame-silver');
 const btnFrameBlack = document.getElementById('btn-frame-black');
 
+// 前開き扉 開き方向選択
+const sectionFrontDoorHinge = document.getElementById('section-front-door-hinge');
+const btnHingeLeft = document.getElementById('btn-hinge-left');
+const btnHingeRight = document.getElementById('btn-hinge-right');
+
 // キャスターオプション（ONでキャスター、OFFで標準ゴム脚）
 const toggleCaster = document.getElementById('toggle-caster');
 const cardCaster = document.getElementById('card-caster');
@@ -215,6 +220,7 @@ const state = {
   hasRubberPacking: false,     // モレ対策ゴムパッキン (側面・背面 隙間モレ抑制)
   hasRoomDivider: false,       // ２室分け（後付け仕切り板・Type A/C両対応）
   frontWideFrame: '2x',        // 正面下側幅広フレーム: '2x' (40mm・初期値) | '3x' (60mm) | 'none' (20mm標準)
+  doorHingeSide: 'left',       // 前開き扉開き方向: 'left' (左ヒンジ、右打掛) | 'right' (左打掛、右ヒンジ)
   frontWindowH: 50,
   hasSideReinforcement: false, // 側面補強フレームの有無 (左右対称)
   sideOpeningH: 120,           // 側面上部開口高さ (デフォルト: 上下均等中央 H=300mm時 120mm)
@@ -396,17 +402,25 @@ function syncPanelConfigUI() {
 
 /**
  * 側面換気量調整板オプションの利用可否更新
- * - 前提条件: 側面補強フレームがON (側面2分割) かつ 側面上部が塩ビパンチング
+ * - 前提条件:
+ *   1. 側面補強フレームがON (側面2分割) かつ 側面上部が塩ビパンチング
+ *   2. 側面補強フレームがOFF (側面1枚) かつ 側面パネルが塩ビパンチング (高さ2分割仕様)
  */
 function updateSideVentCoverAvailability() {
-  const isAvailable = state.hasSideReinforcement && (state.panelConfig.sideUpper === 'punching');
+  const isSideSplitPunching = state.hasSideReinforcement && (state.panelConfig.sideUpper === 'punching');
+  const isSideFullPunching = !state.hasSideReinforcement && (state.panelConfig.side === 'punching');
+  const isAvailable = isSideSplitPunching || isSideFullPunching;
 
   if (isAvailable) {
     toggleSideVentCover.disabled = false;
     cardSideVentCover.classList.remove('disabled');
     ventCoverBadge.classList.add('ready');
     ventCoverBadge.textContent = '選択可能';
-    ventCoverSub.textContent = '冬場の保温・換気調整用。左右外張り';
+    if (isSideFullPunching) {
+      ventCoverSub.textContent = '冬場の保温・換気調整用。左右上下4枚外張り';
+    } else {
+      ventCoverSub.textContent = '冬場の保温・換気調整用。左右外張り';
+    }
   } else {
     toggleSideVentCover.checked = false;
     state.hasSideVentCover = false;
@@ -415,12 +429,12 @@ function updateSideVentCoverAvailability() {
     cardSideVentCover.classList.remove('active');
     ventCoverBadge.classList.remove('ready');
 
-    if (!state.hasSideReinforcement) {
-      ventCoverBadge.textContent = '要側面2分割';
-      ventCoverSub.textContent = '※側面補強フレームを有効にすると選択できます';
-    } else {
+    if (state.hasSideReinforcement) {
       ventCoverBadge.textContent = '要上部パンチング';
       ventCoverSub.textContent = '※側面上部が塩ビパンチングパネル時に選択できます';
+    } else {
+      ventCoverBadge.textContent = '要側面パンチング';
+      ventCoverSub.textContent = '※側面パネルが塩ビパンチング時に選択できます';
     }
   }
 }
@@ -618,10 +632,14 @@ function calculateGrandTotals() {
       const config = getMaterialConfig(part.partCode || part.name);
       if (config) {
         if (config.unit === 'm') {
-          const lengthM = (part.lengthMm || 0) / 1000;
+          const rawLengthMm = part.lengthMm || 0;
+          // スライド扉用レール（上側レール PGRU, 下側レール PGRL）は250mm単位で切り上げて資材量を算出
+          const isGlassRail = part.partCode && (part.partCode.startsWith('PGRU') || part.partCode.startsWith('PGRL'));
+          const billedLengthMm = isGlassRail ? (Math.ceil(rawLengthMm / 250) * 250) : rawLengthMm;
+          const lengthM = billedLengthMm / 1000;
           const singleCost = Math.round(config.pricePerMeter * lengthM);
           totalFrameCost += singleCost * part.count;
-          totalFrameWeight += config.weightPerMeter * lengthM * part.count;
+          totalFrameWeight += config.weightPerMeter * (rawLengthMm / 1000) * part.count;
         } else {
           totalFrameCost += (config.pricePerPiece || 0) * part.count;
           totalFrameWeight += (config.weightPerPiece || 0) * part.count;
@@ -838,12 +856,20 @@ async function runStructuralAndCostSimulation() {
 }
 
 /**
+ * 前開き扉の開き方向表示名
+ */
+function getFrontDoorHingeDisplayName(side = state.doorHingeSide) {
+  return side === 'right' ? '左打掛、右ヒンジ' : '左ヒンジ、右打掛';
+}
+
+/**
  * ケージタイプの表示名を取得
  * @param {boolean} detailed - 詳細（仕様テキスト・カード画像用）かどうか
  */
 function getCageTypeDisplayName(detailed = false) {
   if (state.cageType === 'A_FRONT') {
-    return detailed ? 'Type A 前開き（左ヒンジ・右打掛仕様）' : 'Type A 前開き（左ヒンジ・右打掛）';
+    const hingeText = getFrontDoorHingeDisplayName();
+    return detailed ? `Type A 前開き (${hingeText})` : `Type A 前開き (${hingeText})`;
   } else if (state.cageType === 'C') {
     return detailed ? 'Type C（下部前窓＋扉仕様）' : 'Type C（前窓＋扉）';
   }
@@ -1278,7 +1304,7 @@ btnTypeAFront?.addEventListener('click', () => {
   btnTypeA.classList.remove('active');
   btnTypeC.classList.remove('active');
   rowFrontWindow.classList.add('hidden');
-  typeBadge.textContent = 'Type A 前開き 選択中 (左ヒンジ・右打掛)';
+  typeBadge.textContent = `Type A 前開き 選択中 (${getFrontDoorHingeDisplayName()})`;
   updateDoorUI();
   syncUpdate();
 });
@@ -1338,6 +1364,16 @@ function updateDoorUI() {
   updateDoorAntiFlexAvailability();
   updateRoomDividerAvailability();
 
+  if (sectionFrontDoorHinge) {
+    if (isFrontOpen) {
+      sectionFrontDoorHinge.classList.remove('hidden');
+      btnHingeLeft?.classList.toggle('active', state.doorHingeSide !== 'right');
+      btnHingeRight?.classList.toggle('active', state.doorHingeSide === 'right');
+    } else {
+      sectionFrontDoorHinge.classList.add('hidden');
+    }
+  }
+
   if (slideDoorGroup && frontDoorGroup) {
     slideDoorGroup.style.display = isFrontOpen ? 'none' : 'grid';
     frontDoorGroup.style.display = isFrontOpen ? 'grid' : 'none';
@@ -1349,6 +1385,31 @@ function updateDoorUI() {
   const currentMode = state.doorState || 'closed';
   doorModeBtns.forEach((btn) => {
     btn.classList.toggle('active', btn.getAttribute('data-mode') === currentMode);
+  });
+}
+
+// 前開き扉 開き方向切り替え (左ヒンジ、右打掛 / 左打掛、右ヒンジ)
+if (btnHingeLeft) {
+  btnHingeLeft.addEventListener('click', () => {
+    state.doorHingeSide = 'left';
+    btnHingeLeft.classList.add('active');
+    btnHingeRight?.classList.remove('active');
+    if (state.cageType === 'A_FRONT') {
+      typeBadge.textContent = `Type A 前開き 選択中 (${getFrontDoorHingeDisplayName()})`;
+    }
+    syncUpdate();
+  });
+}
+
+if (btnHingeRight) {
+  btnHingeRight.addEventListener('click', () => {
+    state.doorHingeSide = 'right';
+    btnHingeRight.classList.add('active');
+    btnHingeLeft?.classList.remove('active');
+    if (state.cageType === 'A_FRONT') {
+      typeBadge.textContent = `Type A 前開き 選択中 (${getFrontDoorHingeDisplayName()})`;
+    }
+    syncUpdate();
   });
 }
 
@@ -1740,7 +1801,8 @@ function applyCreaturePreset(preset) {
       btnTypeC.classList.toggle('active', state.cageType === 'C');
       if (typeBadge) {
         if (state.cageType === 'A_FRONT') {
-          typeBadge.textContent = 'Type A 前開き 選択中 (左ヒンジ・右打掛)';
+          state.doorHingeSide = preset.doorHingeSide || 'left';
+          typeBadge.textContent = `Type A 前開き 選択中 (${getFrontDoorHingeDisplayName()})`;
         } else {
           typeBadge.textContent = state.cageType === 'A' ? 'Type A 選択中 (全面スライド扉)' : 'Type C 選択中 (前窓＋扉)';
         }
@@ -1929,6 +1991,9 @@ function finalizeEstimateCalculation(totals) {
     if (state.cageType === 'C' && state.frontWindowH !== lastEstimatedState.frontWindowH) {
       diffs.push(`前窓高:${lastEstimatedState.frontWindowH}→${state.frontWindowH}`);
     }
+    if (state.cageType === 'A_FRONT' && state.doorHingeSide !== lastEstimatedState.doorHingeSide) {
+      diffs.push(`開き:${getFrontDoorHingeDisplayName(lastEstimatedState.doorHingeSide)}→${getFrontDoorHingeDisplayName(state.doorHingeSide)}`);
+    }
     if (state.frameColor !== lastEstimatedState.frameColor) {
       diffs.push(`色:${lastEstimatedState.frameColor === 'black' ? '黒' : '銀'}→${state.frameColor === 'black' ? '黒' : '銀'}`);
     }
@@ -2098,7 +2163,7 @@ function getSelectedPanelsList() {
     panels.push({ face: '正面扉', name: '透明アクリル 3.0mm (スライド扉)' });
     panels.push({ face: '正面固定窓', name: `透明アクリル 3.0mm (開口高 ${state.frontWindowH}mm)` });
   } else if (state.cageType === 'A_FRONT') {
-    panels.push({ face: '正面扉', name: '透明アクリル 3.0mm (前開き扉)' });
+    panels.push({ face: '正面扉', name: `透明アクリル 3.0mm (前開き扉: ${getFrontDoorHingeDisplayName()})` });
   } else {
     panels.push({ face: '正面扉', name: '透明アクリル 3.0mm (全面スライド扉)' });
   }
@@ -2168,7 +2233,7 @@ function getSelectedOptionsList() {
 
   // 0. 前開き扉仕様 (Type A 前開き専用)
   if (state.cageType === 'A_FRONT') {
-    options.push('前開き扉仕様');
+    options.push(`前開き扉仕様 (${getFrontDoorHingeDisplayName()})`);
   }
 
   // 1. 正面幅広フレーム (Type A専用)
@@ -2192,7 +2257,11 @@ function getSelectedOptionsList() {
 
   // 4. 側面換気量調整板 (左右外張り)
   if (state.hasSideVentCover) {
-    options.push('側面換気量調整板 (左右ペア・外張りt1.5アクリル板・化粧つまみネジ付)');
+    if (!state.hasSideReinforcement) {
+      options.push('側面換気量調整板 (左右上下4枚・外張りt1.5アクリル板・化粧つまみネジ付)');
+    } else {
+      options.push('側面換気量調整板 (左右ペア・外張りt1.5アクリル板・化粧つまみネジ付)');
+    }
   }
 
   // 5. 床面中央補強フレーム (2分割仕様)
@@ -2890,6 +2959,8 @@ async function maybeSendEstimateLog(estimateData) {
       },
       spec: {
         ...estimateData.spec,
+        typeName: getCageTypeDisplayName(true),
+        doorHingeDisplayName: state.cageType === 'A_FRONT' ? getFrontDoorHingeDisplayName() : undefined,
         frameColorDisplayName,
         panelsSummary,
         optionsSummary
@@ -3000,7 +3071,8 @@ function checkInitialStateFromStorageOrUrl() {
         btnTypeC.classList.toggle('active', state.cageType === 'C');
         if (typeBadge) {
           if (state.cageType === 'A_FRONT') {
-            typeBadge.textContent = 'Type A 前開き 選択中 (左ヒンジ・右打掛)';
+            state.doorHingeSide = incomingState.doorHingeSide || 'left';
+            typeBadge.textContent = `Type A 前開き 選択中 (${getFrontDoorHingeDisplayName()})`;
           } else {
             typeBadge.textContent = state.cageType === 'A' ? 'Type A 選択中 (全面スライド扉)' : 'Type C 選択中 (前窓＋扉)';
           }

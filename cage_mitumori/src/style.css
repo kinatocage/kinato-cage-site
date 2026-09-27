@@ -736,6 +736,29 @@ body {
   margin-top: 2px;
 }
 
+.hinge-badge-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34d399;
+  font-size: 0.68rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.frame-color-btn.active .hinge-badge-icon {
+  background: #10b981;
+  color: #022c22;
+  border-color: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+
 /* 2. Param Rows & Sliders */
 .param-row {
   display: flex;

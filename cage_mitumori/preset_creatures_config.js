@@ -268,5 +268,36 @@ export const creaturePresets = [
     },
     tags: ['Type A', 'シルバー', '正面幅広3倍', '中空ポリカ', '換気量調整板'],
     desc: '正面幅広フレーム3倍＆中空ポリカ・換気量調整板仕様'
+  },
+  {
+    id: 'sugar_glider',
+    name: 'フクロモモンガ',
+    icon: '🐿️',
+    W: 350,
+    D: 350,
+    H: 500,
+    cageType: 'A_FRONT',
+    frameColor: 'silver',
+    frontWideFrame: 'none',
+    hasSideReinforcement: false,
+    hasSideVentCover: true,
+    hasDoorAntiFlex: false,
+    hasFloorReinforcement: false,
+    hasTopReinforcement: false,
+    footType: 'rubber',
+    panelConfig: {
+      front: 'acrylic',
+      floor: 'acrylic',
+      back: 'acrylic',
+      side: 'punching',
+      sideUpper: 'punching',
+      sideLower: 'acrylic',
+      top: 'punching',
+      topLeft: 'punching',
+      topRight: 'punching'
+    },
+    doorHingeSide: 'left',
+    tags: ['Type A (前開き)', 'シルバー', '側面パンチング', '換気量調整板'],
+    desc: 'W350×D350×H500mm前開き仕様。側面全面パンチング＆外張り側面換気量調整板で通気・保温を両立'
   }
 ];

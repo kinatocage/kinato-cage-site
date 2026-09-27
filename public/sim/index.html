@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="./assets/index-RXCISSjv.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-IIm0HCZ4.css">
+  <script type="module" crossorigin src="./assets/index-DTy47Ouq.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-BOKaMwbL.css">
 </head>
 <body>
   <div id="app" class="app-layout">
@@ -174,6 +174,14 @@
                 <p class="type-desc">正面床幅広フレーム選択可<br>全面スライド扉構造</p>
               </button>
 
+              <button class="type-card" id="btn-type-a-front" data-type="A_FRONT">
+                <div class="type-card-header">
+                  <span class="type-code">Type A</span>
+                  <span class="type-badge-mini" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);">前開き</span>
+                </div>
+                <p class="type-desc">正面床幅広フレーム選択可<br>横開き（左ヒンジ・右打掛錠）<br><span style="color: #60a5fa; font-size: 0.74rem;">幅600 / 高700mmまで</span></p>
+              </button>
+
               <button class="type-card" id="btn-type-c" data-type="C">
                 <div class="type-card-header">
                   <span class="type-code">Type C</span>
@@ -209,6 +217,24 @@
               <button class="frame-color-btn" id="btn-frame-black" data-frame-color="black" title="ブラック">
                 <span class="color-swatch black"></span>
                 <span class="color-label">ブラック</span>
+              </button>
+            </div>
+          </section>
+
+          <!-- 2-2. 前開き扉 開き方向仕様 (Type A_FRONT選択時のみ表示) -->
+          <section class="control-section hidden" id="section-front-door-hinge">
+            <div class="section-header-flex">
+              <label class="section-title">扉開き仕様</label>
+              <span class="unit-note">前開き扉専用</span>
+            </div>
+            <div class="frame-color-selector">
+              <button class="frame-color-btn active" id="btn-hinge-left" data-hinge="left" title="左ヒンジ・右打掛 (右開き)">
+                <span class="hinge-badge-icon">左</span>
+                <span class="color-label">左ヒンジ、右打掛</span>
+              </button>
+              <button class="frame-color-btn" id="btn-hinge-right" data-hinge="right" title="左打掛・右ヒンジ (左開き)">
+                <span class="hinge-badge-icon">右</span>
+                <span class="color-label">左打掛、右ヒンジ</span>
               </button>
             </div>
           </section>
@@ -285,10 +311,10 @@
             </div>
           </section>
 
-          <!-- 4. 引き違いスライド扉 開閉操作（排他制御ボタングループ） -->
+          <!-- 4. 扉 開閉操作（スライド扉／前開き扉） -->
           <section class="control-section">
-            <label class="section-title">引き違いスライド扉 開閉</label>
-            <div class="door-mode-group">
+            <label class="section-title" id="door-control-title">引き違いスライド扉 開閉</label>
+            <div class="door-mode-group" id="slide-door-group">
               <button class="door-mode-btn active" id="btn-door-closed" data-mode="closed">
                 <span class="door-mode-icon">🔒</span>
                 <span class="door-mode-label">全閉</span>
@@ -300,6 +326,16 @@
               <button class="door-mode-btn" id="btn-door-right" data-mode="right_open">
                 <span class="door-mode-icon">◀</span>
                 <span class="door-mode-label">右扉を開く</span>
+              </button>
+            </div>
+            <div class="door-mode-group" id="front-door-group" style="display: none;">
+              <button class="door-mode-btn active" id="btn-front-door-closed" data-mode="closed">
+                <span class="door-mode-icon">🔒</span>
+                <span class="door-mode-label">全閉 (施錠)</span>
+              </button>
+              <button class="door-mode-btn" id="btn-front-door-open" data-mode="open">
+                <span class="door-mode-icon">🚪</span>
+                <span class="door-mode-label">扉を開く</span>
               </button>
             </div>
           </section>
@@ -585,7 +621,7 @@
                   <input type="checkbox" id="toggle-door-anti-flex" class="custom-checkbox" />
                   <div class="option-text-wrap">
                     <span class="option-title">正面スライド扉 たわみ防止レール</span>
-                    <span class="option-sub">強力生体向け。左右端に縦レールを追加し内側からの変形を防止</span>
+                    <span class="option-sub" id="door-anti-flex-sub">強力生体向け。左右端に縦レールを追加し内側からの変形を防止</span>
                   </div>
                 </label>
               </div>
