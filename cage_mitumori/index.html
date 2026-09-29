@@ -52,7 +52,7 @@
               </div>
             </div>
             <div class="cost-hud-beta-notice">
-              ※まだβ版なので誤差（最大±15%程度）が出ております。詳細はDMよりお問い合わせください。
+              ※まだβ版なので誤差（最大±8%程度）が出ております。詳細はDMよりお問い合わせください。
             </div>
             <!-- 見積もり詳細＆画像保存モーダルを開くボタン（価格・重量の真下にワイド配置） -->
             <button class="btn-open-estimate-modal" id="btn-open-estimate-modal" title="お見積もり結果の詳細確認・画像保存・仕様コピー">
@@ -179,6 +179,14 @@
                   <span class="type-badge-mini" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);">前開き</span>
                 </div>
                 <p class="type-desc">正面床幅広フレーム選択可<br>横開き（左ヒンジ・右打掛錠）<br><span style="color: #60a5fa; font-size: 0.74rem;">幅600 / 高700mmまで</span></p>
+              </button>
+
+              <button class="type-card" id="btn-type-a-framed" data-type="A_FRAMED">
+                <div class="type-card-header">
+                  <span class="type-code">Type A</span>
+                  <span class="type-badge-mini" style="background: rgba(236, 72, 153, 0.15); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.3);">正面枠囲い</span>
+                </div>
+                <p class="type-desc">正面40mm高剛性フレーム枠<br>アルミ枠スライド扉仕様<br><span style="color: #60a5fa; font-size: 0.74rem;">幅900 / 高450mm以上</span></p>
               </button>
 
               <button class="type-card" id="btn-type-c" data-type="C">
@@ -649,6 +657,74 @@
             </div>
           </section>
         </div>
+
+        <!-- 7. 部材集計リスト（BOM・開発確認用アコーディオン） -->
+        <section class="control-section accordion-section" style="margin: 16px 12px 10px;">
+          <!-- 開発確認用 注意喚起バナー -->
+          <div style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; font-size: 0.78rem; color: #fbbf24; display: flex; align-items: flex-start; gap: 10px; line-height: 1.45;">
+            <span style="font-size: 1.1rem; line-height: 1;">⚠️</span>
+            <div>
+              <strong style="color: #f59e0b; display: block; margin-bottom: 2px;">【開発確認用表示中】資材リスト（BOM）</strong>
+              <span>開発検証用として部材内訳を表示しています。<strong style="color: #ef4444;">本番デプロイ時には必ず非表示に戻してください。</strong></span>
+            </div>
+          </div>
+
+          <div class="accordion-header bom-accordion-header active" id="bom-toggle-btn">
+            <div class="accordion-title-wrap">
+              <svg class="accordion-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              <span class="section-title" style="margin-bottom: 0;">資材リスト内訳 (BOM)</span>
+            </div>
+            <div class="accordion-header-right" style="display: flex; align-items: center; gap: 8px;">
+              <span class="bom-badge" id="parts-count-badge">計算中</span>
+              <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <div class="bom-table-container accordion-content" id="bom-container" style="margin-top: 8px;">
+            <!-- フレーム類 (レール・エンドキャップ統合) テーブル -->
+            <div class="bom-section-title-bar" style="padding: 10px 12px 6px; display: flex; justify-content: space-between; align-items: center;">
+              <span class="bom-section-title" style="font-weight: 700; color: #38bdf8;">■ フレーム類（レール・キャップ含む）</span>
+              <span class="bom-section-sub" style="font-size: 0.7rem; color: #94a3b8;">※型番・長さ・数量・原価・重量</span>
+            </div>
+            <table class="bom-table frame-bom-table">
+              <thead>
+                <tr>
+                  <th style="width: 32%;">型番</th>
+                  <th style="width: 18%; text-align: right;">長さ</th>
+                  <th style="width: 12%; text-align: center;">数量</th>
+                  <th style="width: 22%; text-align: right;">原価合計</th>
+                  <th style="width: 16%; text-align: right;">重量</th>
+                </tr>
+              </thead>
+              <tbody id="bom-frame-tbody">
+                <!-- JavaScriptで描画 -->
+              </tbody>
+              <tfoot id="bom-frame-tfoot">
+                <!-- 合計行 -->
+              </tfoot>
+            </table>
+
+            <!-- パネル類・その他部材テーブル -->
+            <div class="bom-section-title-bar" style="margin-top: 14px; padding: 10px 12px 6px;">
+              <span class="bom-section-title" style="font-weight: 700; color: #34d399;">■ パネル・その他部材</span>
+            </div>
+            <table class="bom-table other-bom-table">
+              <thead>
+                <tr>
+                  <th>部材種別</th>
+                  <th>寸法 / 仕様</th>
+                  <th style="width: 45px; text-align: center;">数量</th>
+                  <th>用途・配置</th>
+                </tr>
+              </thead>
+              <tbody id="bom-other-tbody">
+                <!-- JavaScriptで描画 -->
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
 
       <!-- フッター -->
@@ -694,7 +770,7 @@
             <span class="modal-weight-val" id="modal-weight-total">0.0 kg</span>
           </div>
           <div class="modal-beta-notice">
-            ※まだβ版なので誤差（最大±15%程度）が出ております。詳細はDMよりお問い合わせください。
+            ※まだβ版なので誤差（最大±8%程度）が出ております。詳細はDMよりお問い合わせください。
           </div>
         </div>
 

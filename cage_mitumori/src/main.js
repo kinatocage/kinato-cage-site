@@ -2,6 +2,12 @@ import './style.css';
 import { CageViewer } from './cage/CageViewer.js';
 import { materialsConfig } from '../cost_materials_config.js';
 import { creaturePresets } from '../preset_creatures_config.js';
+import { getFenpCost } from '../fenp_price_config.js';
+import { getPvcPunchingCost } from '../pvc_punching_price_config.js';
+import { getAcrylicExtrusionCost } from '../acrylic_extrusion_price_config.js';
+import { getAcrylicBlackMatteCost } from '../acrylic_black_matte_price_config.js';
+import { getAcrylicSmokeGrayCost } from '../acrylic_smoke_gray_price_config.js';
+import { getAcrylicCastCost, getAcrylicCastRawBoardCost } from '../acrylic_cast_price_config.js';
 
 // DOM要素の取得
 const container = document.getElementById('canvas-container');
@@ -89,8 +95,17 @@ const inputSideH = document.getElementById('input-side-h');
 // タイプ選択
 const btnTypeA = document.getElementById('btn-type-a');
 const btnTypeAFront = document.getElementById('btn-type-a-front');
+const btnTypeAFramed = document.getElementById('btn-type-a-framed');
 const btnTypeC = document.getElementById('btn-type-c');
 const typeBadge = document.getElementById('type-badge');
+
+// 資材リスト（BOM・開発確認用）
+const bomToggleBtn = document.getElementById('bom-toggle-btn');
+const bomContainer = document.getElementById('bom-container');
+const bomFrameTbody = document.getElementById('bom-frame-tbody');
+const bomFrameTfoot = document.getElementById('bom-frame-tfoot');
+const bomOtherTbody = document.getElementById('bom-other-tbody');
+const partsCountBadge = document.getElementById('parts-count-badge');
 
 // フレームカラー選択
 const btnFrameSilver = document.getElementById('btn-frame-silver');
@@ -337,6 +352,9 @@ function syncUpdate() {
 
   // パラメータ変更時は価格・重量計算表示を消去
   resetEstimateDisplay();
+
+  // 資材リスト（BOMテーブル）の描画更新（開発確認用）
+  updateBOMTable();
 }
 
 /**
@@ -448,19 +466,23 @@ function updateSideVentCoverAvailability() {
  * - ブラックフレームの場合: 3倍幅はAFS-2060がないため、40mm幅+20mm幅の2段重ね構成案内
  */
 function updateFrontWideFrameAvailability() {
-  if (state.cageType === 'C') {
-    // Type Cは前窓構造のため選択不可
+  if (state.cageType === 'C' || state.cageType === 'A_FRAMED') {
+    // Type CまたはType A 正面枠囲いは選択不可（正面枠囲いは4040固定のため）
     toggleFrontWide2x.checked = false;
     toggleFrontWide2x.disabled = true;
     cardFrontWide2x.classList.remove('active');
     cardFrontWide2x.classList.add('disabled');
-    frontWide2xSub.textContent = '※Type Cは前窓構造のため選択不可（Type A専用）';
+    frontWide2xSub.textContent = state.cageType === 'A_FRAMED'
+      ? '※正面枠囲いは正面下部40x40固定のため選択不可'
+      : '※Type Cは前窓構造のため選択不可（Type A専用）';
 
     toggleFrontWide3x.checked = false;
     toggleFrontWide3x.disabled = true;
     cardFrontWide3x.classList.remove('active');
     cardFrontWide3x.classList.add('disabled');
-    frontWide3xSub.textContent = '※Type Cは前窓構造のため選択不可（Type A専用）';
+    frontWide3xSub.textContent = state.cageType === 'A_FRAMED'
+      ? '※正面枠囲いは正面下部40x40固定のため選択不可'
+      : '※Type Cは前窓構造のため選択不可（Type A専用）';
   } else {
     // Type Aの場合
     const isBlack = (state.frameColor === 'black');
@@ -613,6 +635,144 @@ function getMaterialConfig(partCode) {
   return null;
 }
 
+/**
+ * 部材集計テーブル（BOM）のレンダリング（開発確認用）
+ * - フレーム類・レール・エンドキャップ類を合体して1つの表に集約
+ * - 列構成: 型番 ー 長さ ー 数量 ー 原価合計(単価×数量) ー 重量
+ * - パネル類・その他部材テーブル
+ */
+function updateBOMTable() {
+  if (!bomContainer || !bomFrameTbody) return;
+
+  const parts = viewer.getPartsSummary();
+  const frameParts = [];
+  const otherParts = [];
+
+  for (const part of parts) {
+    if (part.category === 'frame' || part.category === 'rail_cap' || part.category === 'hardware') {
+      frameParts.push(part);
+    } else {
+      otherParts.push(part);
+    }
+  }
+
+  // 1. フレーム類 (レール・キャップ含む) テーブル描画
+  const groupedFramePartsMap = new Map();
+
+  for (const part of frameParts) {
+    const code = part.partCode || part.name;
+    const len = part.lengthMm != null ? Math.round(part.lengthMm) : null;
+    const groupKey = `${code}__${len != null ? len : 'none'}`;
+
+    if (groupedFramePartsMap.has(groupKey)) {
+      const existing = groupedFramePartsMap.get(groupKey);
+      existing.count += part.count;
+    } else {
+      groupedFramePartsMap.set(groupKey, {
+        ...part,
+        partCode: code,
+        lengthMm: len,
+        count: part.count
+      });
+    }
+  }
+
+  const consolidatedFrameParts = Array.from(groupedFramePartsMap.values());
+
+  bomFrameTbody.innerHTML = '';
+  if (bomFrameTfoot) bomFrameTfoot.innerHTML = '';
+
+  let totalFrameCost = 0;
+  let totalFrameWeight = 0;
+  let totalFrameItems = 0;
+
+  for (const part of consolidatedFrameParts) {
+    totalFrameItems += part.count;
+    const config = getMaterialConfig(part.partCode);
+
+    let singleCost = 0;
+    let totalCost = 0;
+    let totalWeight = 0;
+    let lengthDisplay = '-';
+
+    if (config) {
+      if (config.unit === 'm') {
+        const rawLengthMm = part.lengthMm || 0;
+        const isGlassRail = part.partCode && (part.partCode.startsWith('PGRU') || part.partCode.startsWith('PGRL'));
+        const billedLengthMm = isGlassRail ? (Math.ceil(rawLengthMm / 250) * 250) : rawLengthMm;
+        const lengthM = billedLengthMm / 1000;
+        lengthDisplay = `${part.lengthMm || Math.round(lengthM * 1000)} mm`;
+        singleCost = Math.round(config.pricePerMeter * lengthM);
+        totalCost = singleCost * part.count;
+        totalWeight = config.weightPerMeter * (rawLengthMm / 1000) * part.count;
+      } else {
+        lengthDisplay = '-';
+        singleCost = config.pricePerPiece || 0;
+        totalCost = singleCost * part.count;
+        totalWeight = (config.weightPerPiece || 0) * part.count;
+      }
+    } else {
+      lengthDisplay = part.size || '-';
+    }
+
+    totalFrameCost += totalCost;
+    totalFrameWeight += totalWeight;
+
+    const tr = document.createElement('tr');
+    tr.className = 'bom-cat-frame';
+    tr.innerHTML = `
+      <td><strong>${part.partCode || part.name}</strong></td>
+      <td style="text-align: right; font-family: monospace;">${lengthDisplay}</td>
+      <td style="text-align: center; font-family: monospace;">${part.count}</td>
+      <td style="text-align: right; font-family: monospace;">¥${totalCost.toLocaleString()}</td>
+      <td style="text-align: right; font-family: monospace;">${totalWeight.toFixed(3)} kg</td>
+    `;
+    bomFrameTbody.appendChild(tr);
+  }
+
+  // 合計行 (tfoot)
+  if (bomFrameTfoot) {
+    const tfootTr = document.createElement('tr');
+    tfootTr.innerHTML = `
+      <td><strong>フレーム等 合計</strong></td>
+      <td style="text-align: center;">-</td>
+      <td style="text-align: center; font-family: monospace;"><strong>${totalFrameItems}点</strong></td>
+      <td style="text-align: right; font-family: monospace;"><strong>¥${totalFrameCost.toLocaleString()}</strong></td>
+      <td style="text-align: right; font-family: monospace;"><strong>${totalFrameWeight.toFixed(3)} kg</strong></td>
+    `;
+    bomFrameTfoot.appendChild(tfootTr);
+  }
+
+  // 2. パネル類・その他部材テーブルの描画
+  if (bomOtherTbody) {
+    bomOtherTbody.innerHTML = '';
+    for (const part of otherParts) {
+      const tr = document.createElement('tr');
+      tr.className = `bom-cat-${part.category || 'other'}`;
+      tr.innerHTML = `
+        <td><strong>${part.name}</strong></td>
+        <td>${part.size || '-'}</td>
+        <td style="text-align: center; font-family: monospace;">${part.count}</td>
+        <td>${part.note || '-'}</td>
+      `;
+      bomOtherTbody.appendChild(tr);
+    }
+  }
+
+  if (partsCountBadge) {
+    partsCountBadge.textContent = `${parts.length}品目 / フレーム計${totalFrameItems}点`;
+  }
+}
+
+// 資材リスト（BOMアコーディオン）開閉
+if (bomToggleBtn && bomContainer) {
+  bomToggleBtn.addEventListener('click', () => {
+    const isHidden = bomContainer.classList.contains('hidden');
+    bomContainer.classList.toggle('hidden', !isHidden);
+    bomToggleBtn.classList.toggle('active', isHidden);
+  });
+}
+
 let isEstimateCalculated = false;
 
 /**
@@ -628,7 +788,7 @@ function calculateGrandTotals() {
   let totalPanelWeight = 0;
 
   for (const part of parts) {
-    if (part.category === 'frame' || part.category === 'rail_cap' || part.category === 'hardware') {
+    if (part.category === 'frame' || part.category === 'rail_cap' || part.category === 'hardware' || part.category === 'other') {
       const config = getMaterialConfig(part.partCode || part.name);
       if (config) {
         if (config.unit === 'm') {
@@ -661,8 +821,70 @@ function calculateGrandTotals() {
         // 側面換気量調整板は固定オプションとして後述で定額加算（二重計上防止、重量計算は維持）
         const isVentCoverPart = part.panelCode === 'acrylic_extrusion_1_5' || (part.name && part.name.includes('換気量調整板'));
         if (!isVentCoverPart) {
-          const singleCost = Math.round(config.pricePerM2 * areaM2);
+          // 金網（FENP）判定: wire_mesh_15, 25, 30等の場合は寸法連動マトリクス表から原価算出
+          const isWireMesh = (part.panelCode && part.panelCode.startsWith('wire_mesh_')) ||
+                             (part.partCode && part.partCode.startsWith('wire_mesh_')) ||
+                             (config.pitchMm != null);
+
+          // パネル素材別の判定（各専用価格マスタ参照）
+          const isPvcPunching = (part.panelCode === 'pvc_punching_3_0') ||
+                                (part.partCode === 'pvc_punching_3_0') ||
+                                (part.name && part.name.includes('塩ビパンチング'));
+
+          const isAcrylicExtrusion = (part.panelCode && part.panelCode.startsWith('acrylic_extrusion_')) ||
+                                     (part.partCode && part.partCode.startsWith('acrylic_extrusion_')) ||
+                                     (part.panelCode === 'acrylic_extrusion_3_0' || part.panelCode === 'acrylic_extrusion_2_0' || part.panelCode === 'acrylic_extrusion_1_5');
+
+          const isAcrylicBlackMatte = (part.panelCode === 'acrylic_black_matte_3_0') ||
+                                      (part.partCode === 'acrylic_black_matte_3_0') ||
+                                      (part.name && part.name.includes('黒両面マット'));
+
+          const isAcrylicSmokeGray = (part.panelCode === 'acrylic_smoke_gray_3_0') ||
+                                     (part.partCode === 'acrylic_smoke_gray_3_0') ||
+                                     (part.name && part.name.includes('グレースモーク'));
+
+          const isAcrylicCast = (part.panelCode === 'acrylic_cast_3_0') ||
+                                (part.partCode === 'acrylic_cast_3_0') ||
+                                (part.name && part.name.includes('キャスト'));
+
+          if (isWireMesh) {
+            const pitch = config.pitchMm || (part.panelCode ? parseInt(part.panelCode.replace('wire_mesh_', ''), 10) : 25);
+            const fenpCost = getFenpCost(pitch, wMm, hMm);
+            singleCost = fenpCost != null ? fenpCost : Math.round(config.pricePerM2 * areaM2);
+          } else if (isPvcPunching) {
+            const punchingCost = getPvcPunchingCost(wMm, hMm);
+            singleCost = punchingCost != null ? punchingCost : Math.round(config.pricePerM2 * areaM2);
+          } else if (isAcrylicExtrusion) {
+            const thick = config.thicknessMm || 3.0;
+            const extCost = getAcrylicExtrusionCost(thick, wMm, hMm);
+            singleCost = extCost != null ? extCost : Math.round(config.pricePerM2 * areaM2);
+          } else if (isAcrylicBlackMatte) {
+            const matteCost = getAcrylicBlackMatteCost(wMm, hMm);
+            singleCost = matteCost != null ? matteCost : Math.round(config.pricePerM2 * areaM2);
+          } else if (isAcrylicSmokeGray) {
+            const smokeCost = getAcrylicSmokeGrayCost(wMm, hMm);
+            singleCost = smokeCost != null ? smokeCost : Math.round(config.pricePerM2 * areaM2);
+          } else if (isAcrylicCast) {
+            // 正面扉本体（扉パネル）かどうかの判定
+            const isDoorPanel = part.name && part.name.includes('扉');
+            if (isDoorPanel) {
+              // 扉本体: キャスト板テーブル価格 + 穴加工2箇所(310円) + 磨き仕上げ4辺(2056円) = 計2366円/枚
+              const castCost = getAcrylicCastCost(wMm, hMm);
+              singleCost = castCost != null ? castCost : (Math.round(config.pricePerM2 * areaM2) + 2366);
+            } else {
+              // 座板・スペーサー等の小型パーツ: 板代のみ（加工費なし）
+              const rawCost = getAcrylicCastRawBoardCost(wMm, hMm);
+              singleCost = rawCost != null ? rawCost : Math.round(config.pricePerM2 * areaM2);
+            }
+          } else {
+            singleCost = Math.round(config.pricePerM2 * areaM2);
+          }
+
           totalPanelCost += singleCost * part.count;
+          // 1枚あたりの固定原価（スライド部材等）が設定されている場合は枚数分加算
+          if (config.baseCostPerPiece) {
+            totalPanelCost += config.baseCostPerPiece * part.count;
+          }
           // 固定原価（正面スライド扉 2枚1式あたりの基本原価など）が設定されている場合は加算
           if (config.baseCost) {
             totalPanelCost += config.baseCost;
@@ -690,6 +912,7 @@ function calculateGrandTotals() {
   const isRubberPacking = !!state.hasRubberPacking;
   const isRoomDivider = !!state.hasRoomDivider;
   const isTypeAFront = state.cageType === 'A_FRONT';
+  const isTypeAFramed = state.cageType === 'A_FRAMED';
 
   // 1. オプション加工工賃（資材費とは別で単純に販売価格へ加算）
   const splitFloorLabor = isFloorSplit ? (laborConfig.splitFloor?.price ?? 500) : 0;
@@ -701,15 +924,26 @@ function calculateGrandTotals() {
   const rubberPackingLabor = isRubberPacking ? (laborConfig.rubberPacking?.price ?? 800) : 0;
   const roomDividerLabor = isRoomDivider ? (laborConfig.roomDivider?.price ?? 500) : 0;
   const frontOpenDoorLabor = isTypeAFront ? (laborConfig.frontOpenDoor?.price ?? 3000) : 0;
+  const frontFramedDoorLabor = isTypeAFramed ? (laborConfig.frontFramedDoor?.price ?? 3000) : 0;
 
-  const totalLaborFee = splitFloorLabor + splitTopLabor + typeCLabor + splitSideLabor + frontWide3xLabor + perchLabor + rubberPackingLabor + roomDividerLabor + frontOpenDoorLabor;
+  const totalLaborFee = splitFloorLabor + splitTopLabor + typeCLabor + splitSideLabor + frontWide3xLabor + perchLabor + rubberPackingLabor + roomDividerLabor + frontOpenDoorLabor + frontFramedDoorLabor;
 
   // 2. 特定オプション部材（販売価格加算額および内部原価）
   const casterPrice = isCaster ? (itemConfig.caster?.price ?? 1500) : 0;
   const casterCost = isCaster ? (itemConfig.caster?.cost ?? 800) : 0;
 
+  // 側面換気量調整板（販売加算額は500円固定、穴加工費: φ9mm×4箇所/枚 @94円 を原価に積み上げ）
+  let ventCoverPanelCount = 0;
+  if (isSideVentCover) {
+    const ventPart = Array.isArray(parts) ? parts.find(p => p.name && p.name.includes('換気量調整板')) : null;
+    ventCoverPanelCount = ventPart ? ventPart.count : (state.hasSideReinforcement ? 2 : 4);
+  }
   const ventCoverPrice = isSideVentCover ? (itemConfig.sideVentCover?.price ?? 500) : 0;
-  const ventCoverCost = isSideVentCover ? (itemConfig.sideVentCover?.cost ?? 200) : 0;
+  const baseVentCoverCost = isSideVentCover ? (itemConfig.sideVentCover?.cost ?? 200) : 0;
+  const holeCostUnit = itemConfig.sideVentCover?.holeCostPerPiece ?? 94;
+  const holesPerPanel = itemConfig.sideVentCover?.holesPerPanel ?? 4;
+  const ventHoleProcessingCost = isSideVentCover ? (ventCoverPanelCount * holesPerPanel * holeCostUnit) : 0;
+  const ventCoverCost = baseVentCoverCost + ventHoleProcessingCost;
 
   const totalOptionPrice = casterPrice + ventCoverPrice;
   const totalOptionCost = casterCost + ventCoverCost;
@@ -867,7 +1101,9 @@ function getFrontDoorHingeDisplayName(side = state.doorHingeSide) {
  * @param {boolean} detailed - 詳細（仕様テキスト・カード画像用）かどうか
  */
 function getCageTypeDisplayName(detailed = false) {
-  if (state.cageType === 'A_FRONT') {
+  if (state.cageType === 'A_FRAMED') {
+    return detailed ? 'Type A 正面枠囲い（高剛性アルミ枠スライド扉仕様）' : 'Type A 正面枠囲い';
+  } else if (state.cageType === 'A_FRONT') {
     const hingeText = getFrontDoorHingeDisplayName();
     return detailed ? `Type A 前開き (${hingeText})` : `Type A 前開き (${hingeText})`;
   } else if (state.cageType === 'C') {
@@ -1073,14 +1309,15 @@ toggleTopReinforce.addEventListener('change', (e) => {
   syncUpdate();
 });
 
-// 正面スライド扉 たわみ防止レールの利用可否制御（前開き選択時は選択不可）
+// 正面スライド扉 たわみ防止レールの利用可否制御（前開き・正面枠囲い選択時は選択不可）
 function updateDoorAntiFlexAvailability() {
   if (!toggleDoorAntiFlex || !cardDoorAntiFlex) return;
 
   const isFrontOpen = state.cageType === 'A_FRONT';
+  const isFramed = state.cageType === 'A_FRAMED';
   const doorAntiFlexSub = document.getElementById('door-anti-flex-sub');
 
-  if (isFrontOpen) {
+  if (isFrontOpen || isFramed) {
     if (state.hasDoorAntiFlex) {
       state.hasDoorAntiFlex = false;
       toggleDoorAntiFlex.checked = false;
@@ -1089,7 +1326,9 @@ function updateDoorAntiFlexAvailability() {
     cardDoorAntiFlex.classList.add('disabled');
     cardDoorAntiFlex.classList.remove('active');
     if (doorAntiFlexSub) {
-      doorAntiFlexSub.textContent = '※前開き（横開き扉）仕様のためスライド扉用レールは選択不可';
+      doorAntiFlexSub.textContent = isFramed
+        ? '※正面枠囲い仕様（扉なし）のため選択不可'
+        : '※前開き（横開き扉）仕様のためスライド扉用レールは選択不可';
     }
   } else {
     toggleDoorAntiFlex.disabled = false;
@@ -1100,14 +1339,15 @@ function updateDoorAntiFlexAvailability() {
   }
 }
 
-// ２室分けオプションの利用可否制御（前開き選択時・止まり木ON時は選択不可）
+// ２室分けオプションの利用可否制御（前開き・止まり木ON・正面枠囲い選択時は選択不可）
 function updateRoomDividerAvailability() {
   if (!toggleRoomDivider || !cardRoomDivider) return;
 
   const isFrontOpen = state.cageType === 'A_FRONT';
+  const isFramed = state.cageType === 'A_FRAMED';
   const isPerchActive = state.hasPerch;
 
-  if (isFrontOpen || isPerchActive) {
+  if (isFrontOpen || isPerchActive || isFramed) {
     if (state.hasRoomDivider) {
       state.hasRoomDivider = false;
       toggleRoomDivider.checked = false;
@@ -1117,7 +1357,9 @@ function updateRoomDividerAvailability() {
     cardRoomDivider.classList.add('disabled');
     cardRoomDivider.classList.remove('active');
     if (roomDividerSub) {
-      if (isFrontOpen) {
+      if (isFramed) {
+        roomDividerSub.textContent = '※正面枠囲い仕様では2室分け仕切り板は選択不可';
+      } else if (isFrontOpen) {
         roomDividerSub.textContent = '※前開き仕様では2室分け仕切り板は選択不可';
       } else {
         roomDividerSub.textContent = '※止まり木オプション選択時は利用できません';
@@ -1290,6 +1532,7 @@ btnTypeA.addEventListener('click', () => {
   state.frontWideFrame = lastTypeAFrontWideFrame; // 前回のType A設定を復元
   btnTypeA.classList.add('active');
   btnTypeAFront?.classList.remove('active');
+  btnTypeAFramed?.classList.remove('active');
   btnTypeC.classList.remove('active');
   rowFrontWindow.classList.add('hidden');
   typeBadge.textContent = 'Type A 選択中 (全面スライド扉)';
@@ -1302,9 +1545,22 @@ btnTypeAFront?.addEventListener('click', () => {
   state.frontWideFrame = lastTypeAFrontWideFrame; // 前回のType A設定を復元
   btnTypeAFront.classList.add('active');
   btnTypeA.classList.remove('active');
+  btnTypeAFramed?.classList.remove('active');
   btnTypeC.classList.remove('active');
   rowFrontWindow.classList.add('hidden');
   typeBadge.textContent = `Type A 前開き 選択中 (${getFrontDoorHingeDisplayName()})`;
+  updateDoorUI();
+  syncUpdate();
+});
+
+btnTypeAFramed?.addEventListener('click', () => {
+  state.cageType = 'A_FRAMED';
+  btnTypeAFramed.classList.add('active');
+  btnTypeA.classList.remove('active');
+  btnTypeAFront?.classList.remove('active');
+  btnTypeC.classList.remove('active');
+  rowFrontWindow.classList.add('hidden');
+  typeBadge.textContent = 'Type A 正面枠囲い 選択中 (高剛性枠・スライド扉)';
   updateDoorUI();
   syncUpdate();
 });
@@ -1315,6 +1571,7 @@ btnTypeC.addEventListener('click', () => {
   btnTypeC.classList.add('active');
   btnTypeA.classList.remove('active');
   btnTypeAFront?.classList.remove('active');
+  btnTypeAFramed?.classList.remove('active');
   rowFrontWindow.classList.remove('hidden');
   typeBadge.textContent = 'Type C 選択中 (前窓＋扉)';
   updateDoorUI();
@@ -1323,23 +1580,38 @@ btnTypeC.addEventListener('click', () => {
 
 const FRONT_OPEN_MAX_W = 600;
 const FRONT_OPEN_MAX_H = 700; // 高さ制限: 最大700mm
+const FRAMED_MIN_W = 900;
+const FRAMED_MIN_H = 450;
+const STANDARD_MIN_W = 300;
+const STANDARD_MIN_H = 200;
 const STANDARD_MAX_W = 1800;
 const STANDARD_MAX_H = 900;
 
 /**
- * ケージタイプに応じた寸法上限（幅・高さ）の制限更新
+ * ケージタイプに応じた寸法上限・下限（幅・高さ）の制限更新
+ * - TypeA 正面枠囲い: 幅900mm以上、高さ450mm以上
  * - TypeA 前開き: 幅600mmまで、高さ700mmまで
- * - 標準ケージ: 幅1800mmまで、高さ900mmまで
+ * - 標準ケージ: 幅300〜1800mm、高さ200〜900mm
  */
 function updateDimensionLimits() {
   const isFrontOpen = state.cageType === 'A_FRONT';
+  const isFramed = state.cageType === 'A_FRAMED';
+  const minW = isFramed ? FRAMED_MIN_W : STANDARD_MIN_W;
+  const minH = isFramed ? FRAMED_MIN_H : STANDARD_MIN_H;
   const maxW = isFrontOpen ? FRONT_OPEN_MAX_W : STANDARD_MAX_W;
   const maxH = isFrontOpen ? FRONT_OPEN_MAX_H : STANDARD_MAX_H;
 
   if (sliderW && inputW) {
+    sliderW.min = minW;
+    inputW.min = minW;
     sliderW.max = maxW;
     inputW.max = maxW;
-    if (state.W > maxW) {
+    if (state.W < minW) {
+      state.W = minW;
+      sliderW.value = minW;
+      inputW.value = minW;
+      updateFloorReinforceByArea();
+    } else if (state.W > maxW) {
       state.W = maxW;
       sliderW.value = maxW;
       inputW.value = maxW;
@@ -1348,9 +1620,15 @@ function updateDimensionLimits() {
   }
 
   if (sliderH && inputH) {
+    sliderH.min = minH;
+    inputH.min = minH;
     sliderH.max = maxH;
     inputH.max = maxH;
-    if (state.H > maxH) {
+    if (state.H < minH) {
+      state.H = minH;
+      sliderH.value = minH;
+      inputH.value = minH;
+    } else if (state.H > maxH) {
       state.H = maxH;
       sliderH.value = maxH;
       inputH.value = maxH;
@@ -1360,9 +1638,14 @@ function updateDimensionLimits() {
 
 function updateDoorUI() {
   const isFrontOpen = state.cageType === 'A_FRONT';
+  const isFramed = state.cageType === 'A_FRAMED';
   updateDimensionLimits();
   updateDoorAntiFlexAvailability();
   updateRoomDividerAvailability();
+
+  // 正面幅広フレームオプションの表示制御（A_FRAMED または Type C のときは非表示）
+  cardFrontWide2x?.classList.toggle('hidden', isFramed || state.cageType === 'C');
+  cardFrontWide3x?.classList.toggle('hidden', isFramed || state.cageType === 'C');
 
   if (sectionFrontDoorHinge) {
     if (isFrontOpen) {
@@ -1372,6 +1655,12 @@ function updateDoorUI() {
     } else {
       sectionFrontDoorHinge.classList.add('hidden');
     }
+  }
+
+  // 扉開閉コントロールセクション全体の制御
+  const doorSection = slideDoorGroup ? slideDoorGroup.closest('.control-section') : null;
+  if (doorSection) {
+    doorSection.classList.remove('hidden');
   }
 
   if (slideDoorGroup && frontDoorGroup) {
@@ -1793,14 +2082,17 @@ function applyCreaturePreset(preset) {
   state.H = preset.H;
 
   // 2. ケージタイプ（指定があれば連動）
-  if (preset.cageType && (preset.cageType === 'A' || preset.cageType === 'A_FRONT' || preset.cageType === 'C')) {
+  if (preset.cageType && (preset.cageType === 'A' || preset.cageType === 'A_FRONT' || preset.cageType === 'A_FRAMED' || preset.cageType === 'C')) {
     state.cageType = preset.cageType;
     if (btnTypeA && btnTypeC) {
       btnTypeA.classList.toggle('active', state.cageType === 'A');
       btnTypeAFront?.classList.toggle('active', state.cageType === 'A_FRONT');
+      btnTypeAFramed?.classList.toggle('active', state.cageType === 'A_FRAMED');
       btnTypeC.classList.toggle('active', state.cageType === 'C');
       if (typeBadge) {
-        if (state.cageType === 'A_FRONT') {
+        if (state.cageType === 'A_FRAMED') {
+          typeBadge.textContent = 'Type A 正面枠囲い 選択中 (高剛性枠・スライド扉)';
+        } else if (state.cageType === 'A_FRONT') {
           state.doorHingeSide = preset.doorHingeSide || 'left';
           typeBadge.textContent = `Type A 前開き 選択中 (${getFrontDoorHingeDisplayName()})`;
         } else {
@@ -2331,7 +2623,7 @@ ${panelLines}
 ${optLines}
 ・概算総重量: 約 ${totals.weight.toFixed(1)} kg
 ・お見積り合計金額: ¥${totals.priceWithMarkup.toLocaleString()}（税込・送料別）
-※まだβ版なので誤差（最大±15%程度）が出ております。詳細はDMよりお問い合わせください。
+※まだβ版なので誤差（最大±8%程度）が出ております。詳細はDMよりお問い合わせください。
 ※公式サイト: https://kinato-cage-site.pages.dev/`;
 }
 
@@ -2714,7 +3006,7 @@ async function exportEstimateCardImage() {
     // β版価格誤差に関する注意書き
     ctx.fillStyle = '#fcd34d';
     ctx.font = '600 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText('※まだβ版なので誤差（最大±15%程度）が出ております。', priceBoxX + 35, priceBoxY + 220);
+    ctx.fillText('※まだβ版なので誤差（最大±8%程度）が出ております。', priceBoxX + 35, priceBoxY + 220);
     ctx.fillText('　詳細はDMよりお問い合わせください。', priceBoxX + 35, priceBoxY + 244);
 
     // 控えに関する注意書き
@@ -3063,14 +3355,17 @@ function checkInitialStateFromStorageOrUrl() {
       if (inputH) inputH.value = state.H;
       if (sliderH) sliderH.value = state.H;
     }
-    if (incomingState.cageType === 'A' || incomingState.cageType === 'A_FRONT' || incomingState.cageType === 'C') {
+    if (incomingState.cageType === 'A' || incomingState.cageType === 'A_FRONT' || incomingState.cageType === 'A_FRAMED' || incomingState.cageType === 'C') {
       state.cageType = incomingState.cageType;
       if (btnTypeA && btnTypeC) {
         btnTypeA.classList.toggle('active', state.cageType === 'A');
         btnTypeAFront?.classList.toggle('active', state.cageType === 'A_FRONT');
+        btnTypeAFramed?.classList.toggle('active', state.cageType === 'A_FRAMED');
         btnTypeC.classList.toggle('active', state.cageType === 'C');
         if (typeBadge) {
-          if (state.cageType === 'A_FRONT') {
+          if (state.cageType === 'A_FRAMED') {
+            typeBadge.textContent = 'Type A 正面枠囲い 選択中 (高剛性枠・スライド扉)';
+          } else if (state.cageType === 'A_FRONT') {
             state.doorHingeSide = incomingState.doorHingeSide || 'left';
             typeBadge.textContent = `Type A 前開き 選択中 (${getFrontDoorHingeDisplayName()})`;
           } else {

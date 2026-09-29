@@ -68,6 +68,15 @@ export const materialsConfig = {
       note: '正面3倍幅・60mm高'
     },
 
+    // 4040シリーズ (シルバー)
+    'AFS-4040-4': {
+      name: '4040フレーム (シルバー)',
+      unit: 'm',
+      weightPerMeter: 1.188,   // 重量 (kg/m)
+      pricePerMeter: 2095,    // 税込単価 (円/m)
+      note: '正面下部 40x40枠囲い用'
+    },
+
     // ブラックフレームシリーズ
     'AFS-2020-4-BK': {
       name: '2020フレーム (ブラック)',
@@ -83,14 +92,28 @@ export const materialsConfig = {
       pricePerMeter: 1809,    // 税込単価 (円/m)
       note: 'ブラックアルマイト 40mm高'
     },
+    'AFS-4040-4-BK': {
+      name: '4040フレーム (ブラック)',
+      unit: 'm',
+      weightPerMeter: 1.188,   // 重量 (kg/m)
+      pricePerMeter: 2710,    // 税込単価 (円/m)
+      note: '正面下部 40x40枠囲い用 (ブラック)'
+    },
 
-    // 天面金網インナー専用フレーム (シルバー)
+    // 天面金網受用フレーム (シルバー・5シリーズ)
     'AFS-2020-5': {
-      name: '2020インナーフレーム (金網受用・シルバー)',
+      name: '2020フレーム (金網受用・シルバー)',
       unit: 'm',
       weightPerMeter: 0.404,   // 重量 (kg/m)
       pricePerMeter: 822,     // 税込単価 (円/m)
-      note: '黒ケージ金網取付用インナー'
+      note: '天面金網受用 (5シリーズ)'
+    },
+    'AFS-2040-5': {
+      name: '2040フレーム (金網受用・シルバー)',
+      unit: 'm',
+      weightPerMeter: 0.752,   // 重量 (kg/m)
+      pricePerMeter: 1394,    // 税込単価 (円/m)
+      note: '正面枠囲い天面金網用 (シルバー・5シリーズ)'
     },
 
     // 止まり木用フレーム・丸棒
@@ -196,6 +219,20 @@ export const materialsConfig = {
       weightPerPiece: 0.0041,  // 重量 (kg/個) 4.1g
       pricePerPiece: 201,     // 税込単価 (円/個)
       note: '2室分け仕切り板固定用L字ブラケット (シルバー固定)'
+    },
+    'ECP-2040-4': {
+      name: '2040用エンドキャップ',
+      unit: 'piece',
+      weightPerPiece: 0.0022,  // 重量 (kg/個) 約2.2g
+      pricePerPiece: 143,     // 税込単価 (円/個)
+      note: '正面枠囲い左扉スペーサーフレーム両端用 (ブラック)'
+    },
+    'ECP-2040-4-GY': {
+      name: '2040用エンドキャップ (グレー)',
+      unit: 'piece',
+      weightPerPiece: 0.0022,  // 重量 (kg/個) 約2.2g
+      pricePerPiece: 143,     // 税込単価 (円/個)
+      note: '正面枠囲い左扉スペーサーフレーム両端用 (グレー)'
     }
   },
 
@@ -216,6 +253,20 @@ export const materialsConfig = {
       weightPerPiece: 0.050,   // 重量 50g (0.050kg)
       pricePerPiece: 660,      // 税込単価 660円
       note: '前開き扉用 ステンレス製打掛錠 (上部2箇所)'
+    },
+    'CP-294N': {
+      name: 'タキゲン CP-294N スライドラッチ',
+      unit: 'piece',
+      weightPerPiece: 0.055,   // 重量 55g (0.055kg)
+      pricePerPiece: 792,      // 税込単価 792円
+      note: '正面枠囲い扉用 ワンタッチスライドラッチ (左右各1個)'
+    },
+    'ACRYLIC-ROUND-20-5': {
+      name: 'アクリル丸板 透明 φ20mm t5mm (穴加工済)',
+      unit: 'piece',
+      weightPerPiece: 0.002,   // 重量 約2g
+      pricePerPiece: 190,      // 税込単価 190円
+      note: '正面枠囲い柱側 スライドラッチ受金高さ調整スペーサー (各2枚・計4枚)'
     }
   },
 
@@ -229,18 +280,17 @@ export const materialsConfig = {
       thicknessMm: 3.0,
       unit: 'm2',
       weightPerM2: 3.6,        // 重量 (kg/m2)
-      pricePerM2: 7568,        // 税込単価 (円/m2)
-      note: '標準透明パネル (床・背・側面・天面・固定窓)'
+      pricePerM2: 7568,        // 税込単価 (円/m2, フォールバック用)
+      note: '標準透明パネル (床・背・側面・天面・固定窓 / acrylic_extrusion_price_config.jsより自動積算)'
     },
-    // 透明アクリル 3.0mm - 正面扉専用
+    // 透明アクリル 3.0mm - 正面扉専用 (キャスト板)
     'acrylic_cast_3_0': {
-      name: '透明アクリル 3.0mm',
+      name: '透明アクリル 3.0mm (キャスト板・正面扉専用)',
       thicknessMm: 3.0,
       unit: 'm2',
       weightPerM2: 3.6,        // 重量 (kg/m2)
-      pricePerM2: 14652,       // 税込単価 (円/m2)
-      baseCost: 1500,          // 扉1式(2枚組)あたりの固定原価（面積原価とは別に加算）
-      note: '正面扉専用 (高透明・高平滑パネル・固定原価+1500円含む)'
+      pricePerM2: 14652,       // 税込単価 (円/m2, フォールバック用)
+      note: '正面扉専用 (キャスト板 / acrylic_cast_price_config.jsより自動積算: 穴加工2箇所310円+磨き4辺2056円=計2366円/枚込)'
     },
     // 中空ポリカ 4.0mm
     'polyca_4_0': {
@@ -257,8 +307,8 @@ export const materialsConfig = {
       thicknessMm: 3.0,
       unit: 'm2',
       weightPerM2: 4.3,        // 重量 (kg/m2)
-      pricePerM2: 20092,       // 税込単価 (円/m2)
-      note: '通気孔パネル (φ3.1-P7)'
+      pricePerM2: 20092,       // 税込単価 (円/m2, フォールバック用)
+      note: '通気孔パネル (φ3.1-P7 / pvc_punching_price_config.js価格表より自動積算)'
     },
     // アクリル黒両面マット 3.0mm
     'acrylic_black_matte_3_0': {
@@ -266,8 +316,9 @@ export const materialsConfig = {
       thicknessMm: 3.0,
       unit: 'm2',
       weightPerM2: 3.6,        // 重量 (kg/m2)
-      pricePerM2: 10344,       // 税込単価 (円/m2)
-      note: '低反射・マットブラックアクリル'
+      pricePerM2: 10344,       // 税込単価 (円/m2, フォールバック用)
+      baseCostPerPiece: 400,   // 1枚あたりの固定原価（カット・スライド加工費等）
+      note: '低反射・マットブラックアクリル (acrylic_black_matte_price_config.jsより自動積算 / スライド部材は固定原価+400円)'
     },
     // アクリル グレースモーク半透明 3.0mm (コモグラス 530K)
     'acrylic_smoke_gray_3_0': {
@@ -275,8 +326,8 @@ export const materialsConfig = {
       thicknessMm: 3.0,
       unit: 'm2',
       weightPerM2: 3.6,        // 重量 (kg/m2)
-      pricePerM2: 10976,       // 税込単価 (円/m2)
-      note: '暗め半透明スモークアクリル (コモグラス 530K グレースモーク)'
+      pricePerM2: 10976,       // 税込単価 (円/m2, フォールバック用)
+      note: '暗め半透明スモークアクリル (コモグラス 530K / acrylic_smoke_gray_price_config.jsより自動積算)'
     },
     // 透明アクリル 1.5mm
     'acrylic_extrusion_1_5': {
@@ -284,8 +335,8 @@ export const materialsConfig = {
       thicknessMm: 1.5,
       unit: 'm2',
       weightPerM2: 1.8,        // 重量 (kg/m2)
-      pricePerM2: 4336,        // 税込単価 (円/m2)
-      note: '側面換気量調整板等'
+      pricePerM2: 4336,        // 税込単価 (円/m2, フォールバック用)
+      note: '側面換気量調整板等 (acrylic_extrusion_price_config.jsより自動積算)'
     },
     // 透明アクリル 2.0mm
     'acrylic_extrusion_2_0': {
@@ -293,8 +344,8 @@ export const materialsConfig = {
       thicknessMm: 2.0,
       unit: 'm2',
       weightPerM2: 2.4,        // 重量 (kg/m2)
-      pricePerM2: 5296,        // 税込単価 (円/m2)
-      note: '予備・薄物パネル'
+      pricePerM2: 5296,        // 税込単価 (円/m2, フォールバック用)
+      note: '予備・薄物パネル (acrylic_extrusion_price_config.jsより自動積算)'
     },
     // 金網15mmピッチ（黒粉体塗装）
     'wire_mesh_15': {
@@ -302,8 +353,8 @@ export const materialsConfig = {
       pitchMm: 15,
       unit: 'm2',
       weightPerM2: 8.9,        // 重量 (kg/m2)
-      pricePerM2: 42712,       // 税込単価 (円/m2)
-      note: '天面金網 (FENP15, 線径φ3.2)'
+      pricePerM2: 42712,       // 税込単価 (円/m2, フォールバック用)
+      note: '天面金網 (FENP15, 線径φ3.2 / fenp_price_config.js価格表より自動積算)'
     },
     // 金網25mmピッチ（黒粉体塗装）
     'wire_mesh_25': {
@@ -311,8 +362,8 @@ export const materialsConfig = {
       pitchMm: 25,
       unit: 'm2',
       weightPerM2: 6.2,        // 重量 (kg/m2)
-      pricePerM2: 25627,       // 税込単価 (円/m2)
-      note: '天面金網 (FENP25, 線径φ3.2)'
+      pricePerM2: 25627,       // 税込単価 (円/m2, フォールバック用)
+      note: '天面金網 (FENP25, 線径φ3.2 / fenp_price_config.js価格表より自動積算)'
     },
     // 金網30mmピッチ（黒粉体塗装）
     'wire_mesh_30': {
@@ -320,8 +371,8 @@ export const materialsConfig = {
       pitchMm: 30,
       unit: 'm2',
       weightPerM2: 4.4,        // 重量 (kg/m2)
-      pricePerM2: 14949,       // 税込単価 (円/m2)
-      note: '天面金網 (FENP30, 線径φ3.2)'
+      pricePerM2: 14949,       // 税込単価 (円/m2, フォールバック用)
+      note: '天面金網 (FENP30, 線径φ3.2 / fenp_price_config.js価格表より自動積算)'
     }
   },
 
@@ -378,6 +429,11 @@ export const materialsConfig = {
         name: 'TypeA 前開き 加工工賃',
         price: 3000,    // 販売価格への加算額 (円)
         note: '前開き扉 切欠き・穴あけ加工工賃'
+      },
+      frontFramedDoor: {
+        name: 'TypeA 正面枠囲い 加工工賃',
+        price: 3000,    // 販売価格への加算額 (円)
+        note: '正面枠囲いアルミ扉・ラッチ組み立て加工工賃'
       }
     },
 
@@ -392,10 +448,12 @@ export const materialsConfig = {
         note: '車輪径φ50 / 取付高66mm (標準ゴム脚からの変更)'
       },
       sideVentCover: {
-        name: '側面換気量調整板 (左右ペア・つまみネジ8箇所付)',
-        price: 500,     // 販売価格への加算額 (円)
-        cost: 200,      // 内部原価 (円・非表示)
-        note: 't1.5透明アクリル外張り＋No.1化粧つまみネジ'
+        name: '側面換気量調整板 (つまみネジ付)',
+        price: 500,           // 販売価格への加算額 (円・固定)
+        cost: 200,            // 基本部材原価 (つまみネジ等、円・非表示)
+        holeCostPerPiece: 94, // 穴加工費単価 (円/穴・φ9mm穴あけ)
+        holesPerPanel: 4,     // 調整板1枚あたりの穴数 (φ9mm×4箇所)
+        note: 't1.5透明アクリル外張り＋φ9mm穴加工4箇所/枚＋No.1化粧つまみネジ (穴加工費は原価に積み上げ)'
       }
     }
   },

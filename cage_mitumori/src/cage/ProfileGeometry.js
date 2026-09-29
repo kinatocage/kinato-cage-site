@@ -495,5 +495,138 @@ export function create1530Geometry(length) {
   });
 }
 
+/**
+ * 40mm x 40mm アルミフレームの2D断面Shape（4面各2スロット、計8スロット＋4隅芯穴）
+ */
+export function create4040Shape() {
+  const shape = new THREE.Shape();
+  const half = 20;        // 40mm / 2
+  const slotW = 3.0;      // 開口半幅 (6mm)
+  const neckT = 1.8;
+  const innerW = 5.5;
+  const depth = 5.0;
 
+  // 右上角 (20, 20)
+  shape.moveTo(half, half);
 
+  // 右辺 (X = 20): Y = +10, Y = -10 の2スロット
+  // 上部スロット (Y = 10)
+  shape.lineTo(half, 10 + slotW);
+  shape.lineTo(half - neckT, 10 + slotW);
+  shape.lineTo(half - neckT, 10 + innerW);
+  shape.lineTo(half - depth, 10 + innerW);
+  shape.lineTo(half - depth, 10 - innerW);
+  shape.lineTo(half - neckT, 10 - innerW);
+  shape.lineTo(half - neckT, 10 - slotW);
+  shape.lineTo(half, 10 - slotW);
+
+  // 下部スロット (Y = -10)
+  shape.lineTo(half, -10 + slotW);
+  shape.lineTo(half - neckT, -10 + slotW);
+  shape.lineTo(half - neckT, -10 + innerW);
+  shape.lineTo(half - depth, -10 + innerW);
+  shape.lineTo(half - depth, -10 - innerW);
+  shape.lineTo(half - neckT, -10 - innerW);
+  shape.lineTo(half - neckT, -10 - slotW);
+  shape.lineTo(half, -10 - slotW);
+
+  shape.lineTo(half, -half); // 右下角 (20, -20)
+
+  // 下辺 (Y = -20): X = +10, X = -10 の2スロット
+  // 右スロット (X = 10)
+  shape.lineTo(10 + slotW, -half);
+  shape.lineTo(10 + slotW, -half + neckT);
+  shape.lineTo(10 + innerW, -half + neckT);
+  shape.lineTo(10 + innerW, -half + depth);
+  shape.lineTo(10 - innerW, -half + depth);
+  shape.lineTo(10 - innerW, -half + neckT);
+  shape.lineTo(10 - slotW, -half + neckT);
+  shape.lineTo(10 - slotW, -half);
+
+  // 左スロット (X = -10)
+  shape.lineTo(-10 + slotW, -half);
+  shape.lineTo(-10 + slotW, -half + neckT);
+  shape.lineTo(-10 + innerW, -half + neckT);
+  shape.lineTo(-10 + innerW, -half + depth);
+  shape.lineTo(-10 - innerW, -half + depth);
+  shape.lineTo(-10 - innerW, -half + neckT);
+  shape.lineTo(-10 - slotW, -half + neckT);
+  shape.lineTo(-10 - slotW, -half);
+
+  shape.lineTo(-half, -half); // 左下角 (-20, -20)
+
+  // 左辺 (X = -20): Y = -10, Y = +10 の2スロット
+  // 下部スロット (Y = -10)
+  shape.lineTo(-half, -10 - slotW);
+  shape.lineTo(-half + neckT, -10 - slotW);
+  shape.lineTo(-half + neckT, -10 - innerW);
+  shape.lineTo(-half + depth, -10 - innerW);
+  shape.lineTo(-half + depth, -10 + innerW);
+  shape.lineTo(-half + neckT, -10 + innerW);
+  shape.lineTo(-half + neckT, -10 + slotW);
+  shape.lineTo(-half, -10 + slotW);
+
+  // 上部スロット (Y = 10)
+  shape.lineTo(-half, 10 - slotW);
+  shape.lineTo(-half + neckT, 10 - slotW);
+  shape.lineTo(-half + neckT, 10 - innerW);
+  shape.lineTo(-half + depth, 10 - innerW);
+  shape.lineTo(-half + depth, 10 + innerW);
+  shape.lineTo(-half + neckT, 10 + innerW);
+  shape.lineTo(-half + neckT, 10 + slotW);
+  shape.lineTo(-half, 10 + slotW);
+
+  shape.lineTo(-half, half); // 左上角 (-20, 20)
+
+  // 上辺 (Y = 20): X = -10, X = +10 の2スロット
+  // 左スロット (X = -10)
+  shape.lineTo(-10 - slotW, half);
+  shape.lineTo(-10 - slotW, half - neckT);
+  shape.lineTo(-10 - innerW, half - neckT);
+  shape.lineTo(-10 - innerW, half - depth);
+  shape.lineTo(-10 + innerW, half - depth);
+  shape.lineTo(-10 + innerW, half - neckT);
+  shape.lineTo(-10 + slotW, half - neckT);
+  shape.lineTo(-10 + slotW, half);
+
+  // 右スロット (X = 10)
+  shape.lineTo(10 - slotW, half);
+  shape.lineTo(10 - slotW, half - neckT);
+  shape.lineTo(10 - innerW, half - neckT);
+  shape.lineTo(10 - innerW, half - depth);
+  shape.lineTo(10 + innerW, half - depth);
+  shape.lineTo(10 + innerW, half - neckT);
+  shape.lineTo(10 + slotW, half - neckT);
+  shape.lineTo(10 + slotW, half);
+
+  shape.lineTo(half, half); // 閉じる
+
+  // 4隅の芯穴 (直径 4.5mm)
+  const holePositions = [
+    { x: 10, y: 10 },
+    { x: -10, y: 10 },
+    { x: -10, y: -10 },
+    { x: 10, y: -10 }
+  ];
+  for (const pos of holePositions) {
+    const hole = new THREE.Path();
+    hole.absarc(pos.x, pos.y, 2.25, 0, Math.PI * 2, true);
+    shape.holes.push(hole);
+  }
+
+  return shape;
+}
+
+const shape4040 = create4040Shape();
+
+/**
+ * 指定した長さの4040アルミフレームジオメトリを生成 (AFS-4040-4)
+ * @param {number} length 長さ (mm)
+ */
+export function create4040Geometry(length) {
+  return new THREE.ExtrudeGeometry(shape4040, {
+    depth: length,
+    bevelEnabled: false,
+    steps: 1
+  });
+}
