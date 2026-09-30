@@ -32,8 +32,11 @@ function doPost(e) {
     if (logType === 'web_access' || logType === 'web_history') {
       // 1. Web訪問・流入元・回遊動線ログの処理
       result = handleWebHistoryLog(ss, data, contents);
+    } else if (logType === 'calc_error' || logType === 'error') {
+      // 2. 計算エラー・システム例外ログの処理
+      result = handleCalcErrorLog(ss, data, contents);
     } else {
-      // 2. 見積もり詳細ログの処理
+      // 3. 見積もり詳細ログの処理
       result = handleEstimateLog(ss, data, contents);
     }
 
@@ -266,3 +269,47 @@ function setupWebHistoryHeader(sheet) {
     .setHorizontalAlignment('center');
   sheet.setFrozenRows(1);
 }
+
+/**
+ * 計算エラー・例外ログの保存
+ */
+function handleCalcErrorLog(ss, data, rawJson) {
+  let sheet = ss.getSheetByName('エラーログ');
+  if (!sheet) {
+    sheet = ss.insertSheet('エラーログ');
+    setupErrorLogHeader(sheet);
+  }
+
+  const now = new Date();
+  const formattedDate = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss');
+  const spec = data.spec || {};
+  const dev = data.device || {};
+
+  sheet.appendRow([
+    formattedDate,
+    data.visitorId || '',
+    data.sessionId || '',
+    data.errorMessage || '不明なエラー',
+    data.url || '',
+    `W:${spec.W || ''} D:${spec.D || ''} H:${spec.H || ''} Type:${spec.cageType || ''}`,
+    dev.screen || '',
+    data.errorStack || '',
+    rawJson
+  ]);
+
+  return createJsonResponse({ status: 'success', action: 'error_logged' });
+}
+
+function setupErrorLogHeader(sheet) {
+  const headers = [
+    '日時', '端末ID', 'セッションID', 'エラー内容',
+    '発生URL', 'ケージ設定', '画面サイズ', 'スタックトレース', '生データ(JSON)'
+  ];
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  sheet.getRange(1, 1, 1, headers.length)
+    .setFontWeight('bold')
+    .setBackground('#fee2e2') // 淡いレッド
+    .setHorizontalAlignment('center');
+  sheet.setFrozenRows(1);
+}
+

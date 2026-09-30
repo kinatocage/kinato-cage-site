@@ -99,13 +99,13 @@ const btnTypeAFramed = document.getElementById('btn-type-a-framed');
 const btnTypeC = document.getElementById('btn-type-c');
 const typeBadge = document.getElementById('type-badge');
 
-// 資材リスト（BOM・開発確認用）
-const bomToggleBtn = document.getElementById('bom-toggle-btn');
-const bomContainer = document.getElementById('bom-container');
-const bomFrameTbody = document.getElementById('bom-frame-tbody');
-const bomFrameTfoot = document.getElementById('bom-frame-tfoot');
-const bomOtherTbody = document.getElementById('bom-other-tbody');
-const partsCountBadge = document.getElementById('parts-count-badge');
+// 資材リスト（BOM・動的デバッグ生成用）
+let bomToggleBtn = null;
+let bomContainer = null;
+let bomFrameTbody = null;
+let bomFrameTfoot = null;
+let bomOtherTbody = null;
+let partsCountBadge = null;
 
 // フレームカラー選択
 const btnFrameSilver = document.getElementById('btn-frame-silver');
@@ -764,13 +764,123 @@ function updateBOMTable() {
   }
 }
 
-// 資材リスト（BOMアコーディオン）開閉
-if (bomToggleBtn && bomContainer) {
-  bomToggleBtn.addEventListener('click', () => {
-    const isHidden = bomContainer.classList.contains('hidden');
-    bomContainer.classList.toggle('hidden', !isHidden);
-    bomToggleBtn.classList.toggle('active', isHidden);
-  });
+/**
+ * 🛠️ 開発デバッグ用 BOM動的インジェクション
+ * URLに ?debug=bom または ?dev=bom がある場合のみ、画面下部にパーツ内訳アコーディオンを動的生成・注入します。
+ * 通常のお客様向けアクセス（本番HTML）には一切DOMが存在しないため、原価漏洩リスクは0です。
+ */
+function setupDebugBOMIfRequested() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const hasDebugParam = params.get('debug') === 'bom' || params.get('dev') === 'bom';
+    const isDebugOff = params.get('debug') === 'off';
+
+    if (isDebugOff) {
+      sessionStorage.removeItem('cage_debug_bom');
+      return;
+    }
+
+    const shouldEnableDebugBOM = hasDebugParam || sessionStorage.getItem('cage_debug_bom') === 'true';
+
+    if (!shouldEnableDebugBOM) return;
+
+    // セッション中に保持
+    sessionStorage.setItem('cage_debug_bom', 'true');
+
+    // 既に生成済みならスキップ
+    if (document.getElementById('debug-bom-section')) return;
+
+    // アコーディオンHTMLを動的作成
+    const section = document.createElement('section');
+    section.id = 'debug-bom-section';
+    section.className = 'control-section accordion-section';
+    section.style.cssText = 'margin: 16px 12px 10px; border: 1px dashed rgba(245, 158, 11, 0.4);';
+
+    section.innerHTML = `
+      <div style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; font-size: 0.78rem; color: #fbbf24; display: flex; align-items: flex-start; gap: 10px; line-height: 1.45;">
+        <span style="font-size: 1.1rem; line-height: 1;">🛠️</span>
+        <div>
+          <strong style="color: #f59e0b; display: block; margin-bottom: 2px;">【管理者デバッグ表示中】資材リスト (BOM)</strong>
+          <span>URLパラメータ（?debug=bom）により動的生成されています。<strong style="color: #60a5fa;">静的HTMLには最初から含まれていません。</strong>（解除: ?debug=off）</span>
+        </div>
+      </div>
+
+      <div class="accordion-header bom-accordion-header active" id="bom-toggle-btn">
+        <div class="accordion-title-wrap">
+          <svg class="accordion-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          <span class="section-title" style="margin-bottom: 0;">資材リスト内訳 (BOM)</span>
+        </div>
+        <div class="accordion-header-right" style="display: flex; align-items: center; gap: 8px;">
+          <span class="bom-badge" id="parts-count-badge">計算中</span>
+          <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </div>
+
+      <div class="bom-table-container accordion-content" id="bom-container" style="margin-top: 8px;">
+        <div class="bom-section-title-bar" style="padding: 10px 12px 6px; display: flex; justify-content: space-between; align-items: center;">
+          <span class="bom-section-title" style="font-weight: 700; color: #38bdf8;">■ フレーム類（レール・キャップ含む）</span>
+          <span class="bom-section-sub" style="font-size: 0.7rem; color: #94a3b8;">※型番・長さ・数量・原価・重量</span>
+        </div>
+        <table class="bom-table frame-bom-table">
+          <thead>
+            <tr>
+              <th style="width: 32%;">型番</th>
+              <th style="width: 18%; text-align: right;">長さ</th>
+              <th style="width: 12%; text-align: center;">数量</th>
+              <th style="width: 22%; text-align: right;">原価合計</th>
+              <th style="width: 16%; text-align: right;">重量</th>
+            </tr>
+          </thead>
+          <tbody id="bom-frame-tbody"></tbody>
+          <tfoot id="bom-frame-tfoot"></tfoot>
+        </table>
+
+        <div class="bom-section-title-bar" style="margin-top: 14px; padding: 10px 12px 6px;">
+          <span class="bom-section-title" style="font-weight: 700; color: #34d399;">■ パネル・その他部材</span>
+        </div>
+        <table class="bom-table other-bom-table">
+          <thead>
+            <tr>
+              <th>部材種別</th>
+              <th>寸法 / 仕様</th>
+              <th style="width: 45px; text-align: center;">数量</th>
+              <th>用途・配置</th>
+            </tr>
+          </thead>
+          <tbody id="bom-other-tbody"></tbody>
+        </table>
+      </div>
+    `;
+
+    // サイドバーの末尾（フッターの前）に挿入
+    const sidebar = document.querySelector('.sidebar-content') || document.querySelector('.sidebar');
+    if (sidebar) {
+      sidebar.appendChild(section);
+    }
+
+    // 要素参照の更新
+    bomToggleBtn = document.getElementById('bom-toggle-btn');
+    bomContainer = document.getElementById('bom-container');
+    bomFrameTbody = document.getElementById('bom-frame-tbody');
+    bomFrameTfoot = document.getElementById('bom-frame-tfoot');
+    bomOtherTbody = document.getElementById('bom-other-tbody');
+    partsCountBadge = document.getElementById('parts-count-badge');
+
+    if (bomToggleBtn && bomContainer) {
+      bomToggleBtn.addEventListener('click', () => {
+        const isHidden = bomContainer.classList.contains('hidden');
+        bomContainer.classList.toggle('hidden', !isHidden);
+        bomToggleBtn.classList.toggle('active', isHidden);
+      });
+    }
+
+    console.log('[Debug] 🛠️ BOMデバッグUIを動的生成・表示しました。');
+    updateBOMTable();
+  } catch (err) {
+    console.warn('[Debug] setupDebugBOMIfRequested エラー:', err);
+  }
 }
 
 let isEstimateCalculated = false;
@@ -1076,6 +1186,13 @@ async function runStructuralAndCostSimulation() {
     finalizeEstimateCalculation(totals);
   } catch (error) {
     console.error('Structural simulation error:', error);
+    if (hudCostTotal) {
+      hudCostTotal.innerHTML = `<span style="color: #ef4444; font-size: 0.82rem; font-weight: 600;">⚠️ 計算中にエラーが発生しました</span>`;
+    }
+    if (hudWeightTotal) {
+      hudWeightTotal.innerHTML = `<span style="color: #94a3b8; font-size: 0.85rem;">-</span>`;
+    }
+    sendSimulationErrorLog(error);
   } finally {
     if (activeSimulationSession === currentSession) {
       activeSimulationSession = null;
@@ -3280,8 +3397,49 @@ async function maybeSendEstimateLog(estimateData) {
   }
 }
 
+/**
+ * 🚨 計算エラー・サイレントクラッシュの自動通報ログ送信
+ * 万が一本番環境で積算ロジックやモデリングで例外エラーが発生した場合、
+ * 管理者が即座に気付けるようにエラー情報をGAS（スプレッドシート）へ自動送信します。
+ */
+function sendSimulationErrorLog(error) {
+  try {
+    const endpoint = materialsConfig?.system?.gasLogEndpointUrl;
+    if (!endpoint || typeof endpoint !== 'string' || !endpoint.startsWith('http')) return;
+
+    const payload = {
+      type: 'calc_error',
+      timestamp: new Date().toISOString(),
+      visitorId: getOrCreateVisitorId(),
+      sessionId: getOrCreateSessionId(),
+      errorMessage: error?.message || String(error),
+      errorStack: error?.stack ? String(error.stack).substring(0, 1000) : '',
+      spec: { ...state },
+      url: window.location.href,
+      device: {
+        userAgent: navigator.userAgent,
+        screen: `${window.innerWidth}x${window.innerHeight}`
+      }
+    };
+
+    console.warn('[Log] 🚨 エラー発生をGASへ通報中...', payload);
+    fetch(endpoint, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      keepalive: true
+    }).catch(() => {});
+  } catch (e) {
+    console.warn('[Log] エラーログ自動送信失敗:', e);
+  }
+}
+
 // 生体プリセットの初期化
 initCreaturePresets();
+
+// 🛠️ デバッグ用BOMの動的生成（?debug=bom 指定時のみ）
+setupDebugBOMIfRequested();
 
 // =================================================================
 // 5. 外部連携（AIチャット等）からの初期状態引き継ぎ（引数非表示対応）
@@ -3436,8 +3594,8 @@ function checkInitialStateFromStorageOrUrl() {
     viewer.setViewPreset('iso', state);
 
     // お見積もりHUDも即座に計算して表示
-    if (typeof calcEstimate === 'function') {
-      calcEstimate();
+    if (typeof runStructuralAndCostSimulation === 'function') {
+      runStructuralAndCostSimulation();
     }
   } catch (e) {
     console.error('[Sim] 初期状態の反映エラー:', e);

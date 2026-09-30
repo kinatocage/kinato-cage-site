@@ -37,25 +37,34 @@
 
 ---
 
-## 🚀 最新版を本番（Cloudflare）へ公開する時の2ステップ
+## 🚀 最新版を本番（Cloudflare）へ公開する手順（安全デプロイ）
 
 > [!IMPORTANT]
-> **【本番デプロイ前の事前チェック】**
-> ローカル環境でのテストログ送信を止めたい場合は、デプロイ前に以下の2箇所のフラグを `true` に切り替えてください：
-> 1. `src/components/WebAnalyticsTracker.astro` の `const SKIP_LOG_ON_LOCALHOST = true;`
-> 2. `cage_mitumori/src/main.js` の `const SKIP_LOG_ON_LOCALHOST = true;`（※切り替え後 `npm run build:sim`）
-> 
-> これにより、手元での開発・デバッグ時にスプレッドシートへテストログが送られるのを防ぎます。本番環境（`kinato-cage-site.pages.dev`）ではフラグに関わらず常時正常にログが送信されます。
+> **【二重事故防止セーフティゲート（自動検証システム）】**
+> 原価・部材リストの露出事故およびログ不達事故を永久に防ぐため、自動検証ゲートが組み込まれています。
+> デプロイ時は以下の**安全デプロイコマンド（1行）**を実行してください。
 
-デザインを変えたり、コードを修正したあと「実機（本番URL）に反映させたい！」という時は、VSCodeのターミナルの `C:\Users\owner\OneDrive\Desktop\Web` フォルダ内で以下の2行を実行するだけで完了します。
-（※Githubを経由しなくてOKです）
-
-1. ビルド（本番用にファイルをまとめる）
 ```bash
-npm run build
+npm run deploy:safe
 ```
 
-2. デプロイ（Cloudflareにアップロードする）
-```bash
-npx wrangler pages deploy dist --project-name="kinato-cage-site"
-```
+このコマンドを実行すると、以下の6段階の安全検証が全自動で実行されます：
+1. **静的検証 (ESLint)**: 未宣言変数（`singleCost`等のReferenceError要因）や構文エラーを100%機械検知（エラー時は即停止）
+2. **ソースコード漏洩検査**: `index.html` に部材表や原価タグが静的混入していないかスキャン（混入時は即停止）
+3. **プロダクションビルド**: シミュレーター（Vite）およびサイト全体（Astro）のビルド
+4. **成果物漏洩検査**: 配布用HTML内にBOM要素が混入していないか最終確認
+5. **GASエンドポイント設定検証**: 見積もりログ収集URLが正しく設定されているか確認
+6. **Cloudflareデプロイ**: 上記すべてがPASSした場合のみ本番公開を実行
+
+---
+
+## 🛠️ 管理者用: 資材リスト（BOM・原価内訳）の確認方法
+通常のお客様向け画面には部材リストや原価情報は**一切出力されません（HTMLにも存在しません）**。
+管理者・開発者が部材数や原価内訳を確認したい場合のみ、URLの末尾に `?debug=bom` を付与してアクセスしてください。
+
+- **本番シミュレーターでのBOM確認**:
+  🔗 https://kinato-cage-site.pages.dev/sim/?debug=bom
+- **ローカル開発環境でのBOM確認**:
+  🔗 http://localhost:5173/?debug=bom
+  *(※一度開くとセッション中保持されます。解除したい場合は `?debug=off` を付与してください)*
+

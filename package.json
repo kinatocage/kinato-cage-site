@@ -8,6 +8,8 @@
     "dev:all": "concurrently \"npm run dev\" \"npm run admin\"",
     "build:sim": "node scripts/build-sim.mjs",
     "build": "node scripts/build-sim.mjs && astro build",
+    "lint": "eslint \"cage_mitumori/src/**/*.js\"",
+    "deploy:safe": "node scripts/deploy-safe.mjs",
     "preview": "astro preview",
     "astro": "astro"
   },
@@ -22,6 +24,8 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "eslint": "^10.11.0",
+    "globals": "^17.12.0"
   }
 }
