@@ -821,6 +821,7 @@ function calculateGrandTotals() {
         // 側面換気量調整板は固定オプションとして後述で定額加算（二重計上防止、重量計算は維持）
         const isVentCoverPart = part.panelCode === 'acrylic_extrusion_1_5' || (part.name && part.name.includes('換気量調整板'));
         if (!isVentCoverPart) {
+          let singleCost = 0;
           // 金網（FENP）判定: wire_mesh_15, 25, 30等の場合は寸法連動マトリクス表から原価算出
           const isWireMesh = (part.panelCode && part.panelCode.startsWith('wire_mesh_')) ||
                              (part.partCode && part.partCode.startsWith('wire_mesh_')) ||
