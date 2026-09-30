@@ -771,6 +771,11 @@ function updateBOMTable() {
  */
 function setupDebugBOMIfRequested() {
   try {
+    // 🛡️ 原価・部材漏洩の完全遮断: ローカル開発環境でのみ有効化（本番環境では絶対に生成されません）
+    if (!isLocalDevelopmentEnvironment()) {
+      return;
+    }
+
     const params = new URLSearchParams(window.location.search);
     const hasDebugParam = params.get('debug') === 'bom' || params.get('dev') === 'bom';
     const isDebugOff = params.get('debug') === 'off';
