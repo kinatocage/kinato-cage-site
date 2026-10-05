@@ -84,6 +84,9 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
             床裏面
           </button>
+          <button class="preset-btn preset-btn-darkroom" id="btn-toggle-darkroom" title="暗室モード切替 (LEDライティングを際立たせるスタジオ減光)">
+            🌙 暗室
+          </button>
         </div>
       </div>
 
@@ -653,6 +656,63 @@
                     <span class="option-sub" id="caster-sub">高さ66mm。標準仕様はゴム脚 (H11mm)</span>
                   </div>
                 </label>
+              </div>
+
+              <!-- LED照明オプション -->
+              <div class="option-inline-card led-option-card" id="card-led-option" style="margin-top: 8px;">
+                <div class="led-card-header">
+                  <div class="option-text-wrap">
+                    <span class="option-title">💡 LED照明</span>
+                  </div>
+                </div>
+
+                <div class="led-select-wrap">
+                  <select id="select-led-type" class="custom-select">
+                    <option value="none">なし（標準）</option>
+                    <option value="usb">USB式 白＆電球色 LED ＋3,000円</option>
+                    <option value="rgbw">リモコン操作 RGB+W ＋6,500円</option>
+                  </select>
+                </div>
+
+                <!-- LEDインタラクティブ点灯コントローラー (LED選択時のみ表示) -->
+                <div class="led-controller-panel hidden" id="led-controller-panel">
+                  <div class="led-ctrl-row">
+                    <span class="led-ctrl-label">点灯制御:</span>
+                    <div class="led-power-switch-group">
+                      <button type="button" class="btn-led-power active" id="btn-led-power-on">点灯</button>
+                      <button type="button" class="btn-led-power" id="btn-led-power-off">消灯</button>
+                    </div>
+                  </div>
+
+                  <!-- USB式用 パターン切替 -->
+                  <div class="led-ctrl-row hidden" id="led-row-usb-modes">
+                    <span class="led-ctrl-label">発光色:</span>
+                    <div class="led-btn-group">
+                      <button type="button" class="btn-led-mode active" data-usb-mode="all">全灯</button>
+                      <button type="button" class="btn-led-mode" data-usb-mode="white">白色</button>
+                      <button type="button" class="btn-led-mode" data-usb-mode="warm">電球色</button>
+                    </div>
+                  </div>
+
+                  <!-- RGB+W用 カラーパレット -->
+                  <div class="led-ctrl-row hidden" id="led-row-rgb-palette">
+                    <span class="led-ctrl-label">演出カラー:</span>
+                    <div class="led-color-palette">
+                      <button type="button" class="btn-color-dot active" data-color="#ffffff" style="background: #ffffff;" title="ホワイト"></button>
+                      <button type="button" class="btn-color-dot" data-color="#ff1744" style="background: #ff1744;" title="レッド"></button>
+                      <button type="button" class="btn-color-dot" data-color="#2979ff" style="background: #2979ff;" title="ブルー"></button>
+                      <button type="button" class="btn-color-dot" data-color="#00e676" style="background: #00e676;" title="グリーン"></button>
+                      <button type="button" class="btn-color-dot" data-color="#ffea00" style="background: #ffea00;" title="イエロー"></button>
+                      <button type="button" class="btn-color-dot" data-color="#d500f9" style="background: #d500f9;" title="パープル"></button>
+                      <button type="button" class="btn-color-dot" data-color="#ff80ab" style="background: #ff80ab;" title="ピンク"></button>
+                      <button type="button" class="btn-color-dot" data-color="#00e5ff" style="background: #00e5ff;" title="シアン"></button>
+                    </div>
+                  </div>
+
+                  <div class="led-hint-text">
+                    ※点灯時は自動で部屋が暗室モードになり、ケージ内の光をリアルに体感できます。
+                  </div>
+                </div>
               </div>
             </div>
           </section>

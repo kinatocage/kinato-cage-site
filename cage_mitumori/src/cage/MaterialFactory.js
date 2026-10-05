@@ -156,6 +156,36 @@ export class MaterialFactory {
       side: THREE.DoubleSide
     });
 
+    // LEDライトバー用マテリアル
+    this.ledAluminum = new THREE.MeshStandardMaterial({
+      color: 0xd8dde4,
+      metalness: 0.8,
+      roughness: 0.25,
+      envMapIntensity: 1.2
+    });
+    this.ledDiffuser = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.4,
+      metalness: 0.05
+    });
+    this.ledEmissive = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: 0xffffff,
+      emissiveIntensity: 1.5,
+      roughness: 0.2,
+      metalness: 0.0
+    });
+    this.ledCable = new THREE.MeshStandardMaterial({
+      color: 0xcccccc,
+      roughness: 0.7,
+      metalness: 0.05
+    });
+    this.ledBracket = new THREE.MeshStandardMaterial({
+      color: 0x8892a0,
+      metalness: 0.6,
+      roughness: 0.3
+    });
+
     // No.1 化粧つまみネジ（シルバーフレーム時は白、ブラックフレーム時は黒）
     this.thumbScrewMaterial = new THREE.MeshStandardMaterial({
       color: 0xf5f6f8, // 初期値: 白（光沢樹脂・ホワイト）
@@ -288,6 +318,11 @@ export class MaterialFactory {
     this.perchWhiteScrew.dispose();
     this.ventCoverAcrylic.dispose();
     this.thumbScrewMaterial.dispose();
+    this.ledAluminum.dispose();
+    this.ledDiffuser.dispose();
+    this.ledEmissive.dispose();
+    this.ledCable.dispose();
+    this.ledBracket.dispose();
     this.screwSilver.dispose();
     this.screwSlot.dispose();
     this.blackMatteAcrylic.dispose();

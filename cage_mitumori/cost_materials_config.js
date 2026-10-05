@@ -454,6 +454,24 @@ export const materialsConfig = {
         holeCostPerPiece: 94, // 穴加工費単価 (円/穴・φ9mm穴あけ)
         holesPerPanel: 4,     // 調整板1枚あたりの穴数 (φ9mm×4箇所)
         note: 't1.5透明アクリル外張り＋φ9mm穴加工4箇所/枚＋No.1化粧つまみネジ (穴加工費は原価に積み上げ)'
+      },
+
+      // --- LED照明オプション ---
+      ledUsb: {
+        name: 'LED照明: USB式 白＆電球色 LED',
+        price: 3000,
+        cost: 1980,
+        length: 350,
+        weight: 0.12,
+        note: 'USB 二色60LEDアルミライトバー [4023] (USB-A給電・3パターン切替)'
+      },
+      ledRgbw: {
+        name: 'LED照明: リモコン操作 RGB+W',
+        price: 6500,
+        cost: 5490,
+        length: 530,
+        weight: 0.35,
+        note: 'RGB+W 30LED[6839] + 専用コントローラー[8166] + 12Vアダプター[6207] + 5pin延長コード1m[6433]'
       }
     }
   },

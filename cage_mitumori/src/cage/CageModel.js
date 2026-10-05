@@ -77,6 +77,10 @@ export class CageModel {
     this.dividerGroup.name = 'RoomDivider';
     this.root.add(this.dividerGroup);
 
+    this.ledGroup = new THREE.Group();
+    this.ledGroup.name = 'LED';
+    this.root.add(this.ledGroup);
+
     // 現在のパラメータ
     this.params = {
       W: 750,
@@ -93,6 +97,11 @@ export class CageModel {
       hasPerch: false,             // 止まり木（天板吊り下げ式・後付け対応）
       hasRubberPacking: false,     // モレ対策ゴムパッキン (側面・背面 隙間モレ抑制)
       hasRoomDivider: false,       // ２室分け（後付け仕切り板・Type A/C両対応）
+      ledType: 'none',             // 'none' | 'usb' | 'high_cri_white' | 'red' | 'white_and_red' | 'rgbw'
+      ledPower: true,              // LED点灯状態 (true | false)
+      ledBrightness: 1.0,          // LED調光 (0.1 ~ 1.0)
+      ledColorMode: 'white',       // usb切替: 'white' | 'warm' | 'all', white_and_red切替: 'both' | 'white' | 'red'
+      ledRgbColor: '#ffffff',      // rgbw発光色: 16進カラーコード
       frontWideFrame: '2x',        // 正面下側幅広フレーム: '2x' (40mm) | '3x' (60mm) | 'none' (20mm標準)
       doorHingeSide: 'left',       // 前開き扉開き方向: 'left' (左ヒンジ・右打掛) | 'right' (左打掛・右ヒンジ)
       footType: 'rubber',      // 'rubber' (ゴム脚) | 'caster' (キャスター)
@@ -673,6 +682,7 @@ export class CageModel {
     this.clearGroup(this.dividerGroup);
     this.clearGroup(this.caulkingGroup);
     this.clearGroup(this.rubberPackingGroup);
+    this.clearGroup(this.ledGroup);
     this.disposeResources();
 
     // 寸法変更時は扉アニメーション状態をリセット（新しい寸法で即時配置）
@@ -1119,12 +1129,20 @@ export class CageModel {
       this.buildRoomDivider();
     }
 
+    // ==========================================
+    // 8. LED照明オプションの構築
+    // ==========================================
+    if (this.params.ledType && this.params.ledType !== 'none') {
+      this.buildLed();
+    }
+
     // 表示トグルの反映
     this.panelGroup.visible = showPanels;
     this.doorGroup.visible = showPanels;
     this.caulkingGroup.visible = showPanels;
     this.rubberPackingGroup.visible = showPanels;
     this.dividerGroup.visible = showPanels;
+    this.ledGroup.visible = true;
   }
 
   /**
@@ -4107,6 +4125,397 @@ export class CageModel {
     });
     this.recordPart('M3 つまみネジ (白)', 'M3 x L8mm', 5, '２室分け固定・倒れ防止用つまみネジ', 'other');
     this.recordPart('M4 皿ネジ', 'M4 x L8mm', 1, '２室分けフレーム固定用皿ネジ', 'other');
+  }
+
+  /**
+   * LED照明オプションの3Dモデル構築
+   * - 天板フロント開口部から直視できる位置へアルミライトバー＆吊り下げステーを構築
+   * - ケージ室内大気効果（モヤ・ミスト）、光シャフト（ボリュメトリック光円錐）、床面グローを完全再現
+   */
+  buildLed() {
+    const { W, D, H, ledType, ledPower, ledBrightness = 1.0, ledColorMode, ledRgbColor } = this.params;
+    if (!ledType || ledType === 'none') return;
+
+    // 天面フレーム下面の基準高さ: H - 20mm
+    // 天面レールや枠で隠れないよう、吊り下げステーでオフセット（バー中心高さ: H - 32mm）
+    const barCenterY = H - 32;
+    const barTopY = barCenterY + 6;
+    const bracketTopY = H - 20;
+
+    /**
+     * 単体LEDライトバーの生成ヘルパー
+     * @param {number} barL - ライトバー長さ (mm)
+     * @param {number} barW - ライトバー幅/奥行 (mm)
+     * @param {number} barH - ライトバー高さ (mm)
+     * @param {number} centerZ - 前後配置位置 (mm)
+     * @param {boolean} isDome - ドーム型かどうか
+     * @param {string|number} emissiveHex - 発光色
+     * @param {boolean} isLit - 点灯中かどうか
+     */
+    const createBarMesh = (barL, barW, barH, centerZ, isDome, emissiveHex, isLit) => {
+      // 1. 天板からの垂直吊り下げステー金具（左右2箇所）
+      const bracketW = 12;
+      const bracketThick = 2.5;
+      const bracketH = bracketTopY - (barCenterY - barH / 2);
+      const bracketCenterY = (bracketTopY + (barCenterY - barH / 2)) / 2;
+
+      for (const sign of [-1, 1]) {
+        const bx = sign * (barL / 2 - 35);
+        const bracketGeom = new THREE.BoxGeometry(bracketW, bracketH, bracketThick);
+        bracketGeom.translate(bx, bracketCenterY, centerZ);
+        this.activeGeometries.push(bracketGeom);
+        const bracketMesh = new THREE.Mesh(bracketGeom, this.materials.ledBracket);
+        bracketMesh.name = 'LED天板吊り下げステー金具';
+        this.ledGroup.add(bracketMesh);
+
+        // 天板側・ステー側固定ボルト
+        const boltGeom = new THREE.CylinderGeometry(2.5, 2.5, 3, 12);
+        boltGeom.rotateX(Math.PI / 2);
+        boltGeom.translate(bx, bracketTopY - 4, centerZ + bracketThick / 2);
+        this.activeGeometries.push(boltGeom);
+        const boltMesh = new THREE.Mesh(boltGeom, this.materials.perchAluminum);
+        this.ledGroup.add(boltMesh);
+      }
+
+      // 2. アルミ押し出しメインボディ
+      const baseGeom = new THREE.BoxGeometry(barL, barH * 0.65, barW);
+      baseGeom.translate(0, barCenterY + barH * 0.175, centerZ);
+      this.activeGeometries.push(baseGeom);
+      const baseMesh = new THREE.Mesh(baseGeom, this.materials.ledAluminum);
+      baseMesh.name = 'LEDアルミボディ';
+      this.ledGroup.add(baseMesh);
+
+      // 3. 発光面 (下向き〜手前下向き乳白ディフューザーカバー)
+      const diffuseH = barH * 0.45;
+      const diffuseW = barW - 2;
+      const diffuseY = barCenterY - barH * 0.25;
+
+      let diffuseGeom;
+      if (isDome) {
+        // ドーム形状カバー
+        diffuseGeom = new THREE.CylinderGeometry(diffuseW / 2, diffuseW / 2, barL - 4, 16, 1, false, 0, Math.PI);
+        diffuseGeom.rotateZ(Math.PI / 2);
+        diffuseGeom.rotateX(Math.PI);
+        diffuseGeom.translate(0, barCenterY - barH * 0.1, centerZ);
+      } else {
+        // フラットワイドカバー（厚みを持たせて外からもくっきり見せる）
+        diffuseGeom = new THREE.BoxGeometry(barL - 4, diffuseH, diffuseW);
+        diffuseGeom.translate(0, diffuseY, centerZ);
+      }
+      this.activeGeometries.push(diffuseGeom);
+
+      // 発光マテリアル（点灯時は鮮烈にグロー発光）
+      const emissiveMat = this.materials.ledEmissive.clone();
+      if (isLit) {
+        const color = new THREE.Color(emissiveHex);
+        emissiveMat.color = color;
+        emissiveMat.emissive = color;
+        emissiveMat.emissiveIntensity = Math.max(0.5, (ledBrightness || 1.0) * 4.0);
+      } else {
+        emissiveMat.color = new THREE.Color(0xf0f3f6);
+        emissiveMat.emissive = new THREE.Color(0x000000);
+        emissiveMat.emissiveIntensity = 0;
+      }
+      const diffuseMesh = new THREE.Mesh(diffuseGeom, emissiveMat);
+      diffuseMesh.name = 'LED発光ディフューザー';
+      this.ledGroup.add(diffuseMesh);
+
+      // 4. 両端エンドキャップ
+      const capThick = 2.5;
+      for (const sign of [-1, 1]) {
+        const capX = sign * (barL / 2 + capThick / 2);
+        const capGeom = new THREE.BoxGeometry(capThick, barH + 0.8, barW + 0.8);
+        capGeom.translate(capX, barCenterY, centerZ);
+        this.activeGeometries.push(capGeom);
+        const capMesh = new THREE.Mesh(capGeom, this.materials.perchGrayCap);
+        this.ledGroup.add(capMesh);
+      }
+
+      // 5. 給電配線コード (右端エンドキャップからケージ角へ伸びるコード)
+      const cableRadius = 1.8;
+      const rightX = barL / 2 + capThick;
+      const targetCornerX = W / 2 - 25;
+      const cableL = Math.max(10, targetCornerX - rightX);
+
+      const cableGeom = new THREE.CylinderGeometry(cableRadius, cableRadius, cableL, 8);
+      cableGeom.rotateZ(Math.PI / 2);
+      cableGeom.translate(rightX + cableL / 2, barCenterY + 2, centerZ);
+      this.activeGeometries.push(cableGeom);
+      const cableMesh = new THREE.Mesh(cableGeom, this.materials.ledCable);
+      cableMesh.name = 'LED給電コード';
+      this.ledGroup.add(cableMesh);
+    };
+
+    /**
+     * ケージ室内の大気効果（モヤ・ミスト）＆内壁・床面グローの生成ヘルパー
+     * - ポリゴンの境界（角や面のエッジ）が一切見えないよう、境界フェード付きカスタムシェーダーで完全なグラデーション化
+     * - LEDバー（ケージ後方天井）からの距離に応じた滑らかな光の広がりを表現
+     * @param {string|number} glowHex
+     * @param {number} intensity
+     * @param {number} barL - LEDバー長さ
+     * @param {number} centerZ - LEDバーZ座標
+     */
+    const buildAtmosphereAndGlow = (glowHex, intensity, barL = 350, centerZ = -D / 2 + 55) => {
+      if (!ledPower || intensity <= 0) return;
+
+      const glowColor = new THREE.Color(glowHex);
+
+      const innerW = W - 44;
+      const innerD = D - 44;
+      const innerH = H - 44;
+      const centerY = H / 2;
+
+      const boxMin = new THREE.Vector3(-innerW / 2, 22, -innerD / 2);
+      const boxMax = new THREE.Vector3(innerW / 2, H - 22, innerD / 2);
+      const lightPos = new THREE.Vector3(0, H - 32, centerZ);
+
+      // --- A. ケージ室内全体の大気フォグ（完全グラデーションシェーダー） ---
+      // ボックス内寸全体に配置するが、シェーダーで全境界（X/Y/Z）に向かって滑らかに透明度0へフェードアウト
+      // これにより、角や面の輪郭（幕のようなエッジ）が物理的に100%消失し、柔らかな光のモヤのみが漂う
+      const atmosphereVert = `
+        varying vec3 vWorldPos;
+        void main() {
+          vec4 worldPos = modelMatrix * vec4(position, 1.0);
+          vWorldPos = worldPos.xyz;
+          gl_Position = projectionMatrix * viewMatrix * worldPos;
+        }
+      `;
+
+      const atmosphereFrag = `
+        uniform vec3 uColor;
+        uniform vec3 uBoxMin;
+        uniform vec3 uBoxMax;
+        uniform vec3 uLightPos;
+        uniform float uBarL;
+        uniform float uIntensity;
+
+        varying vec3 vWorldPos;
+
+        void main() {
+          // 1. ケージ内壁・天井・床・ガラス扉への境界フェード（端から40〜60mmかけて完全に0へ）
+          float fadeX = smoothstep(0.0, 55.0, min(vWorldPos.x - uBoxMin.x, uBoxMax.x - vWorldPos.x));
+          float fadeY = smoothstep(0.0, 35.0, min(vWorldPos.y - uBoxMin.y, uBoxMax.y - vWorldPos.y));
+          float fadeZ = smoothstep(0.0, 55.0, min(vWorldPos.z - uBoxMin.z, uBoxMax.z - vWorldPos.z));
+          float boxFade = fadeX * fadeY * fadeZ;
+
+          // 2. 後方天井のLEDバー（ライン光源）からの距離に応じた滑らかな指数減衰
+          float clampedX = clamp(vWorldPos.x, -uBarL * 0.45, uBarL * 0.45);
+          vec3 lightLinePt = vec3(clampedX, uLightPos.y, uLightPos.z);
+          float dist = length(vWorldPos - lightLinePt);
+
+          // LED直下からふんわり広がる柔らかな光のグラデーション
+          float glow = exp(-dist * 0.0055);
+
+          // 天井付近の密度と全体への拡散
+          float heightRatio = clamp((vWorldPos.y - uBoxMin.y) / (uBoxMax.y - uBoxMin.y), 0.0, 1.0);
+          float verticalSpread = pow(heightRatio, 1.6);
+
+          float alpha = clamp(boxFade * (glow * 0.65 + verticalSpread * 0.35) * uIntensity * 0.28, 0.0, 0.5);
+
+          gl_FragColor = vec4(uColor, alpha);
+        }
+      `;
+
+      const hazeGeom = new THREE.BoxGeometry(innerW, innerH, innerD);
+      hazeGeom.translate(0, centerY, 0);
+      this.activeGeometries.push(hazeGeom);
+
+      const hazeMat = new THREE.ShaderMaterial({
+        vertexShader: atmosphereVert,
+        fragmentShader: atmosphereFrag,
+        uniforms: {
+          uColor: { value: glowColor },
+          uBoxMin: { value: boxMin },
+          uBoxMax: { value: boxMax },
+          uLightPos: { value: lightPos },
+          uBarL: { value: barL },
+          uIntensity: { value: intensity }
+        },
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.BackSide
+      });
+      this.activeMaterials.push(hazeMat);
+
+      const hazeMesh = new THREE.Mesh(hazeGeom, hazeMat);
+      hazeMesh.name = 'ケージ室内大気グラデーションフォグ';
+      this.ledGroup.add(hazeMesh);
+
+      // --- B. 床面受光グラデーションプレーン ---
+      // 後方LEDバーからの光が床面に柔らかく落ちる様子を表現。壁際で自然にフェードアウト
+      const floorFrag = `
+        uniform vec3 uColor;
+        uniform vec3 uBoxMin;
+        uniform vec3 uBoxMax;
+        uniform vec3 uLightPos;
+        uniform float uBarL;
+        uniform float uIntensity;
+
+        varying vec3 vWorldPos;
+
+        void main() {
+          // 端のフェードアウト（四角い板のエッジを完全に消去）
+          float fadeX = smoothstep(0.0, 45.0, min(vWorldPos.x - uBoxMin.x, uBoxMax.x - vWorldPos.x));
+          float fadeZ = smoothstep(0.0, 45.0, min(vWorldPos.z - uBoxMin.z, uBoxMax.z - vWorldPos.z));
+          float borderFade = fadeX * fadeZ;
+
+          // LEDライン直下（床面後方）からの距離
+          float clampedX = clamp(vWorldPos.x, -uBarL * 0.45, uBarL * 0.45);
+          vec2 lightLine2D = vec2(clampedX, uLightPos.z);
+          float dist = length(vec2(vWorldPos.x, vWorldPos.z) - lightLine2D);
+
+          float glow = exp(-dist * 0.0058);
+          float alpha = clamp(borderFade * glow * uIntensity * 0.38, 0.0, 0.6);
+
+          gl_FragColor = vec4(uColor, alpha);
+        }
+      `;
+
+      const floorGlowGeom = new THREE.PlaneGeometry(innerW, innerD);
+      floorGlowGeom.rotateX(-Math.PI / 2);
+      floorGlowGeom.translate(0, 20.6, 0);
+      this.activeGeometries.push(floorGlowGeom);
+
+      const floorGlowMat = new THREE.ShaderMaterial({
+        vertexShader: atmosphereVert,
+        fragmentShader: floorFrag,
+        uniforms: {
+          uColor: { value: glowColor },
+          uBoxMin: { value: boxMin },
+          uBoxMax: { value: boxMax },
+          uLightPos: { value: lightPos },
+          uBarL: { value: barL },
+          uIntensity: { value: intensity }
+        },
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      this.activeMaterials.push(floorGlowMat);
+
+      const floorGlowMesh = new THREE.Mesh(floorGlowGeom, floorGlowMat);
+      floorGlowMesh.name = '床面LED受光グラデーション';
+      this.ledGroup.add(floorGlowMesh);
+
+      // --- C. 背面パネル受光グラデーションプレーン ---
+      // LEDバーが後方天井にあるため、背面パネル上部から下方・左右へ滑らかにグラデーションが広がる
+      const backFrag = `
+        uniform vec3 uColor;
+        uniform vec3 uBoxMin;
+        uniform vec3 uBoxMax;
+        uniform vec3 uLightPos;
+        uniform float uBarL;
+        uniform float uIntensity;
+
+        varying vec3 vWorldPos;
+
+        void main() {
+          float fadeX = smoothstep(0.0, 45.0, min(vWorldPos.x - uBoxMin.x, uBoxMax.x - vWorldPos.x));
+          float fadeY = smoothstep(0.0, 35.0, min(vWorldPos.y - uBoxMin.y, uBoxMax.y - vWorldPos.y));
+          float borderFade = fadeX * fadeY;
+
+          // 天井後方のLEDバーからの距離
+          float clampedX = clamp(vWorldPos.x, -uBarL * 0.45, uBarL * 0.45);
+          vec2 lightLine2D = vec2(clampedX, uLightPos.y);
+          float dist = length(vec2(vWorldPos.x, vWorldPos.y) - lightLine2D);
+
+          float glow = exp(-dist * 0.0075);
+          float alpha = clamp(borderFade * glow * uIntensity * 0.32, 0.0, 0.55);
+
+          gl_FragColor = vec4(uColor, alpha);
+        }
+      `;
+
+      const backGlowGeom = new THREE.PlaneGeometry(innerW, innerH);
+      backGlowGeom.translate(0, centerY, -D / 2 + 20.6);
+      this.activeGeometries.push(backGlowGeom);
+
+      const backGlowMat = new THREE.ShaderMaterial({
+        vertexShader: atmosphereVert,
+        fragmentShader: backFrag,
+        uniforms: {
+          uColor: { value: glowColor },
+          uBoxMin: { value: boxMin },
+          uBoxMax: { value: boxMax },
+          uLightPos: { value: lightPos },
+          uBarL: { value: barL },
+          uIntensity: { value: intensity }
+        },
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      this.activeMaterials.push(backGlowMat);
+
+      const backGlowMesh = new THREE.Mesh(backGlowGeom, backGlowMat);
+      backGlowMesh.name = '背面LED受光グラデーション';
+      this.ledGroup.add(backGlowMesh);
+    };
+
+    // 正確なLEDバーの配置: ケージ後方天井面 (バックフレーム内側から35mm手前: -D/2 + 55mm)
+    const baseZ = -D / 2 + 55;
+
+    switch (ledType) {
+      case 'usb': {
+        // USB式 白＆電球色 LED (350mm)
+        const barL = Math.min(350, W - 60);
+        let color = 0xffffff;
+        if (ledColorMode === 'warm') {
+          color = 0xffa726; // 温かみのある電球色
+        } else if (ledColorMode === 'all') {
+          color = 0xffe0b2; // 白＋電球色の全灯
+        }
+        createBarMesh(barL, 18, 13, baseZ, false, color, !!ledPower);
+        buildAtmosphereAndGlow(color, ledBrightness, barL, baseZ);
+
+        // 部材リストへの登録: USB 二色60LEDアルミライトバー [4023]
+        this.recordPart('USB 二色60LEDアルミライトバー [4023]', '350mm', 1, 'USB給電アルミライトバー (白＆電球色 3パターン切替)', 'other', {
+          partCode: 'LED-4023',
+          unitType: 'piece',
+          isLedOption: true,
+          ledKey: 'ledUsb'
+        });
+        break;
+      }
+
+      case 'rgbw': {
+        // リモコン操作 RGB+W フルカラーLEDライトバー (530mm)
+        const barL = Math.min(530, W - 60);
+        const rgbColor = ledRgbColor || '#ffffff';
+        createBarMesh(barL, 18, 13, baseZ, false, rgbColor, !!ledPower);
+        buildAtmosphereAndGlow(rgbColor, ledBrightness * 1.15, barL, baseZ);
+
+        // 部材リストへの登録: ご指定の4物品をそれぞれ個別登録
+        this.recordPart('RGB+W LEDライトバー 30LED [6839]', '530mm', 1, 'RGBフルカラー+独立ホワイト素子アルミバー', 'other', {
+          partCode: 'LED-6839',
+          unitType: 'piece',
+          isLedOption: true,
+          ledKey: 'ledRgbw'
+        });
+        this.recordPart('RGB+W 専用コントローラー [8166]', 'リモコン付属', 1, '調光・調色RFリモコン式コントローラー', 'other', {
+          partCode: 'LED-8166',
+          unitType: 'piece',
+          isLedOption: true
+        });
+        this.recordPart('ACアダプター 12V 1.5A [6207]', '12V 1.5A', 1, 'DC12V電源アダプター', 'other', {
+          partCode: 'LED-6207',
+          unitType: 'piece',
+          isLedOption: true
+        });
+        this.recordPart('RGB+W用 5pin延長コード1m [6433]', '1m', 1, '配線取り回し用 5pin延長コード', 'other', {
+          partCode: 'LED-6433',
+          unitType: 'piece',
+          isLedOption: true
+        });
+        break;
+      }
+
+      default: {
+        // その他/フォールバック (指定なし)
+        break;
+      }
+    }
   }
 
   /**

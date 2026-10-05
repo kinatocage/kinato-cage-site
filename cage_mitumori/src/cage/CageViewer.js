@@ -76,10 +76,13 @@ export class CageViewer {
   }
 
   setupLighting() {
+    this.studioLights = [];
+
     // 環境光（過剰な白色化・平坦化を防止し、金属の陰影とハイライトのメリハリを生む）
     const hemiLight = new THREE.HemisphereLight(0xffffff, 0x1e2430, 0.38);
     hemiLight.position.set(0, 1000, 0);
     this.scene.add(hemiLight);
+    this.studioLights.push({ light: hemiLight, baseIntensity: 0.38 });
 
     // メイン指向性ライト（金属光沢のハイライト・ソフトシャドウ生成）
     const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.35);
@@ -97,18 +100,29 @@ export class CageViewer {
     dirLight1.shadow.bias = -0.0005;
     dirLight1.shadow.radius = 3.5; // 影を自然にソフトにぼかす
     this.scene.add(dirLight1);
+    this.studioLights.push({ light: dirLight1, baseIntensity: 1.35 });
 
     const dirLightTop = new THREE.DirectionalLight(0xffffff, 0.65);
     dirLightTop.position.set(0, 1200, 0);
     this.scene.add(dirLightTop);
+    this.studioLights.push({ light: dirLightTop, baseIntensity: 0.65 });
 
     const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
     dirLight2.position.set(-1000, 1000, -1200);
     this.scene.add(dirLight2);
+    this.studioLights.push({ light: dirLight2, baseIntensity: 0.5 });
 
     const dirLightBottom = new THREE.DirectionalLight(0x2a3240, 0.25);
     dirLightBottom.position.set(0, -1000, 0);
     this.scene.add(dirLightBottom);
+    this.studioLights.push({ light: dirLightBottom, baseIntensity: 0.25 });
+
+    // ケージ内部LEDのリアルタイム光源グループ
+    this.ledLightGroup = new THREE.Group();
+    this.scene.add(this.ledLightGroup);
+
+    this.isDarkroomMode = false;
+    this.manualDarkroomOverride = null; // null: 自動(LED点灯連動), true: 強制暗室, false: 強制明室
   }
 
   setupFloorGrid() {
@@ -127,6 +141,107 @@ export class CageViewer {
   }
 
   /**
+   * 暗室モードの設定（スタジオ減光＆コンテナクラス連動）
+   * @param {boolean} isDark
+   */
+  applyDarkroomMode(isDark) {
+    this.isDarkroomMode = isDark;
+    const factor = isDark ? 0.05 : 1.0; // 暗室時はスタジオ照明を5%に大幅減光
+    if (this.studioLights) {
+      for (const item of this.studioLights) {
+        item.light.intensity = item.baseIntensity * factor;
+      }
+    }
+    if (this.gridHelper) {
+      this.gridHelper.material.opacity = isDark ? 0.15 : 0.85;
+      this.gridHelper.material.transparent = true;
+    }
+    // コンテナ背景（CSS）も暗室トーンに連動
+    if (this.container) {
+      this.container.classList.toggle('darkroom-active', isDark);
+    }
+  }
+
+  /**
+   * 暗室手動オーバーライド (nullで自動連動に戻す)
+   */
+  setDarkroomOverride(override) {
+    this.manualDarkroomOverride = override;
+    if (this._lastAutoParams) {
+      this.updateLedLighting(this._lastAutoParams);
+    }
+  }
+
+  /**
+   * LEDリアルタイム光源の同期
+   */
+  updateLedLighting(params) {
+    // 既存のLED光源およびターゲットをクリーンアップ
+    while (this.ledLightGroup.children.length > 0) {
+      const child = this.ledLightGroup.children[0];
+      if (child.target && child.target.parent) {
+        child.target.parent.remove(child.target);
+      }
+      this.ledLightGroup.remove(child);
+      if (child.dispose) child.dispose();
+    }
+
+    const { W, D, H, ledType, ledPower, ledBrightness = 1.0, ledColorMode, ledRgbColor } = params;
+    const isLit = ledType && ledType !== 'none' && !!ledPower;
+
+    // 暗室モードの自動判定（手動指定がない場合は、LED点灯時に自動で暗室ON）
+    const shouldBeDark = (this.manualDarkroomOverride !== null)
+      ? this.manualDarkroomOverride
+      : isLit;
+    this.applyDarkroomMode(shouldBeDark);
+
+    if (!isLit) return;
+
+    // 光源の配置基準位置 (LEDバー直下: ケージ後方天井 H - 34mm, Z = -D / 2 + 55mm)
+    const lightY = H - 34;
+    const baseZ = -D / 2 + 55;
+
+    const createDownSpot = (x, y, z, colorHex, intensityRatio = 1.0) => {
+      // 内部を扇状に斜め前下方へ照射するスポットライト（後方からケージ内全体へ照射）
+      const spot = new THREE.SpotLight(colorHex, (ledBrightness * 6.5) * intensityRatio);
+      spot.position.set(x, y, z);
+      spot.angle = Math.PI / 2.3; // 扇状の広角照射
+      spot.penumbra = 0.85;       // 柔らかな光のグラデーション
+      spot.decay = 1.2;
+      spot.distance = Math.max(H * 2.0, 800); // ケージ全体で綺麗に収束
+
+      const target = new THREE.Object3D();
+      target.position.set(x, 20, 0); // ケージ中央床面へ向けて照射
+      this.scene.add(target);
+      spot.target = target;
+      this.ledLightGroup.add(spot);
+
+      // 後方上部から室内を包み込む柔らかなアンビエント散乱ポイントライト
+      const point = new THREE.PointLight(colorHex, (ledBrightness * 2.8) * intensityRatio, Math.max(W, D) * 2.2);
+      point.position.set(x, H * 0.65, z + 25);
+      this.ledLightGroup.add(point);
+    };
+
+    if (ledType === 'usb') {
+      let color = 0xffffff;
+      if (ledColorMode === 'warm') color = 0xffa726;
+      else if (ledColorMode === 'all') color = 0xffe2ba;
+      createDownSpot(0, lightY, baseZ, color);
+    } else if (ledType === 'high_cri_white') {
+      createDownSpot(0, lightY, baseZ, 0xfcfbfa);
+    } else if (ledType === 'red') {
+      createDownSpot(0, lightY, baseZ, 0xff1744, 1.4);
+    } else if (ledType === 'white_and_red') {
+      const isWhiteLit = (ledColorMode === 'all' || ledColorMode === 'both' || ledColorMode === 'white');
+      const isRedLit = (ledColorMode === 'all' || ledColorMode === 'both' || ledColorMode === 'red');
+      if (isWhiteLit) createDownSpot(0, lightY, -D / 2 + 85, 0xfcfbfa, 1.0);
+      if (isRedLit) createDownSpot(0, lightY, -D / 2 + 45, 0xff1744, 1.3);
+    } else if (ledType === 'rgbw') {
+      createDownSpot(0, lightY, baseZ, ledRgbColor || '#ffffff', 1.2);
+    }
+  }
+
+  /**
    * フレームカラーの変更（シルバー / ブラック）
    */
   setFrameColor(colorType) {
@@ -134,6 +249,8 @@ export class CageViewer {
   }
 
   update(params) {
+    this._lastAutoParams = params;
+
     // 接地レベルの動的同期（ゴム脚: -11mm、キャスター: -66mm）
     const groundY = params.footType === 'caster' ? -66.0 : -11.0;
     if (this.gridHelper) this.gridHelper.position.y = groundY;
@@ -141,6 +258,7 @@ export class CageViewer {
 
     this.cageModel.update(params);
     this.dimensions.update(params);
+    this.updateLedLighting(params);
 
     const centerY = params.H / 2;
     this.controls.target.set(0, centerY, 0);

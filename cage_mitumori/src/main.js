@@ -219,6 +219,16 @@ const roomDividerSub = document.getElementById('room-divider-sub');
 // 止まり木サブテキスト要素
 const perchSub = document.getElementById('perch-sub');
 
+// 特注LED照明オプション DOM要素
+const cardLedOption = document.getElementById('card-led-option');
+const selectLedType = document.getElementById('select-led-type');
+const ledControllerPanel = document.getElementById('led-controller-panel');
+const btnLedPowerOn = document.getElementById('btn-led-power-on');
+const btnLedPowerOff = document.getElementById('btn-led-power-off');
+const ledRowUsbModes = document.getElementById('led-row-usb-modes');
+const ledRowRgbPalette = document.getElementById('led-row-rgb-palette');
+const btnToggleDarkroom = document.getElementById('btn-toggle-darkroom');
+
 // アプリケーション状態
 const state = {
   W: 750,
@@ -234,6 +244,11 @@ const state = {
   hasPerch: false,             // 止まり木（天板吊り下げ式・後付け対応）
   hasRubberPacking: false,     // モレ対策ゴムパッキン (側面・背面 隙間モレ抑制)
   hasRoomDivider: false,       // ２室分け（後付け仕切り板・Type A/C両対応）
+  ledType: 'none',             // 'none' | 'usb' | 'high_cri_white' | 'red' | 'white_and_red' | 'rgbw'
+  ledPower: true,              // LED点灯状態 (true | false)
+  ledBrightness: 1.0,          // LED調光 (0.1 ~ 1.0)
+  ledColorMode: 'all',         // usb用: 'all'|'white'|'warm', dual用: 'both'|'white'|'red'
+  ledRgbColor: '#ffffff',      // rgbw発光色: 16進カラーコード
   frontWideFrame: '2x',        // 正面下側幅広フレーム: '2x' (40mm・初期値) | '3x' (60mm) | 'none' (20mm標準)
   doorHingeSide: 'left',       // 前開き扉開き方向: 'left' (左ヒンジ、右打掛) | 'right' (左打掛、右ヒンジ)
   frontWindowH: 50,
@@ -1061,8 +1076,25 @@ function calculateGrandTotals() {
   const ventHoleProcessingCost = isSideVentCover ? (ventCoverPanelCount * holesPerPanel * holeCostUnit) : 0;
   const ventCoverCost = baseVentCoverCost + ventHoleProcessingCost;
 
-  const totalOptionPrice = casterPrice + ventCoverPrice;
-  const totalOptionCost = casterCost + ventCoverCost;
+  // LED照明オプション部材
+  let ledPrice = 0;
+  let ledCost = 0;
+  let ledWeight = 0;
+  if (state.ledType && state.ledType !== 'none') {
+    const ledConfigMap = {
+      usb: itemConfig.ledUsb,
+      rgbw: itemConfig.ledRgbw
+    };
+    const ledItem = ledConfigMap[state.ledType];
+    if (ledItem) {
+      ledPrice = ledItem.price || 0;
+      ledCost = ledItem.cost || 0;
+      ledWeight = ledItem.weight || 0.15;
+    }
+  }
+
+  const totalOptionPrice = casterPrice + ventCoverPrice + ledPrice;
+  const totalOptionCost = casterCost + ventCoverCost + ledCost;
 
   // 3. 資材原価および基本販売価格（設定ファイルのmarkupRate倍・roundingUnit単位で切り上げ）
   const pricingConfig = materialsConfig.pricing || {};
@@ -1075,7 +1107,7 @@ function calculateGrandTotals() {
   // 4. 総合計の算出 (※内訳金額はDOM・UI上には表示せず、合計金額のみに反映)
   const grandTotalCost = baseMaterialsCost + totalOptionCost;
   const grandTotalPrice = basePriceWithMarkup + totalOptionPrice + totalLaborFee;
-  const grandTotalWeight = totalFrameWeight + totalPanelWeight;
+  const grandTotalWeight = totalFrameWeight + totalPanelWeight + ledWeight;
 
   return {
     rawCost: grandTotalCost,
@@ -1267,6 +1299,13 @@ function updateSpecSummary() {
   }
   if (state.hasRoomDivider) {
     optionsList.push('２室分け');
+  }
+  if (state.ledType && state.ledType !== 'none') {
+    const ledSummaryNames = {
+      usb: 'LED: USB式',
+      rgbw: 'LED: RGB+W'
+    };
+    optionsList.push(ledSummaryNames[state.ledType] || 'LED照明');
   }
   optionsList.push(state.footType === 'caster' ? 'キャスター' : 'ゴム脚');
 
@@ -1851,6 +1890,125 @@ toggleCaster.addEventListener('change', (e) => {
   syncUpdate();
 });
 
+// ==========================================================================
+// 特注LED照明オプション イベントハンドラ
+// ==========================================================================
+function updateLedUI() {
+  const isSelected = state.ledType && state.ledType !== 'none';
+  if (isSelected) {
+    cardLedOption?.classList.add('active');
+    ledControllerPanel?.classList.remove('hidden');
+
+    // サブ行の表示出し分け
+    if (state.ledType === 'usb') {
+      ledRowUsbModes?.classList.remove('hidden');
+      ledRowRgbPalette?.classList.add('hidden');
+    } else if (state.ledType === 'rgbw') {
+      ledRowUsbModes?.classList.add('hidden');
+      ledRowRgbPalette?.classList.remove('hidden');
+    } else {
+      ledRowUsbModes?.classList.add('hidden');
+      ledRowRgbPalette?.classList.add('hidden');
+    }
+  } else {
+    cardLedOption?.classList.remove('active');
+    ledControllerPanel?.classList.add('hidden');
+  }
+
+  // 点灯/消灯ボタンスタイル
+  if (btnLedPowerOn && btnLedPowerOff) {
+    if (state.ledPower) {
+      btnLedPowerOn.classList.add('active');
+      btnLedPowerOff.classList.remove('active');
+    } else {
+      btnLedPowerOn.classList.remove('active');
+      btnLedPowerOff.classList.add('active');
+    }
+  }
+
+  // 暗室ボタンのアクティブ同期
+  if (btnToggleDarkroom) {
+    btnToggleDarkroom.classList.toggle('active', !!viewer.isDarkroomMode);
+  }
+}
+
+// LEDタイプ選択ドロップダウン
+if (selectLedType) {
+  selectLedType.addEventListener('change', (e) => {
+    state.ledType = e.target.value;
+    if (state.ledType !== 'none') {
+      state.ledPower = true;
+      // LED点灯時は自動的に暗室モード（手動解除のオーバーライドをリセット）
+      viewer.setDarkroomOverride(null);
+    } else {
+      viewer.setDarkroomOverride(null);
+    }
+    updateLedUI();
+    syncUpdate();
+    if (btnToggleDarkroom) {
+      btnToggleDarkroom.classList.toggle('active', !!viewer.isDarkroomMode);
+    }
+  });
+}
+
+// 点灯 / 消灯ボタン
+if (btnLedPowerOn && btnLedPowerOff) {
+  btnLedPowerOn.addEventListener('click', () => {
+    state.ledPower = true;
+    viewer.setDarkroomOverride(null); // 点灯時は自動で暗室
+    updateLedUI();
+    syncUpdate();
+    if (btnToggleDarkroom) {
+      btnToggleDarkroom.classList.toggle('active', !!viewer.isDarkroomMode);
+    }
+  });
+
+  btnLedPowerOff.addEventListener('click', () => {
+    state.ledPower = false;
+    viewer.setDarkroomOverride(null); // 消灯時は自動で通常明室
+    updateLedUI();
+    syncUpdate();
+    if (btnToggleDarkroom) {
+      btnToggleDarkroom.classList.toggle('active', !!viewer.isDarkroomMode);
+    }
+  });
+}
+
+// USBモード切替ボタン
+if (ledRowUsbModes) {
+  ledRowUsbModes.querySelectorAll('.btn-led-mode').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const mode = e.target.dataset.usbMode;
+      state.ledColorMode = mode;
+      ledRowUsbModes.querySelectorAll('.btn-led-mode').forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      syncUpdate();
+    });
+  });
+}
+
+// RGB+Wカラーパレット
+if (ledRowRgbPalette) {
+  ledRowRgbPalette.querySelectorAll('.btn-color-dot').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const color = e.target.dataset.color;
+      state.ledRgbColor = color;
+      ledRowRgbPalette.querySelectorAll('.btn-color-dot').forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      syncUpdate();
+    });
+  });
+}
+
+// 暗室モード手動切替ボタン
+if (btnToggleDarkroom) {
+  btnToggleDarkroom.addEventListener('click', () => {
+    const nextDark = !viewer.isDarkroomMode;
+    viewer.setDarkroomOverride(nextDark);
+    btnToggleDarkroom.classList.toggle('active', nextDark);
+  });
+}
+
 // 扉開閉モードの排他制御
 let _doorAnimTimer = null; // アニメーション中インジケーター用タイマー
 
@@ -2001,6 +2159,16 @@ btnResetSpecs.addEventListener('click', () => {
     topRight: 'punching',
     partition: 'black_matte'
   };
+
+  // LEDオプションのリセット
+  state.ledType = 'none';
+  state.ledPower = true;
+  state.ledBrightness = 1.0;
+  state.ledColorMode = 'all';
+  state.ledRgbColor = '#ffffff';
+  if (selectLedType) selectLedType.value = 'none';
+  viewer.setDarkroomOverride(null);
+  updateLedUI();
 
   // 正面幅広フレームのリセット (Type A デフォルト: 2倍幅)
   state.frontWideFrame = '2x';
@@ -2717,6 +2885,15 @@ function getSelectedOptionsList() {
   // 11. ２室分け（後付け仕切り板）
   if (state.hasRoomDivider) {
     options.push('２室分け（後付け仕切り板仕様）');
+  }
+
+  // 12. LED照明オプション
+  if (state.ledType && state.ledType !== 'none') {
+    const ledNames = {
+      usb: 'LED照明: USB式 白＆電球色 LED',
+      rgbw: 'LED照明: リモコン操作 RGB+W'
+    };
+    options.push(ledNames[state.ledType] || 'LED照明');
   }
 
   return options;
