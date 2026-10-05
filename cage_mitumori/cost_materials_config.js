@@ -267,6 +267,69 @@ export const materialsConfig = {
       weightPerPiece: 0.002,   // 重量 約2g
       pricePerPiece: 190,      // 税込単価 190円
       note: '正面枠囲い柱側 スライドラッチ受金高さ調整スペーサー (各2枚・計4枚)'
+    },
+    'GROMMET-30': {
+      name: '配線用ゴムグロメット (φ30穴用, 黒)',
+      unit: 'piece',
+      weightPerPiece: 0.005,   // 重量 約5g
+      pricePerPiece: 80,       // 税込単価 80円
+      note: '天面板 奥側配線用グロメット'
+    },
+    'RNSFS4': {
+      name: '段付きローレットノブ (SUS303, RNSFS4)',
+      unit: 'piece',
+      weightPerPiece: 0.012,   // 重量 約12g
+      pricePerPiece: 350,      // 税込単価 350円
+      note: '引き違い扉用 ステンレスつまみ'
+    },
+    'C-108': {
+      name: 'プッシュ式スライド扉鍵 (C-108)',
+      unit: 'piece',
+      weightPerPiece: 0.045,   // 重量 約45g
+      pricePerPiece: 800,      // 税込単価 800円
+      note: '右スライド扉 下部プッシュ式シリンダー錠'
+    },
+    'RUBBER-FOOT': {
+      name: 'ゴム脚 (黒)',
+      unit: 'piece',
+      weightPerPiece: 0.008,   // 重量 約8g
+      pricePerPiece: 60,       // 税込単価 60円
+      note: '床面接地用ゴム脚 (座金入り)'
+    },
+    'CASTER-50': {
+      name: '自在キャスター',
+      unit: 'piece',
+      weightPerPiece: 0.120,   // 重量 約120g
+      pricePerPiece: 200,      // 税込単価 200円 (4個800円)
+      note: '車輪径φ50 自在キャスター'
+    },
+    'SCREW-M4-KNOB': {
+      name: 'No.1 化粧つまみネジ (ホワイト)',
+      unit: 'piece',
+      weightPerPiece: 0.0025,  // 重量 約2.5g
+      pricePerPiece: 25,       // 税込単価 25円
+      note: '床下パネルヒータ支え板・換気量調整板用 手締め化粧ネジ'
+    },
+    'SCREW-M3-KNOB': {
+      name: 'M3 つまみネジ (白)',
+      unit: 'piece',
+      weightPerPiece: 0.002,   // 重量 約2g
+      pricePerPiece: 25,       // 税込単価 25円
+      note: '止まり木・仕切り板用 固定つまみネジ'
+    },
+    'BOLT-M6-20': {
+      name: 'M6 ボルト',
+      unit: 'piece',
+      weightPerPiece: 0.008,   // 重量 約8g
+      pricePerPiece: 30,       // 税込単価 30円
+      note: '止まり木 φ30丸棒固定用ボルト'
+    },
+    'SCREW-M4-FLAT': {
+      name: 'M4 皿ネジ',
+      unit: 'piece',
+      weightPerPiece: 0.003,   // 重量 約3g
+      pricePerPiece: 15,       // 税込単価 15円
+      note: '仕切り板フレーム固定用皿ネジ'
     }
   },
 
@@ -300,6 +363,15 @@ export const materialsConfig = {
       weightPerM2: 0.9,        // 重量 (kg/m2)
       pricePerM2: 7500,        // 税込単価 (円/m2)
       note: '高断熱・軽量中空ポリカーボネート'
+    },
+    // プラダン 4.0mm
+    'danplate_4_0': {
+      name: 'プラダン 4.0mm',
+      thicknessMm: 4.0,
+      unit: 'm2',
+      weightPerM2: 0.66,       // 重量 (kg/m2)
+      pricePerM2: 1000,        // 税込単価 (円/m2)
+      note: '床下パネルヒータ用 緩衝プラダン'
     },
     // 塩ビパンチングボード 透明 3.0mm
     'pvc_punching_3_0': {
@@ -434,6 +506,11 @@ export const materialsConfig = {
         name: 'TypeA 正面枠囲い 加工工賃',
         price: 3000,    // 販売価格への加算額 (円)
         note: '正面枠囲いアルミ扉・ラッチ組み立て加工工賃'
+      },
+      floorHeaterSupport: {
+        name: '床下パネルヒータ支え板 加工工賃',
+        price: 1000,    // 販売価格への加算額 (円)
+        note: '床下パネルヒータ支え板 取り付け・加工工賃'
       }
     },
 
@@ -472,6 +549,15 @@ export const materialsConfig = {
         length: 530,
         weight: 0.35,
         note: 'RGB+W 30LED[6839] + 専用コントローラー[8166] + 12Vアダプター[6207] + 5pin延長コード1m[6433]'
+      },
+      // 床下パネルヒータ支え板
+      floorHeaterSupport: {
+        name: '床下パネルヒータ支え板',
+        holeCostPerPiece: 112,    // 丸穴加工単価 (円/穴・φ6mm)
+        diagonalCutCost: 239,     // 角斜めカット単価 (円/箇所・80x80mm)
+        cornerCutCost: 587,       // 角落とし単価 (円/箇所・配線逃がし切欠き)
+        screwCostPerPiece: 25,    // No.1化粧つまみネジ原価 (円/個)
+        note: '透明アクリル2mm＋緩衝プラダン4mm＋穴加工＋斜めカット＋切欠き＋化粧ネジ'
       }
     }
   },

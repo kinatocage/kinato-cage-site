@@ -94,6 +94,7 @@ export class CageModel {
       hasTopReinforcement: false,  // 天面中央補強フレーム (W>940mmで必須ON、940mm以下は任意)
       hasDoorAntiFlex: false,      // 強力爬虫類向けスライド扉たわみ防止レール (扉幅-2mm)
       hasSideVentCover: false,     // 側面換気量調整板 (t1.5外張りアクリル板)
+      hasFloorHeaterSupport: false, // 床下パネルヒータ支え板 (t2.0外張りアクリル板＋プラダン4mm)
       hasPerch: false,             // 止まり木（天板吊り下げ式・後付け対応）
       hasRubberPacking: false,     // モレ対策ゴムパッキン (側面・背面 隙間モレ抑制)
       hasRoomDivider: false,       // ２室分け（後付け仕切り板・Type A/C両対応）
@@ -667,7 +668,7 @@ export class CageModel {
     } else if (newParams) {
       Object.assign(this.params, newParams);
     }
-    const { W, D, H, cageType, frontWindowH, hasSideReinforcement, sideOpeningH, showPanels, frameColor, hasFloorReinforcement, hasTopReinforcement, footType, doorHingeSide } = this.params;
+    const { W, D, H, cageType, frontWindowH, hasSideReinforcement, sideOpeningH, showPanels, frameColor, hasFloorReinforcement, hasTopReinforcement, footType, doorHingeSide, hasFloorHeaterSupport } = this.params;
     const isSilver = (frameColor === 'silver');
 
     if (frameColor) {
@@ -1219,6 +1220,209 @@ export class CageModel {
         heightMm: floorMatD,
         unitType: 'm2'
       });
+    }
+
+    // --- 1-2. 床下パネルヒータ支え板 (オプション: 透明アクリル2mm + 緩衝プラダン4mm + 化粧つまみネジ) ---
+    if (this.params.hasFloorHeaterSupport) {
+      const screwColorName = frameColor === 'black' ? 'ブラック' : 'ホワイト';
+      const heaterSupportT = 2.0; // アクリル厚み 2mm
+      const danplateT = 4.0;      // プラダン厚み 4mm
+
+      if (hasFloorReinforcement) {
+        // 【2枚構成・床面2分割】
+        // アクリル板1枚あたり寸法: ヨコ Math.round(W / 2 + 9) mm (W=1050で534mm), タテ D - 2 mm
+        const panelW = Math.round(W / 2 + 9);
+        const panelD = D - 2;
+        const cornerCutX = 80;
+        const cornerCutY = 80;
+        const notchX = 20;
+        const notchY = Math.max(10, panelD - 180); // 切欠き長さ (D=400で 398 - 180 = 218mm)
+
+        // 基準形状 (左側パネル用: X: 0〜panelW, Z: -panelD/2〜panelD/2)
+        // 2枚を互い違い(180度回転)配置してケージ床面を覆う
+        // 角A (X=0, Z=-panelD/2, 左奥): 斜めカット 80x80
+        // 角C (X=0, Z=panelD/2, 左手前): 斜めカット 80x80
+        // 角B (X=panelW, Z=-panelD/2, 右奥): 直角
+        // 角D (X=panelW, Z=panelD/2, 右手前): 角落とし (幅20mm x 長さ notchY)
+        const shape = new THREE.Shape();
+        shape.moveTo(cornerCutX, -panelD / 2);
+        shape.lineTo(panelW, -panelD / 2);
+        shape.lineTo(panelW, panelD / 2 - notchY);
+        shape.lineTo(panelW - notchX, panelD / 2 - notchY);
+        shape.lineTo(panelW - notchX, panelD / 2);
+        shape.lineTo(cornerCutX, panelD / 2);
+        shape.lineTo(0, panelD / 2 - cornerCutY);
+        shape.lineTo(0, -panelD / 2 + cornerCutY);
+        shape.closePath();
+
+        const extrudeSettings = { depth: heaterSupportT, bevelEnabled: false };
+        const geom = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+        geom.rotateX(Math.PI / 2);
+        this.activeGeometries.push(geom);
+
+        // 1枚目 (左側パネル): ケージ外寸より1mm控えた位置 (-W/2 + 1) を基準に配置
+        // 板幅 panelW = W/2 + 9 (W=1050で534mm)
+        // 内側端面は X = -W/2 + 1 + panelW = +10mm (中央フレーム右端面) までカバー
+        // 丸穴中心は X = -W/2 + 1 + panelW - 9 = +1.0mm (中央溝X=0から+1.0mm偏芯、φ6穴でM4ボルト吸収)
+        const leftMesh = new THREE.Mesh(geom, this.materials.acrylic);
+        leftMesh.position.set(-W / 2 + 1, 0, 0);
+        leftMesh.castShadow = true;
+        this.panelGroup.add(leftMesh);
+
+        // 2枚目 (右側パネル): 180度回転してケージ外寸より1mm控えた位置 (W/2 - 1) を基準に配置
+        // 内側端面は X = W/2 - 1 - panelW = -10mm (中央フレーム左端面) までカバー
+        // 丸穴中心は X = W/2 - 1 - panelW + 9 = -1.0mm (中央溝X=0から-1.0mm偏芯、φ6穴でM4ボルト吸収)
+        const geomRight = geom.clone();
+        geomRight.rotateY(Math.PI);
+        this.activeGeometries.push(geomRight);
+        const rightMesh = new THREE.Mesh(geomRight, this.materials.acrylic);
+        rightMesh.position.set(W / 2 - 1, 0, 0);
+        rightMesh.castShadow = true;
+        this.panelGroup.add(rightMesh);
+
+        // 化粧つまみネジの締結位置（フレームの溝中心線に配置、φ6穴が1mmのズレを吸収）
+        // 外周フレーム溝: X = ±(W/2 - 10), Z = ±(D/2 - 10)
+        // 中央フレーム溝: X = 0
+        const screwPositions = [
+          // 左側パネル留め (7箇所)
+          { x: -W / 2 + 10, z: -D / 2 + 90 }, // 角A 奥側
+          { x: -W / 2 + 90, z: -D / 2 + 10 }, // 角A 左側
+          { x: -W / 2 + 10, z: D / 2 - 90 },  // 角C 手前側
+          { x: -W / 2 + 90, z: D / 2 - 10 },  // 角C 左側
+          { x: 0,           z: -D / 2 + 90 }, // 角B 中央フレーム溝 (X=0溝中心、アクリル穴X=+1.0mmをφ6で吸収)
+          { x: 0 - 80,      z: -D / 2 + 10 }, // 角B 奥フレーム溝
+          { x: 0 - 80,      z: D / 2 - 10 },  // 角D 手前フレーム溝
+
+          // 右側パネル留め (180度反転対称・7箇所)
+          { x: W / 2 - 10,  z: D / 2 - 90 },  // 反転角A 手前側
+          { x: W / 2 - 90,  z: D / 2 - 10 },  // 反転角A 右側
+          { x: W / 2 - 10,  z: -D / 2 + 90 }, // 反転角C 奥側
+          { x: W / 2 - 90,  z: -D / 2 + 10 }, // 反転角C 右側
+          { x: 0,           z: D / 2 - 90 },  // 反転角B 中央フレーム溝 (X=0溝中心、アクリル穴X=-1.0mmをφ6で吸収)
+          { x: 0 + 80,      z: D / 2 - 10 },  // 反転角B 手前フレーム溝
+          { x: 0 + 80,      z: -D / 2 + 10 }, // 反転角D 奥フレーム溝
+        ];
+
+        for (const sp of screwPositions) {
+          this.addBottomThumbScrew(sp.x, -heaterSupportT, sp.z);
+        }
+
+        // 緩衝プラダン 4.0mm (2枚)
+        const splitFloorW = (W - 60) / 2;
+        const danplateW = Math.max(10, Math.round(splitFloorW - 10));
+        const danplateD = Math.max(10, Math.round((isFramed ? D - 60 : D - 40) - 10));
+        const { map: danMap, bumpMap: danBump } = createHollowPolycaTexture(danplateW, danplateD);
+        this.activeTextures.push(danMap, danBump);
+        const danMat = this.materials.createPolycaMaterial(danMap, danBump);
+        this.activeMaterials.push(danMat);
+
+        const danGeom = new THREE.BoxGeometry(danplateW, danplateT, danplateD);
+        this.activeGeometries.push(danGeom);
+        const leftDanMesh = new THREE.Mesh(danGeom, danMat);
+        leftDanMesh.position.set(-splitFloorW / 2 - 10, danplateT / 2, floorCenterZ);
+        this.panelGroup.add(leftDanMesh);
+
+        const rightDanMesh = new THREE.Mesh(danGeom, danMat);
+        rightDanMesh.position.set(splitFloorW / 2 + 10, danplateT / 2, floorCenterZ);
+        this.panelGroup.add(rightDanMesh);
+
+        // BOM記録 (2枚構成)
+        this.recordPart('床下パネルヒータ支え板 (透明アクリル 2.0mm)', `${panelW} x ${panelD} mm`, 2, '床面外側固定 (2枚互い違い配置・斜めカット各2箇所・切欠き各1箇所・φ6穴各7箇所)', 'panel', {
+          panelCode: 'acrylic_extrusion_2_0',
+          partCode: 'acrylic_extrusion_2_0',
+          widthMm: panelW,
+          heightMm: panelD,
+          unitType: 'm2'
+        });
+        this.recordPart('床下パネルヒータ用 緩衝プラダン 4.0mm', `${danplateW} x ${danplateD} mm`, 2, '床下パネルヒータ緩衝用 (間口-10mm・2枚)', 'panel', {
+          panelCode: 'danplate_4_0',
+          partCode: 'danplate_4_0',
+          widthMm: danplateW,
+          heightMm: danplateD,
+          unitType: 'm2'
+        });
+        this.recordPart(`No.1 化粧つまみネジ (${screwColorName})`, '外径φ15mm / M4 (手締め・工具不要)', 14, '床下パネルヒータ支え板 固定用 (計14箇所)', 'other');
+
+      } else {
+        // 【1枚構成・通常床面】
+        // アクリル板寸法: ヨコ W - 2 mm, タテ D - 2 mm
+        const panelW = W - 2;
+        const panelD = D - 2;
+        const cornerCut = 80;
+
+        const shape = new THREE.Shape();
+        const hw = panelW / 2;
+        const hd = panelD / 2;
+        shape.moveTo(-hw + cornerCut, -hd);
+        shape.lineTo(hw - cornerCut, -hd);
+        shape.lineTo(hw, -hd + cornerCut);
+        shape.lineTo(hw, hd - cornerCut);
+        shape.lineTo(hw - cornerCut, hd);
+        shape.lineTo(-hw + cornerCut, hd);
+        shape.lineTo(-hw, hd - cornerCut);
+        shape.lineTo(-hw, -hd + cornerCut);
+        shape.closePath();
+
+        const extrudeSettings = { depth: heaterSupportT, bevelEnabled: false };
+        const geom = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+        geom.rotateX(Math.PI / 2);
+        this.activeGeometries.push(geom);
+
+        const panelMesh = new THREE.Mesh(geom, this.materials.acrylic);
+        panelMesh.position.set(0, 0, 0);
+        panelMesh.castShadow = true;
+        this.panelGroup.add(panelMesh);
+
+        // 丸穴位置 (4隅各2個 ＋ 長辺中央各1個、計10箇所)
+        const holeCoords = [
+          { x: -hw + 90, z: -hd + 9 },
+          { x: -hw + 9, z: -hd + 90 },
+          { x: hw - 90, z: -hd + 9 },
+          { x: hw - 9, z: -hd + 90 },
+          { x: -hw + 90, z: hd - 9 },
+          { x: -hw + 9, z: hd - 90 },
+          { x: hw - 90, z: hd - 9 },
+          { x: hw - 9, z: hd - 90 },
+          // 長辺中央 (奥フレーム溝・手前フレーム溝)
+          { x: 0, z: -hd + 9 },
+          { x: 0, z: hd - 9 }
+        ];
+
+        for (const hc of holeCoords) {
+          this.addBottomThumbScrew(hc.x, -heaterSupportT, hc.z);
+        }
+
+        // 緩衝プラダン 4.0mm (1枚)
+        const danplateW = Math.max(10, Math.round((W - 40) - 10));
+        const danplateD = Math.max(10, Math.round((isFramed ? D - 60 : D - 40) - 10));
+        const { map: danMap, bumpMap: danBump } = createHollowPolycaTexture(danplateW, danplateD);
+        this.activeTextures.push(danMap, danBump);
+        const danMat = this.materials.createPolycaMaterial(danMap, danBump);
+        this.activeMaterials.push(danMat);
+
+        const danGeom = new THREE.BoxGeometry(danplateW, danplateT, danplateD);
+        this.activeGeometries.push(danGeom);
+        const danMesh = new THREE.Mesh(danGeom, danMat);
+        danMesh.position.set(0, danplateT / 2, floorCenterZ);
+        this.panelGroup.add(danMesh);
+
+        // BOM記録 (1枚構成)
+        this.recordPart('床下パネルヒータ支え板 (透明アクリル 2.0mm)', `${panelW} x ${panelD} mm`, 1, '床面外側固定 (4隅斜めカット80mm・φ6穴10箇所)', 'panel', {
+          panelCode: 'acrylic_extrusion_2_0',
+          partCode: 'acrylic_extrusion_2_0',
+          widthMm: panelW,
+          heightMm: panelD,
+          unitType: 'm2'
+        });
+        this.recordPart('床下パネルヒータ用 緩衝プラダン 4.0mm', `${danplateW} x ${danplateD} mm`, 1, '床下パネルヒータ緩衝用 (間口-10mm)', 'panel', {
+          panelCode: 'danplate_4_0',
+          partCode: 'danplate_4_0',
+          widthMm: danplateW,
+          heightMm: danplateD,
+          unitType: 'm2'
+        });
+        this.recordPart(`No.1 化粧つまみネジ (${screwColorName})`, '外径φ15mm / M4 (手締め・工具不要)', 10, '床下パネルヒータ支え板 固定用 (計10箇所)', 'other');
+      }
     }
 
     // 2. 背面パネル（透明アクリル / 半透明塩ビパンチング / 中空ポリカ / ブラックマット地アクリル: 間口+10mm）
@@ -3281,6 +3485,43 @@ export class CageModel {
   }
 
   /**
+   * 床下用 No.1 化粧つまみネジ（下向き突出）の生成・配置
+   * @param {number} x - 中心X
+   * @param {number} y - 取付基準面Y (通常は板の下面 Y = -2)
+   * @param {number} z - 中心Z
+   */
+  addBottomThumbScrew(x, y, z) {
+    const screwGroup = new THREE.Group();
+    screwGroup.position.set(x, y, z);
+
+    // 1. ボス座面 (直径8mm x 厚さ1.5mm)
+    const bossGeom = new THREE.CylinderGeometry(4, 4, 1.5, 24);
+    this.activeGeometries.push(bossGeom);
+    const bossMesh = new THREE.Mesh(bossGeom, this.materials.thumbScrewMaterial);
+    bossMesh.position.set(0, -0.75, 0);
+    bossMesh.castShadow = true;
+    screwGroup.add(bossMesh);
+
+    // 2. 頭部フランジ (直径15mm x 厚さ4.5mm、ローレット外周)
+    const headGeom = new THREE.CylinderGeometry(7.5, 7.5, 4.5, 24);
+    this.activeGeometries.push(headGeom);
+    const headMesh = new THREE.Mesh(headGeom, this.materials.thumbScrewMaterial);
+    headMesh.position.set(0, -(1.5 + 2.25), 0);
+    headMesh.castShadow = true;
+    screwGroup.add(headMesh);
+
+    // 3. φ6mm穴の表現（取付面直上に黒い薄い円盤を置いて穴を視覚表現）
+    const holeGeom = new THREE.CylinderGeometry(3, 3, 0.2, 16);
+    this.activeGeometries.push(holeGeom);
+    const holeMesh = new THREE.Mesh(holeGeom, this.materials.grommetMaterial);
+    holeMesh.position.set(0, 0.1, 0);
+    screwGroup.add(holeMesh);
+
+    this.panelGroup.add(screwGroup);
+    return screwGroup;
+  }
+
+  /**
    * 接地用ゴム足（TM-18: 栃木屋/タキゲン規格）の生成・配置
    * - 取り付け位置: 奥行きフレーム下面、前後端から約50mmの計4箇所
    * - 形状: 上面（フレーム密着部）φ18mm、底面（接地部）φ15mm、高さ10mmの円錐台
@@ -3869,7 +4110,7 @@ export class CageModel {
         `${billedM} m`,
         1,
         `側面・背面 隙間モレ抑制用 (実施工長: ${Math.round(totalLengthMm)}mm / 1m単位積算)`,
-        'rail_cap',
+        'other',
         {
           partCode: 'NSCP1H-S-6',
           lengthMm: billedM * 1000,

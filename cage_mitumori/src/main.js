@@ -104,7 +104,10 @@ let bomToggleBtn = null;
 let bomContainer = null;
 let bomFrameTbody = null;
 let bomFrameTfoot = null;
+let bomPanelTbody = null;
+let bomPanelTfoot = null;
 let bomOtherTbody = null;
+let bomOtherTfoot = null;
 let partsCountBadge = null;
 
 // フレームカラー選択
@@ -156,6 +159,12 @@ const toggleRubberPacking = document.getElementById('toggle-rubber-packing');
 const cardRubberPacking = document.getElementById('card-rubber-packing');
 const rubberPackingBadge = document.getElementById('rubber-packing-badge');
 const rubberPackingSub = document.getElementById('rubber-packing-sub');
+
+// 床下パネルヒータ支え板
+const toggleFloorHeaterSupport = document.getElementById('toggle-floor-heater-support');
+const cardFloorHeaterSupport = document.getElementById('card-floor-heater-support');
+const floorHeaterSupportBadge = document.getElementById('floor-heater-support-badge');
+const floorHeaterSupportSub = document.getElementById('floor-heater-support-sub');
 
 // 警告バナー
 const floorWarningBanner = document.getElementById('floor-warning-banner');
@@ -243,6 +252,7 @@ const state = {
   hasSideVentCover: false,     // 側面換気量調整板 (t1.5外張りアクリル板)
   hasPerch: false,             // 止まり木（天板吊り下げ式・後付け対応）
   hasRubberPacking: false,     // モレ対策ゴムパッキン (側面・背面 隙間モレ抑制)
+  hasFloorHeaterSupport: false,// 床下パネルヒータ支え板 (t2.0外張りアクリル板＋プラダン4mm)
   hasRoomDivider: false,       // ２室分け（後付け仕切り板・Type A/C両対応）
   ledType: 'none',             // 'none' | 'usb' | 'high_cri_white' | 'red' | 'white_and_red' | 'rgbw'
   ledPower: true,              // LED点灯状態 (true | false)
@@ -600,7 +610,19 @@ function updateRubberPackingAvailability() {
     } else {
       rubberPackingBadge.textContent = '';
       rubberPackingBadge.classList.add('hidden');
-      rubberPackingSub.textContent = '側面・背面からの水漏れの抑制（完全に水漏れなしを保証するものではありません）';
+    }
+  }
+
+  // 床下パネルヒータ支え板のバッジ連動（床面中央補強フレームの有無で1枚/2枚が切り替わる）
+  if (floorHeaterSupportBadge && floorHeaterSupportSub) {
+    if (state.hasFloorReinforcement) {
+      floorHeaterSupportBadge.textContent = '床面2分割用 (2枚)';
+      floorHeaterSupportBadge.className = 'option-cond-badge info';
+      floorHeaterSupportBadge.classList.remove('hidden');
+    } else {
+      floorHeaterSupportBadge.textContent = '通常床面用 (1枚)';
+      floorHeaterSupportBadge.className = 'option-cond-badge';
+      floorHeaterSupportBadge.classList.remove('hidden');
     }
   }
 }
@@ -651,27 +673,255 @@ function getMaterialConfig(partCode) {
 }
 
 /**
- * 部材集計テーブル（BOM）のレンダリング（開発確認用）
- * - フレーム類・レール・エンドキャップ類を合体して1つの表に集約
- * - 列構成: 型番 ー 長さ ー 数量 ー 原価合計(単価×数量) ー 重量
- * - パネル類・その他部材テーブル
+ * パネル部材の並び順スコアを算出
+ * 指定順: 正面扉 -> TypeC前窓 -> 床面 -> 側面 -> 背面 -> 天面 -> 換気量調整板 -> 床下パネルヒータ支え板 -> プラダン -> その他
+ */
+function getPanelSortScore(part) {
+  const name = part.name || '';
+  if (name.includes('前窓')) return 2; // TypeCの時は前窓
+  if (name.includes('扉')) return 1;   // 正面扉
+  if (name.includes('底板') || (name.includes('床面') && !name.includes('支え板') && !name.includes('プラダン'))) return 3; // 床面
+  if (name.includes('側板') || name.includes('側面')) {
+    if (name.includes('換気量調整板')) return 7; // 換気量調整板
+    return 4; // 側面
+  }
+  if (name.includes('背板') || name.includes('背面')) return 5; // 背面
+  if (name.includes('天板') || name.includes('天面') || name.includes('金網')) return 6; // 天面
+  if (name.includes('換気量調整板')) return 7; // 換気量調整板
+  if (name.includes('床下パネルヒータ支え板')) return 8; // 床下パネルヒータ支え板
+  if (name.includes('プラダン')) return 9; // プラダン
+  return 10; // その他パネル
+}
+
+/**
+ * フレーム部材の並び順スコアを算出
+ * 指定順: 通常構造フレーム -> レール類 -> ECP類
+ */
+function getFrameSortScore(part) {
+  const code = part.partCode || part.name || '';
+  if (code.startsWith('ECP') || code.includes('キャップ')) return 3; // ECP類（一番下）
+  if (code.startsWith('PGRU') || code.startsWith('PGRL') || code.includes('レール')) return 2; // レール類
+  return 1; // 通常フレーム
+}
+
+/**
+ * パネル部材の原価（板材料費 ＋ はざいや穴加工・斜めカット・切欠き・磨き加工費）および重量を算出
+ */
+function getPanelCostAndWeight(part) {
+  const config = getMaterialConfig(part.panelCode || part.partCode || part.name);
+  let wMm = part.widthMm;
+  let hMm = part.heightMm;
+  if ((!wMm || !hMm) && part.size) {
+    const match = part.size.match(/(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)/);
+    if (match) {
+      wMm = parseFloat(match[1]);
+      hMm = parseFloat(match[2]);
+    }
+  }
+
+  let singleCost = 0;
+  let totalCost = 0;
+  let totalWeight = 0;
+
+  if (config && config.unit === 'm2' && wMm && hMm) {
+    const areaM2 = (wMm / 1000) * (hMm / 1000);
+    const isWireMesh = (part.panelCode && part.panelCode.startsWith('wire_mesh_')) ||
+                       (part.partCode && part.partCode.startsWith('wire_mesh_')) ||
+                       (config.pitchMm != null);
+    const isPvcPunching = (part.panelCode === 'pvc_punching_3_0') ||
+                          (part.partCode === 'pvc_punching_3_0') ||
+                          (part.name && part.name.includes('塩ビパンチング'));
+    const isAcrylicExtrusion = (part.panelCode && part.panelCode.startsWith('acrylic_extrusion_')) ||
+                               (part.partCode && part.partCode.startsWith('acrylic_extrusion_')) ||
+                               (part.panelCode === 'acrylic_extrusion_3_0' || part.panelCode === 'acrylic_extrusion_2_0' || part.panelCode === 'acrylic_extrusion_1_5');
+    const isAcrylicBlackMatte = (part.panelCode === 'acrylic_black_matte_3_0') ||
+                                (part.partCode === 'acrylic_black_matte_3_0') ||
+                                (part.name && part.name.includes('黒両面マット'));
+    const isAcrylicSmokeGray = (part.panelCode === 'acrylic_smoke_gray_3_0') ||
+                               (part.partCode === 'acrylic_smoke_gray_3_0') ||
+                               (part.name && part.name.includes('グレースモーク'));
+    const isAcrylicCast = (part.panelCode === 'acrylic_cast_3_0') ||
+                          (part.partCode === 'acrylic_cast_3_0') ||
+                          (part.name && part.name.includes('キャスト'));
+
+    // 1. 板材料費の算出
+    if (isWireMesh) {
+      const pitch = config.pitchMm || (part.panelCode ? parseInt(part.panelCode.replace('wire_mesh_', ''), 10) : 25);
+      const fenpCost = getFenpCost(pitch, wMm, hMm);
+      singleCost = fenpCost != null ? fenpCost : Math.round(config.pricePerM2 * areaM2);
+    } else if (isPvcPunching) {
+      const punchingCost = getPvcPunchingCost(wMm, hMm);
+      singleCost = punchingCost != null ? punchingCost : Math.round(config.pricePerM2 * areaM2);
+    } else if (isAcrylicExtrusion) {
+      const thick = config.thicknessMm || 3.0;
+      const extCost = getAcrylicExtrusionCost(thick, wMm, hMm);
+      singleCost = extCost != null ? extCost : Math.round(config.pricePerM2 * areaM2);
+    } else if (isAcrylicBlackMatte) {
+      const matteCost = getAcrylicBlackMatteCost(wMm, hMm);
+      singleCost = matteCost != null ? matteCost : Math.round(config.pricePerM2 * areaM2);
+    } else if (isAcrylicSmokeGray) {
+      const smokeCost = getAcrylicSmokeGrayCost(wMm, hMm);
+      singleCost = smokeCost != null ? smokeCost : Math.round(config.pricePerM2 * areaM2);
+    } else if (isAcrylicCast) {
+      const isDoorPanel = part.name && part.name.includes('扉');
+      if (isDoorPanel) {
+        // 扉本体: キャスト板テーブル価格 + 穴加工2箇所(310円) + 磨き仕上げ4辺(2056円) = 計2366円/枚（はざいや加工費込）
+        const castCost = getAcrylicCastCost(wMm, hMm);
+        singleCost = castCost != null ? castCost : (Math.round(config.pricePerM2 * areaM2) + 2366);
+      } else {
+        const rawCost = getAcrylicCastRawBoardCost(wMm, hMm);
+        singleCost = rawCost != null ? rawCost : Math.round(config.pricePerM2 * areaM2);
+      }
+    } else {
+      singleCost = Math.round(config.pricePerM2 * areaM2);
+    }
+
+    // 2. はざいや加工費（穴加工・斜めカット・切欠き）の加算
+    // ① 側面換気量調整板: φ9mm穴加工 4箇所/枚 (@94円 = 376円/枚)
+    if (part.name && part.name.includes('換気量調整板')) {
+      const holeUnit = materialsConfig.options?.items?.sideVentCover?.holeCostPerPiece ?? 94;
+      const holesPerPanel = materialsConfig.options?.items?.sideVentCover?.holesPerPanel ?? 4;
+      singleCost += (holesPerPanel * holeUnit);
+    }
+
+    // ② 床下パネルヒータ支え板: φ6mm穴加工、コーナー斜めカット、切欠き
+    if (part.name && part.name.includes('床下パネルヒータ支え板')) {
+      const fhConfig = materialsConfig.options?.items?.floorHeaterSupport || {};
+      const holeUnit = fhConfig.holeCostPerPiece ?? 112;
+      const diagUnit = fhConfig.diagonalCutCost ?? 239;
+      const cornerUnit = fhConfig.cornerCutCost ?? 587;
+
+      const is2Panel = part.count === 2 || (part.note && part.note.includes('2枚'));
+      if (is2Panel) {
+        // 2枚構成: 1枚あたり φ6穴7箇所(@112 = 784円) + 斜めカット2箇所(@239 = 478円) + 切欠き1箇所(@587 = 587円) = 1,849円/枚
+        const processingPerPiece = (7 * holeUnit) + (2 * diagUnit) + (1 * cornerUnit);
+        singleCost += processingPerPiece;
+      } else {
+        // 1枚構成: 1枚あたり φ6穴10箇所(@112 = 1,120円) + 斜めカット4箇所(@239 = 956円) = 2,076円/枚
+        const processingPerPiece = (10 * holeUnit) + (4 * diagUnit);
+        singleCost += processingPerPiece;
+      }
+    }
+
+    if (config.baseCostPerPiece) {
+      singleCost += config.baseCostPerPiece;
+    }
+    totalCost = singleCost * part.count;
+    if (config.baseCost) {
+      totalCost += config.baseCost;
+    }
+    totalWeight = (config.weightPerM2 || 0) * areaM2 * part.count;
+  }
+
+  return { singleCost, totalCost, totalWeight };
+}
+
+/**
+ * その他部材・金物・付属品の原価および重量を算出
+ */
+function getOtherPartCostAndWeight(part) {
+  const code = part.partCode || part.name || '';
+  const config = getMaterialConfig(code);
+
+  let singleCost = 0;
+  let totalCost = 0;
+  let totalWeight = 0;
+
+  if (config) {
+    if (config.unit === 'm') {
+      const rawLengthMm = part.lengthMm || 0;
+      const lengthM = rawLengthMm / 1000;
+      singleCost = Math.round(config.pricePerMeter * lengthM);
+      totalCost = singleCost * part.count;
+      totalWeight = (config.weightPerMeter || 0) * lengthM * part.count;
+    } else {
+      singleCost = config.pricePerPiece || 0;
+      totalCost = singleCost * part.count;
+      totalWeight = (config.weightPerPiece || 0) * part.count;
+    }
+  } else {
+    // フォールバック照合
+    const name = part.name || '';
+    if (name.includes('化粧つまみネジ') || name.includes('No.1')) {
+      const screwCost = materialsConfig.options?.items?.floorHeaterSupport?.screwCostPerPiece ?? 25;
+      singleCost = screwCost;
+      totalCost = singleCost * part.count;
+      totalWeight = 0.0025 * part.count;
+    } else if (name.includes('ゴムグロメット')) {
+      singleCost = 80;
+      totalCost = singleCost * part.count;
+      totalWeight = 0.005 * part.count;
+    } else if (name.includes('ローレットノブ') || (name.includes('つまみ') && name.includes('ノブ'))) {
+      singleCost = 350;
+      totalCost = singleCost * part.count;
+      totalWeight = 0.012 * part.count;
+    } else if (name.includes('鍵') || name.includes('C-108')) {
+      singleCost = 800;
+      totalCost = singleCost * part.count;
+      totalWeight = 0.045 * part.count;
+    } else if (name.includes('キャスター')) {
+      singleCost = 200;
+      totalCost = singleCost * part.count;
+      totalWeight = 0.120 * part.count;
+    } else if (name.includes('ゴム脚')) {
+      singleCost = 60;
+      totalCost = singleCost * part.count;
+      totalWeight = 0.008 * part.count;
+    } else if (name.includes('M3') && name.includes('つまみネジ')) {
+      singleCost = 25;
+      totalCost = singleCost * part.count;
+      totalWeight = 0.002 * part.count;
+    } else if (name.includes('M6') && name.includes('ボルト')) {
+      singleCost = 30;
+      totalCost = singleCost * part.count;
+      totalWeight = 0.008 * part.count;
+    } else if (name.includes('M4') && name.includes('皿ネジ')) {
+      singleCost = 15;
+      totalCost = singleCost * part.count;
+      totalWeight = 0.003 * part.count;
+    } else if (name.includes('LED')) {
+      if (name.includes('USB') || name.includes('白＆電球色')) {
+        singleCost = 1980;
+        totalWeight = 0.120;
+      } else {
+        singleCost = 5490;
+        totalWeight = 0.350;
+      }
+      totalCost = singleCost * part.count;
+    }
+  }
+
+  return { singleCost, totalCost, totalWeight };
+}
+
+/**
+ * 🛠️ BOM（資材リスト）テーブルの更新
+ * - フレーム類テーブル（ECP類・レール類は一番下に配置）
+ * - パネル類テーブル（正面扉→前窓→床面→側面→背面→天面→換気板→支え板→プラダン順、原価合計・重量列付）
+ * - その他部材テーブル（NSCP1H-S-6ゴムパッキン、金具、ネジ、脚など）
  */
 function updateBOMTable() {
   if (!bomContainer || !bomFrameTbody) return;
 
   const parts = viewer.getPartsSummary();
   const frameParts = [];
+  const panelParts = [];
   const otherParts = [];
 
   for (const part of parts) {
-    if (part.category === 'frame' || part.category === 'rail_cap' || part.category === 'hardware') {
+    // NSCP1H-S-6ゴムパッキンはその他に入れる
+    if (part.partCode === 'NSCP1H-S-6' || (part.name && part.name.includes('ゴムパッキン'))) {
+      otherParts.push(part);
+    } else if (part.category === 'panel') {
+      panelParts.push(part);
+    } else if (part.category === 'frame' || part.category === 'rail_cap' || part.category === 'hardware') {
       frameParts.push(part);
     } else {
       otherParts.push(part);
     }
   }
 
-  // 1. フレーム類 (レール・キャップ含む) テーブル描画
+  // 1. フレーム類 (通常フレーム -> レール類 -> ECP類 の順にソート)
   const groupedFramePartsMap = new Map();
 
   for (const part of frameParts) {
@@ -693,6 +943,13 @@ function updateBOMTable() {
   }
 
   const consolidatedFrameParts = Array.from(groupedFramePartsMap.values());
+  // ソート: 1: 通常フレーム -> 2: レール類 -> 3: ECP類
+  consolidatedFrameParts.sort((a, b) => {
+    const scoreA = getFrameSortScore(a);
+    const scoreB = getFrameSortScore(b);
+    if (scoreA !== scoreB) return scoreA - scoreB;
+    return (a.partCode || a.name).localeCompare(b.partCode || b.name);
+  });
 
   bomFrameTbody.innerHTML = '';
   if (bomFrameTfoot) bomFrameTfoot.innerHTML = '';
@@ -745,7 +1002,7 @@ function updateBOMTable() {
     bomFrameTbody.appendChild(tr);
   }
 
-  // 合計行 (tfoot)
+  // フレーム合計行 (tfoot)
   if (bomFrameTfoot) {
     const tfootTr = document.createElement('tr');
     tfootTr.innerHTML = `
@@ -758,24 +1015,99 @@ function updateBOMTable() {
     bomFrameTfoot.appendChild(tfootTr);
   }
 
-  // 2. パネル類・その他部材テーブルの描画
+  // 2. パネル類テーブルの描画
+  // ソート: 正面扉 -> TypeC前窓 -> 床面 -> 側面 -> 背面 -> 天面 -> 換気量調整板 -> 床下パネルヒータ支え板 -> プラダン -> その他
+  panelParts.sort((a, b) => {
+    const scoreA = getPanelSortScore(a);
+    const scoreB = getPanelSortScore(b);
+    return scoreA - scoreB;
+  });
+
+  let totalPanelCost = 0;
+  let totalPanelWeight = 0;
+  let totalPanelItems = 0;
+
+  if (bomPanelTbody) {
+    bomPanelTbody.innerHTML = '';
+    if (bomPanelTfoot) bomPanelTfoot.innerHTML = '';
+
+    for (const part of panelParts) {
+      totalPanelItems += part.count;
+      const { totalCost, totalWeight } = getPanelCostAndWeight(part);
+      totalPanelCost += totalCost;
+      totalPanelWeight += totalWeight;
+
+      const tr = document.createElement('tr');
+      tr.className = 'bom-cat-panel';
+      tr.innerHTML = `
+        <td><strong>${part.name}</strong></td>
+        <td>${part.size || '-'}</td>
+        <td style="text-align: center; font-family: monospace;">${part.count}</td>
+        <td style="text-align: right; font-family: monospace;">¥${totalCost.toLocaleString()}</td>
+        <td style="text-align: right; font-family: monospace;">${totalWeight.toFixed(3)} kg</td>
+        <td>${part.note || '-'}</td>
+      `;
+      bomPanelTbody.appendChild(tr);
+    }
+
+    if (bomPanelTfoot) {
+      const tfootTr = document.createElement('tr');
+      tfootTr.innerHTML = `
+        <td><strong>パネル 合計</strong></td>
+        <td style="text-align: center;">-</td>
+        <td style="text-align: center; font-family: monospace;"><strong>${totalPanelItems}点</strong></td>
+        <td style="text-align: right; font-family: monospace;"><strong>¥${totalPanelCost.toLocaleString()}</strong></td>
+        <td style="text-align: right; font-family: monospace;"><strong>${totalPanelWeight.toFixed(3)} kg</strong></td>
+        <td>-</td>
+      `;
+      bomPanelTfoot.appendChild(tfootTr);
+    }
+  }
+
+  // 3. その他部材・金物・付属品テーブルの描画
+  let totalOtherCost = 0;
+  let totalOtherWeight = 0;
+  let totalOtherItems = 0;
+
   if (bomOtherTbody) {
     bomOtherTbody.innerHTML = '';
+    if (bomOtherTfoot) bomOtherTfoot.innerHTML = '';
+
     for (const part of otherParts) {
+      totalOtherItems += part.count;
+      const { totalCost, totalWeight } = getOtherPartCostAndWeight(part);
+      totalOtherCost += totalCost;
+      totalOtherWeight += totalWeight;
+
       const tr = document.createElement('tr');
       tr.className = `bom-cat-${part.category || 'other'}`;
       tr.innerHTML = `
         <td><strong>${part.name}</strong></td>
         <td>${part.size || '-'}</td>
         <td style="text-align: center; font-family: monospace;">${part.count}</td>
+        <td style="text-align: right; font-family: monospace;">¥${totalCost.toLocaleString()}</td>
+        <td style="text-align: right; font-family: monospace;">${totalWeight.toFixed(3)} kg</td>
         <td>${part.note || '-'}</td>
       `;
       bomOtherTbody.appendChild(tr);
     }
+
+    if (bomOtherTfoot) {
+      const tfootTr = document.createElement('tr');
+      tfootTr.innerHTML = `
+        <td><strong>その他部材 合計</strong></td>
+        <td style="text-align: center;">-</td>
+        <td style="text-align: center; font-family: monospace;"><strong>${totalOtherItems}点</strong></td>
+        <td style="text-align: right; font-family: monospace;"><strong>¥${totalOtherCost.toLocaleString()}</strong></td>
+        <td style="text-align: right; font-family: monospace;"><strong>${totalOtherWeight.toFixed(3)} kg</strong></td>
+        <td>-</td>
+      `;
+      bomOtherTfoot.appendChild(tfootTr);
+    }
   }
 
   if (partsCountBadge) {
-    partsCountBadge.textContent = `${parts.length}品目 / フレーム計${totalFrameItems}点`;
+    partsCountBadge.textContent = `${parts.length}品目 / フレーム計${totalFrameItems}点 / パネル計${totalPanelItems}点 / その他計${totalOtherItems}点`;
   }
 }
 
@@ -793,24 +1125,21 @@ function setupDebugBOMIfRequested() {
 
     const params = new URLSearchParams(window.location.search);
     const hasDebugParam = params.get('debug') === 'bom' || params.get('dev') === 'bom';
-    const isDebugOff = params.get('debug') === 'off';
 
-    if (isDebugOff) {
-      sessionStorage.removeItem('cage_debug_bom');
+    // セッションストレージによる自動保持は解除（通常は隠す）
+    sessionStorage.removeItem('cage_debug_bom');
+
+    // パラメータがない場合は確実に非表示・削除
+    if (!hasDebugParam) {
+      const existing = document.getElementById('debug-bom-section');
+      if (existing) existing.remove();
       return;
     }
-
-    const shouldEnableDebugBOM = hasDebugParam || sessionStorage.getItem('cage_debug_bom') === 'true';
-
-    if (!shouldEnableDebugBOM) return;
-
-    // セッション中に保持
-    sessionStorage.setItem('cage_debug_bom', 'true');
 
     // 既に生成済みならスキップ
     if (document.getElementById('debug-bom-section')) return;
 
-    // アコーディオンHTMLを動的作成
+    // アコーディオンHTMLを動的作成 (初期状態は折りたたんで隠す)
     const section = document.createElement('section');
     section.id = 'debug-bom-section';
     section.className = 'control-section accordion-section';
@@ -821,11 +1150,11 @@ function setupDebugBOMIfRequested() {
         <span style="font-size: 1.1rem; line-height: 1;">🛠️</span>
         <div>
           <strong style="color: #f59e0b; display: block; margin-bottom: 2px;">【管理者デバッグ表示中】資材リスト (BOM)</strong>
-          <span>URLパラメータ（?debug=bom）により動的生成されています。<strong style="color: #60a5fa;">静的HTMLには最初から含まれていません。</strong>（解除: ?debug=off）</span>
+          <span>URLパラメータ（?debug=bom）により動的生成されています。<strong style="color: #60a5fa;">通常画面では完全に非表示です。</strong></span>
         </div>
       </div>
 
-      <div class="accordion-header bom-accordion-header active" id="bom-toggle-btn">
+      <div class="accordion-header bom-accordion-header" id="bom-toggle-btn">
         <div class="accordion-title-wrap">
           <svg class="accordion-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
           <span class="section-title" style="margin-bottom: 0;">資材リスト内訳 (BOM)</span>
@@ -838,7 +1167,8 @@ function setupDebugBOMIfRequested() {
         </div>
       </div>
 
-      <div class="bom-table-container accordion-content" id="bom-container" style="margin-top: 8px;">
+      <div class="bom-table-container accordion-content hidden" id="bom-container" style="margin-top: 8px;">
+        <!-- 1. フレーム類 -->
         <div class="bom-section-title-bar" style="padding: 10px 12px 6px; display: flex; justify-content: space-between; align-items: center;">
           <span class="bom-section-title" style="font-weight: 700; color: #38bdf8;">■ フレーム類（レール・キャップ含む）</span>
           <span class="bom-section-sub" style="font-size: 0.7rem; color: #94a3b8;">※型番・長さ・数量・原価・重量</span>
@@ -857,19 +1187,44 @@ function setupDebugBOMIfRequested() {
           <tfoot id="bom-frame-tfoot"></tfoot>
         </table>
 
-        <div class="bom-section-title-bar" style="margin-top: 14px; padding: 10px 12px 6px;">
-          <span class="bom-section-title" style="font-weight: 700; color: #34d399;">■ パネル・その他部材</span>
+        <!-- 2. パネル類 -->
+        <div class="bom-section-title-bar" style="margin-top: 14px; padding: 10px 12px 6px; display: flex; justify-content: space-between; align-items: center;">
+          <span class="bom-section-title" style="font-weight: 700; color: #34d399;">■ パネル類</span>
+          <span class="bom-section-sub" style="font-size: 0.7rem; color: #94a3b8;">※正面扉→前窓→床面→側面→背面→天面→調整板→支え板→プラダン</span>
+        </div>
+        <table class="bom-table panel-bom-table">
+          <thead>
+            <tr>
+              <th style="width: 28%;">部材種別</th>
+              <th style="width: 18%;">寸法 / 仕様</th>
+              <th style="width: 8%; text-align: center;">数量</th>
+              <th style="width: 15%; text-align: right;">原価合計</th>
+              <th style="width: 13%; text-align: right;">重量</th>
+              <th style="width: 18%;">用途・配置</th>
+            </tr>
+          </thead>
+          <tbody id="bom-panel-tbody"></tbody>
+          <tfoot id="bom-panel-tfoot"></tfoot>
+        </table>
+
+        <!-- 3. その他部材・金物・付属品 -->
+        <div class="bom-section-title-bar" style="margin-top: 14px; padding: 10px 12px 6px; display: flex; justify-content: space-between; align-items: center;">
+          <span class="bom-section-title" style="font-weight: 700; color: #fbbf24;">■ その他部材・金物・付属品</span>
+          <span class="bom-section-sub" style="font-size: 0.7rem; color: #94a3b8;">※パッキン・金具・ネジ・足等</span>
         </div>
         <table class="bom-table other-bom-table">
           <thead>
             <tr>
-              <th>部材種別</th>
-              <th>寸法 / 仕様</th>
-              <th style="width: 45px; text-align: center;">数量</th>
-              <th>用途・配置</th>
+              <th style="width: 28%;">部材名</th>
+              <th style="width: 18%;">寸法 / 仕様</th>
+              <th style="width: 8%; text-align: center;">数量</th>
+              <th style="width: 15%; text-align: right;">原価合計</th>
+              <th style="width: 13%; text-align: right;">重量</th>
+              <th style="width: 18%;">備考・用途</th>
             </tr>
           </thead>
           <tbody id="bom-other-tbody"></tbody>
+          <tfoot id="bom-other-tfoot"></tfoot>
         </table>
       </div>
     `;
@@ -885,7 +1240,10 @@ function setupDebugBOMIfRequested() {
     bomContainer = document.getElementById('bom-container');
     bomFrameTbody = document.getElementById('bom-frame-tbody');
     bomFrameTfoot = document.getElementById('bom-frame-tfoot');
+    bomPanelTbody = document.getElementById('bom-panel-tbody');
+    bomPanelTfoot = document.getElementById('bom-panel-tfoot');
     bomOtherTbody = document.getElementById('bom-other-tbody');
+    bomOtherTfoot = document.getElementById('bom-other-tfoot');
     partsCountBadge = document.getElementById('parts-count-badge');
 
     if (bomToggleBtn && bomContainer) {
@@ -936,93 +1294,9 @@ function calculateGrandTotals() {
         }
       }
     } else if (part.category === 'panel') {
-      const config = getMaterialConfig(part.panelCode || part.partCode || part.name);
-      let wMm = part.widthMm;
-      let hMm = part.heightMm;
-      if ((wMm == null || hMm == null) && part.size) {
-        const match = part.size.match(/(\d+)\s*[x×]\s*(\d+)/);
-        if (match) {
-          wMm = parseInt(match[1], 10);
-          hMm = parseInt(match[2], 10);
-        }
-      }
-      if (config && config.unit === 'm2' && wMm && hMm) {
-        const areaM2 = (wMm / 1000) * (hMm / 1000);
-        // 側面換気量調整板は固定オプションとして後述で定額加算（二重計上防止、重量計算は維持）
-        const isVentCoverPart = part.panelCode === 'acrylic_extrusion_1_5' || (part.name && part.name.includes('換気量調整板'));
-        if (!isVentCoverPart) {
-          let singleCost = 0;
-          // 金網（FENP）判定: wire_mesh_15, 25, 30等の場合は寸法連動マトリクス表から原価算出
-          const isWireMesh = (part.panelCode && part.panelCode.startsWith('wire_mesh_')) ||
-                             (part.partCode && part.partCode.startsWith('wire_mesh_')) ||
-                             (config.pitchMm != null);
-
-          // パネル素材別の判定（各専用価格マスタ参照）
-          const isPvcPunching = (part.panelCode === 'pvc_punching_3_0') ||
-                                (part.partCode === 'pvc_punching_3_0') ||
-                                (part.name && part.name.includes('塩ビパンチング'));
-
-          const isAcrylicExtrusion = (part.panelCode && part.panelCode.startsWith('acrylic_extrusion_')) ||
-                                     (part.partCode && part.partCode.startsWith('acrylic_extrusion_')) ||
-                                     (part.panelCode === 'acrylic_extrusion_3_0' || part.panelCode === 'acrylic_extrusion_2_0' || part.panelCode === 'acrylic_extrusion_1_5');
-
-          const isAcrylicBlackMatte = (part.panelCode === 'acrylic_black_matte_3_0') ||
-                                      (part.partCode === 'acrylic_black_matte_3_0') ||
-                                      (part.name && part.name.includes('黒両面マット'));
-
-          const isAcrylicSmokeGray = (part.panelCode === 'acrylic_smoke_gray_3_0') ||
-                                     (part.partCode === 'acrylic_smoke_gray_3_0') ||
-                                     (part.name && part.name.includes('グレースモーク'));
-
-          const isAcrylicCast = (part.panelCode === 'acrylic_cast_3_0') ||
-                                (part.partCode === 'acrylic_cast_3_0') ||
-                                (part.name && part.name.includes('キャスト'));
-
-          if (isWireMesh) {
-            const pitch = config.pitchMm || (part.panelCode ? parseInt(part.panelCode.replace('wire_mesh_', ''), 10) : 25);
-            const fenpCost = getFenpCost(pitch, wMm, hMm);
-            singleCost = fenpCost != null ? fenpCost : Math.round(config.pricePerM2 * areaM2);
-          } else if (isPvcPunching) {
-            const punchingCost = getPvcPunchingCost(wMm, hMm);
-            singleCost = punchingCost != null ? punchingCost : Math.round(config.pricePerM2 * areaM2);
-          } else if (isAcrylicExtrusion) {
-            const thick = config.thicknessMm || 3.0;
-            const extCost = getAcrylicExtrusionCost(thick, wMm, hMm);
-            singleCost = extCost != null ? extCost : Math.round(config.pricePerM2 * areaM2);
-          } else if (isAcrylicBlackMatte) {
-            const matteCost = getAcrylicBlackMatteCost(wMm, hMm);
-            singleCost = matteCost != null ? matteCost : Math.round(config.pricePerM2 * areaM2);
-          } else if (isAcrylicSmokeGray) {
-            const smokeCost = getAcrylicSmokeGrayCost(wMm, hMm);
-            singleCost = smokeCost != null ? smokeCost : Math.round(config.pricePerM2 * areaM2);
-          } else if (isAcrylicCast) {
-            // 正面扉本体（扉パネル）かどうかの判定
-            const isDoorPanel = part.name && part.name.includes('扉');
-            if (isDoorPanel) {
-              // 扉本体: キャスト板テーブル価格 + 穴加工2箇所(310円) + 磨き仕上げ4辺(2056円) = 計2366円/枚
-              const castCost = getAcrylicCastCost(wMm, hMm);
-              singleCost = castCost != null ? castCost : (Math.round(config.pricePerM2 * areaM2) + 2366);
-            } else {
-              // 座板・スペーサー等の小型パーツ: 板代のみ（加工費なし）
-              const rawCost = getAcrylicCastRawBoardCost(wMm, hMm);
-              singleCost = rawCost != null ? rawCost : Math.round(config.pricePerM2 * areaM2);
-            }
-          } else {
-            singleCost = Math.round(config.pricePerM2 * areaM2);
-          }
-
-          totalPanelCost += singleCost * part.count;
-          // 1枚あたりの固定原価（スライド部材等）が設定されている場合は枚数分加算
-          if (config.baseCostPerPiece) {
-            totalPanelCost += config.baseCostPerPiece * part.count;
-          }
-          // 固定原価（正面スライド扉 2枚1式あたりの基本原価など）が設定されている場合は加算
-          if (config.baseCost) {
-            totalPanelCost += config.baseCost;
-          }
-        }
-        totalPanelWeight += config.weightPerM2 * areaM2 * part.count;
-      }
+      const { totalCost, totalWeight } = getPanelCostAndWeight(part);
+      totalPanelCost += totalCost;
+      totalPanelWeight += totalWeight;
     }
   }
 
@@ -1044,6 +1318,7 @@ function calculateGrandTotals() {
   const isRoomDivider = !!state.hasRoomDivider;
   const isTypeAFront = state.cageType === 'A_FRONT';
   const isTypeAFramed = state.cageType === 'A_FRAMED';
+  const isFloorHeaterSupport = !!state.hasFloorHeaterSupport;
 
   // 1. オプション加工工賃（資材費とは別で単純に販売価格へ加算）
   const splitFloorLabor = isFloorSplit ? (laborConfig.splitFloor?.price ?? 500) : 0;
@@ -1056,25 +1331,18 @@ function calculateGrandTotals() {
   const roomDividerLabor = isRoomDivider ? (laborConfig.roomDivider?.price ?? 500) : 0;
   const frontOpenDoorLabor = isTypeAFront ? (laborConfig.frontOpenDoor?.price ?? 3000) : 0;
   const frontFramedDoorLabor = isTypeAFramed ? (laborConfig.frontFramedDoor?.price ?? 3000) : 0;
+  const floorHeaterSupportLabor = isFloorHeaterSupport ? (laborConfig.floorHeaterSupport?.price ?? 1000) : 0;
 
-  const totalLaborFee = splitFloorLabor + splitTopLabor + typeCLabor + splitSideLabor + frontWide3xLabor + perchLabor + rubberPackingLabor + roomDividerLabor + frontOpenDoorLabor + frontFramedDoorLabor;
+  const totalLaborFee = splitFloorLabor + splitTopLabor + typeCLabor + splitSideLabor + frontWide3xLabor + perchLabor + rubberPackingLabor + roomDividerLabor + frontOpenDoorLabor + frontFramedDoorLabor + floorHeaterSupportLabor;
 
   // 2. 特定オプション部材（販売価格加算額および内部原価）
   const casterPrice = isCaster ? (itemConfig.caster?.price ?? 1500) : 0;
   const casterCost = isCaster ? (itemConfig.caster?.cost ?? 800) : 0;
 
-  // 側面換気量調整板（販売加算額は500円固定、穴加工費: φ9mm×4箇所/枚 @94円 を原価に積み上げ）
-  let ventCoverPanelCount = 0;
-  if (isSideVentCover) {
-    const ventPart = Array.isArray(parts) ? parts.find(p => p.name && p.name.includes('換気量調整板')) : null;
-    ventCoverPanelCount = ventPart ? ventPart.count : (state.hasSideReinforcement ? 2 : 4);
-  }
+  // 側面換気量調整板（穴加工費は各パネル原価に含まれるため、基本付帯原価のみ計上）
   const ventCoverPrice = isSideVentCover ? (itemConfig.sideVentCover?.price ?? 500) : 0;
   const baseVentCoverCost = isSideVentCover ? (itemConfig.sideVentCover?.cost ?? 200) : 0;
-  const holeCostUnit = itemConfig.sideVentCover?.holeCostPerPiece ?? 94;
-  const holesPerPanel = itemConfig.sideVentCover?.holesPerPanel ?? 4;
-  const ventHoleProcessingCost = isSideVentCover ? (ventCoverPanelCount * holesPerPanel * holeCostUnit) : 0;
-  const ventCoverCost = baseVentCoverCost + ventHoleProcessingCost;
+  const ventCoverCost = isSideVentCover ? baseVentCoverCost : 0;
 
   // LED照明オプション部材
   let ledPrice = 0;
@@ -1688,6 +1956,19 @@ toggleRubberPacking.addEventListener('change', (e) => {
   syncUpdate();
 });
 
+// 床下パネルヒータ支え板のトグル
+if (toggleFloorHeaterSupport) {
+  toggleFloorHeaterSupport.addEventListener('change', (e) => {
+    state.hasFloorHeaterSupport = e.target.checked;
+    if (e.target.checked) {
+      cardFloorHeaterSupport?.classList.add('active');
+    } else {
+      cardFloorHeaterSupport?.classList.remove('active');
+    }
+    syncUpdate();
+  });
+}
+
 // タイプ切り替え
 btnTypeA.addEventListener('click', () => {
   state.cageType = 'A';
@@ -2145,6 +2426,10 @@ btnResetSpecs.addEventListener('click', () => {
   if (toggleRubberPacking) toggleRubberPacking.checked = false;
   if (cardRubberPacking) cardRubberPacking.classList.remove('active');
   state.hasRubberPacking = false;
+
+  if (toggleFloorHeaterSupport) toggleFloorHeaterSupport.checked = false;
+  if (cardFloorHeaterSupport) cardFloorHeaterSupport.classList.remove('active');
+  state.hasFloorHeaterSupport = false;
 
   // パネル設定のリセット
   state.panelConfig = {
@@ -2607,6 +2892,9 @@ function finalizeEstimateCalculation(totals) {
     if (state.hasRubberPacking !== lastEstimatedState.hasRubberPacking) {
       diffs.push(state.hasRubberPacking ? 'ゴムパッキン追加' : 'ゴムパッキン解除');
     }
+    if (state.hasFloorHeaterSupport !== lastEstimatedState.hasFloorHeaterSupport) {
+      diffs.push(state.hasFloorHeaterSupport ? '床下ヒータ支え板追加' : '床下ヒータ支え板解除');
+    }
     if (state.hasRoomDivider !== lastEstimatedState.hasRoomDivider) {
       diffs.push(state.hasRoomDivider ? '2室分け追加' : '2室分け解除');
     }
@@ -2880,6 +3168,15 @@ function getSelectedOptionsList() {
   // 10. モレ対策ゴムパッキン
   if (state.hasRubberPacking) {
     options.push('モレ対策ゴムパッキン (側面・背面 隙間モレ抑制)');
+  }
+
+  // 床下パネルヒータ支え板
+  if (state.hasFloorHeaterSupport) {
+    if (state.hasFloorReinforcement) {
+      options.push('床下パネルヒータ支え板 (床面2分割用・透明アクリル2.0mm 2枚＋緩衝プラダン4.0mm 2枚＋化粧ネジ付)');
+    } else {
+      options.push('床下パネルヒータ支え板 (通常床面用・透明アクリル2.0mm 1枚＋緩衝プラダン4.0mm 1枚＋化粧ネジ付)');
+    }
   }
 
   // 11. ２室分け（後付け仕切り板）
@@ -3660,6 +3957,7 @@ function checkInitialStateFromStorageOrUrl() {
       if (urlParams.has('floorReinf')) incomingState.hasFloorReinforcement = urlParams.get('floorReinf') === '1' || urlParams.get('floorReinf') === 'true';
       if (urlParams.has('topReinf')) incomingState.hasTopReinforcement = urlParams.get('topReinf') === '1' || urlParams.get('topReinf') === 'true';
       if (urlParams.has('frontWide')) incomingState.frontWideFrame = urlParams.get('frontWide');
+      if (urlParams.has('floorHeater')) incomingState.hasFloorHeaterSupport = urlParams.get('floorHeater') === '1' || urlParams.get('floorHeater') === 'true';
 
       // アドレスバーから引数を消去（お客さんに見えないようにする）
       if (window.history && window.history.replaceState) {
@@ -3763,6 +4061,11 @@ function checkInitialStateFromStorageOrUrl() {
       if (toggleFloorReinforce) toggleFloorReinforce.checked = state.hasFloorReinforcement;
     } else {
       updateFloorReinforceByArea();
+    }
+    if (typeof incomingState.hasFloorHeaterSupport === 'boolean') {
+      state.hasFloorHeaterSupport = incomingState.hasFloorHeaterSupport;
+      if (toggleFloorHeaterSupport) toggleFloorHeaterSupport.checked = state.hasFloorHeaterSupport;
+      if (cardFloorHeaterSupport) cardFloorHeaterSupport.classList.toggle('active', state.hasFloorHeaterSupport);
     }
     if (incomingState.frontWideFrame) {
       state.frontWideFrame = incomingState.frontWideFrame;
