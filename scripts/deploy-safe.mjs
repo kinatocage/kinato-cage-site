@@ -109,7 +109,7 @@ try {
   console.log('   ✨ 全ての安全検証をクリアし、本番デプロイが完了しました！');
   console.log('   本番URL: https://kinato-cage-site.pages.dev/');
   console.log('   シミュレーターURL: https://kinato-cage-site.pages.dev/sim/');
-  console.log('   （管理者用BOM確認: https://kinato-cage-site.pages.dev/sim/?debug=bom）');
+  console.log('   （※本番URLではBOM機能は物理消去済みです。ローカル開発BOM確認: http://localhost:5173/?debug=bom）');
   console.log('========================================================\n');
 } catch (err) {
   console.error('\n❌ Cloudflare Pages へのアップロード中にエラーが発生しました。');
