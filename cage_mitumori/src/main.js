@@ -1693,7 +1693,7 @@ function calculateGrandTotals() {
   const rubberPackingLabor = isRubberPacking ? (laborConfig.rubberPacking?.price ?? 800) : 0;
   const roomDividerLabor = isRoomDivider ? (laborConfig.roomDivider?.price ?? 500) : 0;
   const frontOpenDoorLabor = isTypeAFront ? (laborConfig.frontOpenDoor?.price ?? 3000) : 0;
-  const frontFramedDoorLabor = isTypeAFramed ? (laborConfig.frontFramedDoor?.price ?? 3000) : 0;
+  const frontFramedDoorLabor = isTypeAFramed ? (laborConfig.frontFramedDoor?.price ?? 5000) : 0;
   const floorHeaterSupportLabor = isFloorHeaterSupport ? (laborConfig.floorHeaterSupport?.price ?? 1000) : 0;
 
   const totalLaborFee = splitFloorLabor + splitTopLabor + typeCLabor + splitSideLabor + frontWide3xLabor + perchLabor + rubberPackingLabor + roomDividerLabor + frontOpenDoorLabor + frontFramedDoorLabor + floorHeaterSupportLabor;

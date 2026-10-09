@@ -504,7 +504,7 @@ export const materialsConfig = {
       },
       frontFramedDoor: {
         name: 'TypeA 正面枠囲い 加工工賃',
-        price: 3000,    // 販売価格への加算額 (円)
+        price: 5000,    // 販売価格への加算額 (円)
         note: '正面枠囲いアルミ扉・ラッチ組み立て加工工賃'
       },
       floorHeaterSupport: {
