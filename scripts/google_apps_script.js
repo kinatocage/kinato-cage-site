@@ -9,6 +9,91 @@
  */
 
 /**
+ * 仕様取得・APIエンドポイント (GET)
+ * 見積りID（?estimateId=EST-xxxx または ?id=EST-xxxx）からスプレッドシートの保存仕様を検索・返却
+ */
+function doGet(e) {
+  try {
+    const params = (e && e.parameter) || {};
+    const estimateId = params.estimateId || params.id;
+    if (!estimateId) {
+      return createJsonResponse({
+        status: 'error',
+        message: 'クエリパラメータ estimateId が指定されていません。例: ?estimateId=EST-20261005-XXXX'
+      });
+    }
+
+    const targetId = String(estimateId).trim().toUpperCase();
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('見積もりシステム');
+    if (!sheet) {
+      return createJsonResponse({ status: 'error', message: '「見積もりシステム」シートが見つかりません。' });
+    }
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      return createJsonResponse({ status: 'not_found', message: '見積もりログがまだ記録されていません。' });
+    }
+
+    // B列（見積ID）を最終行から逆順に検索（直近のログを最優先）
+    const estimateIds = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
+    let targetRow = -1;
+    for (let i = estimateIds.length - 1; i >= 0; i--) {
+      const cellVal = String(estimateIds[i][0]).trim().toUpperCase();
+      if (cellVal === targetId) {
+        targetRow = i + 2; // 2行目起点
+        break;
+      }
+    }
+
+    if (targetRow === -1) {
+      return createJsonResponse({
+        status: 'not_found',
+        message: `指定された見積ID「${estimateId}」のデータが見つかりませんでした。`
+      });
+    }
+
+    // 対象行のA列〜X列（全24列）を取得
+    const rowValues = sheet.getRange(targetRow, 1, 1, 24).getValues()[0];
+    const rawJsonStr = rowValues[23]; // X列: 生データ(JSON)
+
+    let parsedSpec = null;
+    let originalTotals = null;
+    if (rawJsonStr) {
+      try {
+        const parsed = JSON.parse(rawJsonStr);
+        parsedSpec = parsed.spec || null;
+        originalTotals = parsed.calculated || parsed.totals || null;
+      } catch (err) {
+        console.warn('rawJson parse error:', err);
+      }
+    }
+
+    return createJsonResponse({
+      status: 'success',
+      estimateId: rowValues[1],
+      createdAt: rowValues[0],
+      spec: parsedSpec,
+      originalTotals: originalTotals,
+      summary: {
+        cageTypeName: rowValues[8],
+        frameColorName: rowValues[9],
+        W: rowValues[10],
+        D: rowValues[11],
+        H: rowValues[12],
+        panelsSummary: rowValues[13],
+        optionsSummary: rowValues[14],
+        originalPrice: rowValues[15],
+        originalWeight: rowValues[16]
+      }
+    });
+
+  } catch (error) {
+    return createJsonResponse({ status: 'error', message: error.toString() });
+  }
+}
+
+/**
  * Webhook受信エントリーポイント (POST)
  */
 function doPost(e) {
@@ -142,7 +227,18 @@ function handleEstimateLog(ss, data, rawJson) {
   const meta = data.meta || {};
 
   // ケージ種類の日本語化
-  const typeName = spec.cageType === 'A' ? 'Type A（全面扉）' : 'Type C（前窓＋扉）';
+  let typeName = spec.typeName;
+  if (!typeName) {
+    if (spec.cageType === 'A_FRONT') {
+      typeName = 'Type A（前開き扉）';
+    } else if (spec.cageType === 'A_FRAMED') {
+      typeName = 'Type A（枠囲い扉）';
+    } else if (spec.cageType === 'A') {
+      typeName = 'Type A（全面扉）';
+    } else {
+      typeName = 'Type C（前窓＋扉）';
+    }
+  }
   const frameColorName = spec.frameColorDisplayName || (spec.frameColor === 'black' ? 'ブラック' : 'シルバー');
   const panelsText = spec.panelsSummary || '標準仕様';
   const optText = spec.optionsSummary || 'なし';

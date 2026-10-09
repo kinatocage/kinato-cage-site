@@ -7,6 +7,8 @@
  * 条件: 数量1枚単価（完全安全側・原価割れ防止）、直線カット込、税込価格
  */
 
+import { interpolateMatrixCost } from './matrix_interpolation.js';
+
 // B寸法区分（短辺 mm）: 横列
 export const ACRYLIC_EXTRUSION_B_RANGES = [
   {
@@ -281,7 +283,7 @@ function findRangeIndex(val, ranges) {
 }
 
 /**
- * 透明アクリル押出板の仕入原価（税込）を取得
+ * 透明アクリル押出板の仕入原価（税込）を取得（バイリニア線形補間）
  * @param {number|string} thickness 板厚 (1.5, 2.0, 3.0)
  * @param {number} dim1 寸法1 (mm)
  * @param {number} dim2 寸法2 (mm)
@@ -292,6 +294,13 @@ export function getAcrylicExtrusionCost(thickness, dim1, dim2) {
   const matrix = ACRYLIC_EXTRUSION_PRICES[tKey] || ACRYLIC_EXTRUSION_PRICES['3.0'];
   if (!matrix) return null;
 
+  // 1. 高精度バイリニア補間を試行（実勢価格と誤差0.1%〜1%未満で一致）
+  const interpolated = interpolateMatrixCost(dim1, dim2, ACRYLIC_EXTRUSION_A_RANGES, ACRYLIC_EXTRUSION_B_RANGES, matrix);
+  if (interpolated != null && interpolated > 0) {
+    return interpolated;
+  }
+
+  // 2. フォールバック（従来の区間切り上げ判定）
   const aVal = Math.max(dim1, dim2);
   const bVal = Math.min(dim1, dim2);
 

@@ -218,7 +218,7 @@ function calculateEstimate(state) {
   const totalOptionCost = casterCost + ventCoverCost;
 
   const pricingConfig = materialsConfig.pricing || {};
-  const markupRate = typeof pricingConfig.markupRate === 'number' ? pricingConfig.markupRate : 1.4;
+  const markupRate = typeof pricingConfig.markupRate === 'number' ? pricingConfig.markupRate : 1.3;
   const roundingUnit = typeof pricingConfig.roundingUnit === 'number' ? pricingConfig.roundingUnit : 100;
 
   const baseMaterialsCost = totalFrameCost + totalPanelCost + floorHeaterProcessingCost;

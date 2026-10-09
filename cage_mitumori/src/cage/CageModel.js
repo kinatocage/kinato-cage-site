@@ -1066,8 +1066,9 @@ export class CageModel {
     for (const pos of capPositions) {
       this.addEndCap(pos.x, pos.y, pos.z);
     }
-    this.recordPart('ECP-2020-4', '-', 8, '奥行きフレーム両端 (前後計8箇所)', 'frame', {
-      partCode: 'ECP-2020-4',
+    const capPartCode = isSilver ? 'ECP-2020-4-GY' : 'ECP-2020-4';
+    this.recordPart(capPartCode, '-', 8, '奥行きフレーム両端 (前後計8箇所)', 'frame', {
+      partCode: capPartCode,
       lengthMm: null,
       unitType: 'piece'
     });
@@ -1730,7 +1731,7 @@ export class CageModel {
           this.addThumbScrew(W / 2 + ventCoverT, pos.y, pos.z, 1);
         }
 
-        this.recordPart('側面換気量調整板 (透明アクリル 1.5mm)', `${ventCoverH} x ${ventCoverD} mm`, 2, '左右側面上部 外張り (φ9mm穴加工4箇所/枚・保温換気調整)', 'panel', {
+        this.recordPart('側面換気量調整板 (透明アクリル 1.5mm)', `${ventCoverH} x ${ventCoverD} mm`, 2, '左右側面上部 外張り (φ6mm穴加工4箇所/枚・保温換気調整)', 'panel', {
           panelCode: 'acrylic_extrusion_1_5',
           partCode: 'acrylic_extrusion_1_5',
           widthMm: ventCoverH,
@@ -1819,7 +1820,7 @@ export class CageModel {
         }
 
         // BOM記録: 換気量調整板 4枚 (左右各2枚)
-        this.recordPart('側面換気量調整板 (透明アクリル 1.5mm)', `${ventCoverH} x ${ventCoverD} mm`, 4, '左右側面外張り (上下各2枚・φ9mm穴加工4箇所/枚・保温換気調整)', 'panel', {
+        this.recordPart('側面換気量調整板 (透明アクリル 1.5mm)', `${ventCoverH} x ${ventCoverD} mm`, 4, '左右側面外張り (上下各2枚・φ6mm穴加工4箇所/枚・保温換気調整)', 'panel', {
           panelCode: 'acrylic_extrusion_1_5',
           partCode: 'acrylic_extrusion_1_5',
           widthMm: ventCoverH,
@@ -3063,7 +3064,7 @@ export class CageModel {
       // 前開きアクリル扉 3.0mm (1枚)
       const isRightHinge = (this.params.doorHingeSide === 'right');
       const doorDesc = isRightHinge ? '正面 右ヒンジ・左打掛オープン扉' : '正面 左ヒンジ・右打掛オープン扉';
-      this.recordPart('前開きアクリル扉 3.0mm (切欠き・穴加工済)', `${Math.round(panelW * 10) / 10} x ${Math.round(panelH)} mm`, 1, doorDesc, 'panel', {
+      this.recordPart('透明アクリル扉 3.0mm（正面）（前開き）', `${Math.round(panelW * 10) / 10} x ${Math.round(panelH)} mm`, 1, `${doorDesc} (切欠き・穴加工済)`, 'panel', {
         panelCode: 'acrylic_cast_3_0',
         partCode: 'acrylic_cast_3_0',
         widthMm: Math.round(panelW * 10) / 10,
@@ -3162,7 +3163,7 @@ export class CageModel {
     }
 
     // 扉本体（透明アクリル 3.0mm 固定）・段付きローレットノブ・プッシュ鍵（ノブ計2点、鍵計1点）
-    this.recordPart('透明アクリル扉 3.0mm', `${Math.round(doorW)} x ${Math.round(doorH)} mm`, 2, '正面 引き違い (重なり30mm)', 'panel', {
+    this.recordPart('透明アクリル扉 3.0mm（正面）（スライド扉）', `${Math.round(doorW)} x ${Math.round(doorH)} mm`, 2, '正面 引き違い (重なり30mm)', 'panel', {
       panelCode: 'acrylic_cast_3_0',
       partCode: 'acrylic_cast_3_0',
       widthMm: Math.round(doorW),

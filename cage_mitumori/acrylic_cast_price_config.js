@@ -8,15 +8,63 @@
  * 追加加工費: 穴加工2か所 (135円+175円=310円) + 磨き仕上げ4辺 (514円×4=2056円) = 計2366円/枚
  */
 
-// 正面扉専用 加工費（1枚あたり、単位: 円・税込）
+// 正面扉専用 磨き仕上げ単価マスタ（半周長 W+H mm に応じた1辺あたりの単価・円）
+// はざいや実機見積もりAPI実測値に基づくテーブル
+export const ACRYLIC_POLISHING_PRICE_TABLE = [
+  { maxHalfPerimeter: 250, pricePerEdge: 121 },
+  { maxHalfPerimeter: 350, pricePerEdge: 146 },
+  { maxHalfPerimeter: 480, pricePerEdge: 175 },
+  { maxHalfPerimeter: 550, pricePerEdge: 210 },
+  { maxHalfPerimeter: 650, pricePerEdge: 252 },  // 750扉 (370+231=601mm -> 252円)
+  { maxHalfPerimeter: 780, pricePerEdge: 302 },
+  { maxHalfPerimeter: 880, pricePerEdge: 362 },
+  { maxHalfPerimeter: 980, pricePerEdge: 435 },
+  { maxHalfPerimeter: 1150, pricePerEdge: 522 },
+  { maxHalfPerimeter: 1350, pricePerEdge: 626 }, // 1500扉 (745+531=1276mm -> 626円)
+  { maxHalfPerimeter: 1500, pricePerEdge: 752 },
+  { maxHalfPerimeter: 1800, pricePerEdge: 902 }
+];
+
+/**
+ * 扉寸法に応じた磨き仕上げ1辺あたりの単価を取得
+ * @param {number} widthMm 幅(mm)
+ * @param {number} heightMm 高さ(mm)
+ * @returns {number} 1辺あたりの磨き加工単価 (円)
+ */
+export function getAcrylicPolishingCostPerEdge(widthMm, heightMm) {
+  const halfP = (widthMm || 0) + (heightMm || 0);
+  for (const entry of ACRYLIC_POLISHING_PRICE_TABLE) {
+    if (halfP <= entry.maxHalfPerimeter) {
+      return entry.pricePerEdge;
+    }
+  }
+  return 902;
+}
+
+/**
+ * 正面スライド扉1枚あたりの加工費（磨き4辺＋穴2箇所）を動的に算出
+ * @param {number} widthMm 幅(mm)
+ * @param {number} heightMm 高さ(mm)
+ * @returns {number} 扉1枚の加工費合計 (円・税込)
+ */
+export function getAcrylicDoorProcessingCost(widthMm, heightMm) {
+  const edgePrice = getAcrylicPolishingCostPerEdge(widthMm, heightMm);
+  const polishTotal = edgePrice * 4; // 4辺全周磨き
+  const holeTotal = 135 + 350;       // ノブ穴φ4.1(135円) + 錠穴φ10.5(350円)
+  return polishTotal + holeTotal;
+}
+
+// 後方互換用定数（標準750ケージ扉 370x231mm の基準値）
 export const ACRYLIC_CAST_PROCESSING = {
-  holes: [135, 175],          // 穴加工2か所 (円)
-  holeTotal: 310,             // 穴加工合計 (円)
-  polishingPerEdge: 514,      // 磨き仕上げ単価 (円/辺)
-  polishingEdges: 4,          // 磨き辺数 (四周4辺)
-  polishingTotal: 2056,       // 磨き仕上げ合計 (円: 514円 × 4辺)
-  totalProcessingPerPiece: 2366 // 扉1枚あたりの加工費合計 (円: 310 + 2056)
+  holes: [135, 350],            // 穴加工2か所 (円: ノブ穴135円 + 錠穴350円)
+  holeTotal: 485,               // 穴加工合計 (円)
+  polishingPerEdge: 252,        // 標準サイズ磨き単価 (円/辺)
+  polishingEdges: 4,            // 磨き辺数 (四周4辺)
+  polishingTotal: 1008,         // 磨き仕上げ合計 (円: 252円 × 4辺)
+  totalProcessingPerPiece: 1493 // 扉1枚あたりの標準加工費合計 (円: 485 + 1008)
 };
+
+import { interpolateMatrixCost } from './matrix_interpolation.js';
 
 export const ACRYLIC_CAST_B_RANGES = [
   {
@@ -239,12 +287,19 @@ function findRangeIndex(val, ranges) {
 }
 
 /**
- * 透明アクリル キャスト板 3.0mm (正面扉専用) の板単体仕入原価（税込、追加加工費除く）を取得
+ * 透明アクリル キャスト板 3.0mm (正面扉専用) の板単体仕入原価（税込、追加加工費除く）を取得（バイリニア線形補間）
  * @param {number} dim1 寸法1 (mm)
  * @param {number} dim2 寸法2 (mm)
  * @returns {number|null} 板単体仕入原価（円・税込）
  */
 export function getAcrylicCastRawBoardCost(dim1, dim2) {
+  // 1. 高精度バイリニア補間を試行（実勢価格と誤差0.1%〜1%未満で一致）
+  const interpolated = interpolateMatrixCost(dim1, dim2, ACRYLIC_CAST_A_RANGES, ACRYLIC_CAST_B_RANGES, ACRYLIC_CAST_PRICES);
+  if (interpolated != null && interpolated > 0) {
+    return interpolated;
+  }
+
+  // 2. フォールバック（従来の区間切り上げ判定）
   const aVal = Math.max(dim1, dim2);
   const bVal = Math.min(dim1, dim2);
 
@@ -273,5 +328,6 @@ export function getAcrylicCastRawBoardCost(dim1, dim2) {
 export function getAcrylicCastCost(dim1, dim2) {
   const rawCost = getAcrylicCastRawBoardCost(dim1, dim2);
   if (rawCost == null) return null;
-  return rawCost + ACRYLIC_CAST_PROCESSING.totalProcessingPerPiece;
+  const processingCost = getAcrylicDoorProcessingCost(dim1, dim2);
+  return rawCost + processingCost;
 }

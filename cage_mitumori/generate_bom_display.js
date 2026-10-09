@@ -2,8 +2,11 @@ import { CageModel } from './src/cage/CageModel.js';
 import { MaterialFactory } from './src/cage/MaterialFactory.js';
 import { materialsConfig } from './cost_materials_config.js';
 import { getAcrylicExtrusionCost } from './acrylic_extrusion_price_config.js';
-import { getPvcPunchingCost } from './pvc_punching_price_config.js';
+import { getAcrylicBlackMatteCost } from './acrylic_black_matte_price_config.js';
+import { getAcrylicSmokeGrayCost } from './acrylic_smoke_gray_price_config.js';
 import { getAcrylicCastCost, getAcrylicCastRawBoardCost } from './acrylic_cast_price_config.js';
+import { getPvcPunchingCost } from './pvc_punching_price_config.js';
+import { getFenpCost } from './fenp_price_config.js';
 
 if (typeof document === 'undefined') {
   global.document = {
@@ -75,19 +78,30 @@ function getPanelCostAndWeight(part) {
   const code = part.panelCode || part.partCode;
   if (config && wMm && hMm) {
     const areaM2 = (wMm / 1000) * (hMm / 1000);
-    // 1. 板材料費の算出
-    if (code === 'acrylic_extrusion_2_0') {
+    // 1. 板材料費の算出（事前収集したマトリクス表から実仕入原価を完全取得）
+    if (code && code.startsWith('wire_mesh_')) {
+      const pitch = parseInt(code.replace('wire_mesh_', ''), 10) || 25;
+      const fenpCost = getFenpCost(pitch, wMm, hMm);
+      singleCost = fenpCost != null ? fenpCost : Math.round(config.pricePerM2 * areaM2);
+    } else if (code === 'acrylic_extrusion_2_0') {
       singleCost = getAcrylicExtrusionCost(2.0, wMm, hMm);
     } else if (code === 'acrylic_extrusion_3_0') {
       singleCost = getAcrylicExtrusionCost(3.0, wMm, hMm);
     } else if (code === 'acrylic_extrusion_1_5') {
       singleCost = getAcrylicExtrusionCost(1.5, wMm, hMm);
+    } else if (code === 'acrylic_black_matte_3_0') {
+      const matteCost = getAcrylicBlackMatteCost(wMm, hMm);
+      singleCost = matteCost != null ? matteCost : Math.round(config.pricePerM2 * areaM2);
+    } else if (code === 'acrylic_smoke_gray_3_0') {
+      const smokeCost = getAcrylicSmokeGrayCost(wMm, hMm);
+      singleCost = smokeCost != null ? smokeCost : Math.round(config.pricePerM2 * areaM2);
     } else if (code === 'acrylic_cast_3_0') {
       const isDoor = part.name && part.name.includes('扉');
       singleCost = isDoor ? getAcrylicCastCost(wMm, hMm) : getAcrylicCastRawBoardCost(wMm, hMm);
     } else if (code === 'pvc_punching_3_0') {
       singleCost = getPvcPunchingCost(wMm, hMm);
-    } else if (code === 'danplate_4_0') {
+    } else if (code === 'danplate_4_0' || code === 'polyca_4_0') {
+      // プラダン・中空ポリカは平米定額管理
       singleCost = Math.round(config.pricePerM2 * areaM2);
     } else {
       singleCost = Math.round(config.pricePerM2 * areaM2);
@@ -298,3 +312,15 @@ printBOM('1050x400 (床補強あり・床下支え板 2枚構成)', {
   footType: 'rubber',
   frontWideFrame: '2x'
 });
+
+printBOM('600x400 (Type A 前開き扉)', {
+  W: 600,
+  D: 400,
+  H: 400,
+  cageType: 'A_FRONT',
+  doorHingeSide: 'left',
+  frameColor: 'silver',
+  footType: 'rubber',
+  frontWideFrame: '2x'
+});
+

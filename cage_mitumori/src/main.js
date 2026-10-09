@@ -7,13 +7,19 @@ import { getPvcPunchingCost } from '../pvc_punching_price_config.js';
 import { getAcrylicExtrusionCost } from '../acrylic_extrusion_price_config.js';
 import { getAcrylicBlackMatteCost } from '../acrylic_black_matte_price_config.js';
 import { getAcrylicSmokeGrayCost } from '../acrylic_smoke_gray_price_config.js';
-import { getAcrylicCastCost, getAcrylicCastRawBoardCost } from '../acrylic_cast_price_config.js';
+import { getAcrylicCastCost, getAcrylicCastRawBoardCost, getAcrylicDoorProcessingCost } from '../acrylic_cast_price_config.js';
+import { calculateHazaiyaPanelOrderList, formatHazaiyaPanelOrderClipboardText } from './hazaiya_machining_calculator.js';
 
 // DOM要素の取得
 const container = document.getElementById('canvas-container');
 
 // 生体プリセットコンテナ
 const creaturePresetGrid = document.getElementById('creature-preset-grid');
+
+// 見積りID仕様復元DOM要素
+const inputRestoreEstimateId = document.getElementById('input-restore-estimate-id');
+const btnRestoreEstimate = document.getElementById('btn-restore-estimate');
+const restoreStatusMsg = document.getElementById('restore-status-msg');
 
 // 画像保存・問い合わせ仕様コピーDOM要素
 const btnSaveImage = document.getElementById('btn-save-image');
@@ -109,6 +115,8 @@ let bomPanelTfoot = null;
 let bomOtherTbody = null;
 let bomOtherTfoot = null;
 let partsCountBadge = null;
+let lastConsolidatedFrameParts = [];
+let lastSortedPanelParts = [];
 
 // フレームカラー選択
 const btnFrameSilver = document.getElementById('btn-frame-silver');
@@ -765,9 +773,10 @@ function getPanelCostAndWeight(part) {
     } else if (isAcrylicCast) {
       const isDoorPanel = part.name && part.name.includes('扉');
       if (isDoorPanel) {
-        // 扉本体: キャスト板テーブル価格 + 穴加工2箇所(310円) + 磨き仕上げ4辺(2056円) = 計2366円/枚（はざいや加工費込）
+        // 扉本体: キャスト板バイリニア補間価格 + 穴加工2箇所(485円) + 磨き仕上げ4辺(W+Hに応じた単価x4)（はざいや加工費込）
         const castCost = getAcrylicCastCost(wMm, hMm);
-        singleCost = castCost != null ? castCost : (Math.round(config.pricePerM2 * areaM2) + 2366);
+        const fallbackProc = getAcrylicDoorProcessingCost(wMm, hMm);
+        singleCost = castCost != null ? castCost : (Math.round(config.pricePerM2 * areaM2) + fallbackProc);
       } else {
         const rawCost = getAcrylicCastRawBoardCost(wMm, hMm);
         singleCost = rawCost != null ? rawCost : Math.round(config.pricePerM2 * areaM2);
@@ -777,7 +786,7 @@ function getPanelCostAndWeight(part) {
     }
 
     // 2. はざいや加工費（穴加工・斜めカット・切欠き）の加算
-    // ① 側面換気量調整板: φ9mm穴加工 4箇所/枚 (@94円 = 376円/枚)
+    // ① 側面換気量調整板: φ6mm穴加工 4箇所/枚 (@94円 = 376円/枚)
     if (part.name && part.name.includes('換気量調整板')) {
       const holeUnit = materialsConfig.options?.items?.sideVentCover?.holeCostPerPiece ?? 94;
       const holesPerPanel = materialsConfig.options?.items?.sideVentCover?.holesPerPanel ?? 4;
@@ -895,6 +904,193 @@ function getOtherPartCostAndWeight(part) {
 }
 
 /**
+ * テキストをクリップボードにコピー（最新API + execCommandフォールバック）
+ * @param {string} text
+ * @returns {Promise<void>}
+ */
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+  } else {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    textArea.style.top = '0';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      document.execCommand('copy');
+    } finally {
+      textArea.remove();
+    }
+  }
+}
+
+/**
+ * フレーム発注用テキスト（クリップボードコピー用）を生成
+ * - フレーム類（型番-長さ\t数量）※長さ降順
+ * - キャップ類（型番\t数量）
+ * - 原価合計（xxx円）
+ * - 空行
+ * - PGRL / PGRU レール類（型番 長さmm x数量 ※エクセルでセルをまたがないよう半角スペース区切り）
+ * @param {Array} consolidatedParts - 集約済みフレーム部材配列
+ * @returns {string} クリップボード用テキスト
+ */
+function generateFrameOrderText(consolidatedParts) {
+  if (!consolidatedParts || consolidatedParts.length === 0) return '';
+
+  // 1. レール類 (PGRU/PGRL) と その他フレーム・キャップ類に分離
+  const frameCapItems = [];
+  const railItems = [];
+
+  for (const part of consolidatedParts) {
+    const code = part.partCode || part.name || '';
+    const isRail = code.startsWith('PGRU') || code.startsWith('PGRL') || (part.name && part.name.includes('レール'));
+    if (isRail) {
+      railItems.push(part);
+    } else {
+      frameCapItems.push(part);
+    }
+  }
+
+  // 2. 通常フレーム (長さ降順 -> 型番昇順) と キャップ類 (型番昇順) に分離・ソート
+  const regularFrames = [];
+  const capItems = [];
+
+  for (const part of frameCapItems) {
+    const code = part.partCode || part.name || '';
+    if (code.startsWith('ECP') || code.includes('キャップ') || part.lengthMm == null || part.lengthMm === 0) {
+      capItems.push(part);
+    } else {
+      regularFrames.push(part);
+    }
+  }
+
+  // 通常フレーム: 長さ降順（長い順）、同長なら型番昇順
+  regularFrames.sort((a, b) => {
+    const lenA = a.lengthMm || 0;
+    const lenB = b.lengthMm || 0;
+    if (lenB !== lenA) return lenB - lenA;
+    return (a.partCode || a.name).localeCompare(b.partCode || b.name);
+  });
+
+  // キャップ類: 型番昇順
+  capItems.sort((a, b) => (a.partCode || a.name).localeCompare(b.partCode || b.name));
+
+  const sortedFrameCapItems = [...regularFrames, ...capItems];
+
+  // 3. ブロック1の行生成 & 原価合計計算
+  const block1Lines = [];
+  let block1TotalCost = 0;
+
+  for (const part of sortedFrameCapItems) {
+    const config = getMaterialConfig(part.partCode);
+    let singleCost = 0;
+    let totalCost = 0;
+
+    if (config) {
+      if (config.unit === 'm') {
+        const rawLengthMm = part.lengthMm || 0;
+        const lengthM = rawLengthMm / 1000;
+        singleCost = Math.round(config.pricePerMeter * lengthM);
+        totalCost = singleCost * part.count;
+      } else {
+        singleCost = config.pricePerPiece || 0;
+        totalCost = singleCost * part.count;
+      }
+    }
+    block1TotalCost += totalCost;
+
+    let formattedCode = part.partCode || part.name;
+    const len = part.lengthMm != null && part.lengthMm > 0 ? Math.round(part.lengthMm) : null;
+    if (len != null) {
+      if (!formattedCode.endsWith(`-${len}`)) {
+        formattedCode = `${formattedCode}-${len}`;
+      }
+    }
+
+    block1Lines.push(`${formattedCode}\t${part.count}`);
+  }
+
+  // 原価合計行 (例: 7,106円)
+  block1Lines.push(`${block1TotalCost.toLocaleString()}円`);
+
+  // 4. ブロック2 (PGRL / PGRU レール類) の行生成
+  // レール類はエクセルでセルをまたがないように、半角スペース区切り
+  railItems.sort((a, b) => {
+    const isPgruA = (a.partCode || a.name || '').startsWith('PGRU');
+    const isPgruB = (b.partCode || b.name || '').startsWith('PGRU');
+    if (isPgruA && !isPgruB) return -1;
+    if (!isPgruA && isPgruB) return 1;
+    const lenA = a.lengthMm || 0;
+    const lenB = b.lengthMm || 0;
+    return lenB - lenA; // 長い順
+  });
+
+  const block2Lines = [];
+  for (const part of railItems) {
+    const code = part.partCode || part.name;
+    const len = part.lengthMm != null ? Math.round(part.lengthMm) : 0;
+    block2Lines.push(`${code} ${len}mm x${part.count}`);
+  }
+
+  if (block2Lines.length > 0) {
+    return `${block1Lines.join('\n')}\n\n${block2Lines.join('\n')}`;
+  } else {
+    return block1Lines.join('\n');
+  }
+}
+
+/**
+ * パネル部材テキスト（クリップボードコピー用・表のタブ区切り）を生成
+ * - 列構成: 部材種別 / 寸法・仕様 / 数量 / 原価合計 / 重量 / 用途・配置
+ * - ヘッダー・明細行・合計行を完全出力
+ * @param {Array} panelParts - ソート済みパネル部材配列
+ * @returns {string} タブ区切りテキスト
+ */
+function generatePanelOrderText(panelParts) {
+  if (!panelParts || panelParts.length === 0) return '';
+
+  const lines = [];
+  // ヘッダー行
+  lines.push(['部材種別', '寸法 / 仕様', '数量', '原価合計', '重量', '用途・配置'].join('\t'));
+
+  let totalCostSum = 0;
+  let totalWeightSum = 0;
+  let totalCountSum = 0;
+
+  for (const part of panelParts) {
+    const { totalCost, totalWeight } = getPanelCostAndWeight(part);
+    totalCostSum += totalCost;
+    totalWeightSum += totalWeight;
+    totalCountSum += part.count;
+
+    lines.push([
+      part.name,
+      part.size || '-',
+      part.count,
+      `¥${totalCost.toLocaleString()}`,
+      `${totalWeight.toFixed(3)} kg`,
+      part.note || '-'
+    ].join('\t'));
+  }
+
+  // 合計行
+  lines.push([
+    'パネル 合計',
+    '-',
+    `${totalCountSum}点`,
+    `¥${totalCostSum.toLocaleString()}`,
+    `${totalWeightSum.toFixed(3)} kg`,
+    '-'
+  ].join('\t'));
+
+  return lines.join('\n');
+}
+
+/**
  * 🛠️ BOM（資材リスト）テーブルの更新
  * - フレーム類テーブル（ECP類・レール類は一番下に配置）
  * - パネル類テーブル（正面扉→前窓→床面→側面→背面→天面→換気板→支え板→プラダン順、原価合計・重量列付）
@@ -943,6 +1139,7 @@ function updateBOMTable() {
   }
 
   const consolidatedFrameParts = Array.from(groupedFramePartsMap.values());
+  lastConsolidatedFrameParts = consolidatedFrameParts;
   // ソート: 1: 通常フレーム -> 2: レール類 -> 3: ECP類
   consolidatedFrameParts.sort((a, b) => {
     const scoreA = getFrameSortScore(a);
@@ -1022,6 +1219,7 @@ function updateBOMTable() {
     const scoreB = getPanelSortScore(b);
     return scoreA - scoreB;
   });
+  lastSortedPanelParts = [...panelParts];
 
   let totalPanelCost = 0;
   let totalPanelWeight = 0;
@@ -1037,6 +1235,18 @@ function updateBOMTable() {
       totalPanelCost += totalCost;
       totalPanelWeight += totalWeight;
 
+      const isMachiningPanel = (part.name && (
+        part.name.includes('扉') ||
+        part.name.includes('換気量調整板') ||
+        part.name.includes('ヒンジ座板') ||
+        part.name.includes('ロック受座板') ||
+        (part.name.includes('床下パネルヒータ支え板') && !part.name.includes('プラダン'))
+      ));
+
+      const statusBadge = isMachiningPanel
+        ? '<span style="display: inline-block; background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.45); border-radius: 3px; padding: 1px 5px; font-size: 0.65rem; margin-right: 4px; font-weight: bold;">★加工あり</span>'
+        : '<span style="display: inline-block; background: rgba(56, 189, 248, 0.1); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 3px; padding: 1px 5px; font-size: 0.65rem; margin-right: 4px;">切断のみ</span>';
+
       const tr = document.createElement('tr');
       tr.className = 'bom-cat-panel';
       tr.innerHTML = `
@@ -1045,7 +1255,7 @@ function updateBOMTable() {
         <td style="text-align: center; font-family: monospace;">${part.count}</td>
         <td style="text-align: right; font-family: monospace;">¥${totalCost.toLocaleString()}</td>
         <td style="text-align: right; font-family: monospace;">${totalWeight.toFixed(3)} kg</td>
-        <td>${part.note || '-'}</td>
+        <td>${statusBadge}${part.note || '-'}</td>
       `;
       bomPanelTbody.appendChild(tr);
     }
@@ -1106,6 +1316,61 @@ function updateBOMTable() {
     }
   }
 
+  // 4. はざいや外注加工指示プレビューの動的更新（全パネル統合版）
+  const hazaiyaPreviewBody = document.getElementById('bom-hazaiya-preview-body');
+  const hazaiyaPartsBadge = document.getElementById('hazaiya-parts-badge');
+  if (hazaiyaPreviewBody) {
+    const hazaiyaPanelList = calculateHazaiyaPanelOrderList(parts, state);
+    const totalQty = hazaiyaPanelList.reduce((acc, p) => acc + (p.quantity || 1), 0);
+    const machiningCount = hazaiyaPanelList.filter(p => p.needsMachining).length;
+
+    if (hazaiyaPartsBadge) {
+      hazaiyaPartsBadge.textContent = `${hazaiyaPanelList.length}品目 (${totalQty}枚 / 加工あり${machiningCount}点)`;
+    }
+
+    if (hazaiyaPanelList.length === 0) {
+      hazaiyaPreviewBody.innerHTML = '<p style="color: #94a3b8; font-style: italic; margin: 4px 0;">※対象のパネル部材はありません。</p>';
+    } else {
+      let previewHtml = '';
+      hazaiyaPanelList.forEach((spec, idx) => {
+        const isMachining = spec.needsMachining;
+        const borderColor = isMachining ? 'rgba(245, 158, 11, 0.35)' : 'rgba(56, 189, 248, 0.25)';
+        const tagHtml = isMachining
+          ? '<span style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.45); border-radius: 3px; padding: 1px 5px; font-size: 0.65rem; font-weight: bold;">★加工あり</span>'
+          : '<span style="background: rgba(56, 189, 248, 0.1); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 3px; padding: 1px 5px; font-size: 0.65rem;">切断のみ</span>';
+
+        previewHtml += `
+          <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid ${borderColor}; border-radius: 4px; padding: 6px 10px; margin-bottom: 6px;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px; flex-wrap: wrap; gap: 4px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <strong style="color: ${isMachining ? '#fbbf24' : '#e2e8f0'};">[${idx + 1}/${hazaiyaPanelList.length}] ${spec.title}</strong>
+                ${tagHtml}
+              </div>
+              <span style="font-family: monospace; font-size: 0.7rem; color: #38bdf8;">${spec.widthMm} x ${spec.heightMm} mm (t${spec.thicknessMm}mm) × ${spec.quantity}枚</span>
+            </div>
+            <div style="font-size: 0.68rem; color: #94a3b8; margin-bottom: 3px;">
+              素材: <span style="color: #cbd5e1;">${spec.materialName}</span> | 仕上げ: <span style="color: #cbd5e1;">${spec.edgeFinishing}</span>
+            </div>
+        `;
+
+        if (isMachining) {
+          if (spec.corners && spec.corners.length > 0) {
+            previewHtml += '<div style="font-size: 0.67rem; color: #cbd5e1; margin-left: 6px;">・コーナー: ' + spec.corners.map(c => `<span style="color: #fca5a5;">${c.desc}(${c.spec})</span>`).join(', ') + '</div>';
+          }
+          if (spec.notches && spec.notches.length > 0) {
+            previewHtml += '<div style="font-size: 0.67rem; color: #cbd5e1; margin-left: 6px;">・切欠き: ' + spec.notches.map(n => `<span style="color: #fca5a5;">${n.desc}(${n.spec})</span>`).join(', ') + '</div>';
+          }
+          if (spec.holes && spec.holes.length > 0) {
+            previewHtml += '<div style="font-size: 0.67rem; color: #cbd5e1; margin-left: 6px;">・穴あけ: ' + spec.holes.map((h, i) => `<span style="color: #93c5fd;">(${i + 1}) ${h.desc} [${h.base} ➜ φ${h.diameterMm}mm]</span>`).join('<br>&nbsp;&nbsp;') + '</div>';
+          }
+        }
+
+        previewHtml += '</div>';
+      });
+      hazaiyaPreviewBody.innerHTML = previewHtml;
+    }
+  }
+
   if (partsCountBadge) {
     partsCountBadge.textContent = `${parts.length}品目 / フレーム計${totalFrameItems}点 / パネル計${totalPanelItems}点 / その他計${totalOtherItems}点`;
   }
@@ -1154,7 +1419,7 @@ function setupDebugBOMIfRequested() {
         </div>
       </div>
 
-      <div class="accordion-header bom-accordion-header" id="bom-toggle-btn">
+      <div class="accordion-header bom-accordion-header active" id="bom-toggle-btn">
         <div class="accordion-title-wrap">
           <svg class="accordion-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
           <span class="section-title" style="margin-bottom: 0;">資材リスト内訳 (BOM)</span>
@@ -1167,10 +1432,19 @@ function setupDebugBOMIfRequested() {
         </div>
       </div>
 
-      <div class="bom-table-container accordion-content hidden" id="bom-container" style="margin-top: 8px;">
+      <div class="bom-table-container accordion-content" id="bom-container" style="margin-top: 8px;">
         <!-- 1. フレーム類 -->
-        <div class="bom-section-title-bar" style="padding: 10px 12px 6px; display: flex; justify-content: space-between; align-items: center;">
-          <span class="bom-section-title" style="font-weight: 700; color: #38bdf8;">■ フレーム類（レール・キャップ含む）</span>
+        <div class="bom-section-title-bar" style="padding: 10px 12px 6px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="bom-section-title" style="font-weight: 700; color: #38bdf8;">■ フレーム類（レール・キャップ含む）</span>
+            <button id="bom-copy-frame-btn" type="button" class="bom-copy-btn" title="フレーム発注用テキスト（クリップボード）をコピー">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span class="bom-copy-btn-text">コピー</span>
+            </button>
+          </div>
           <span class="bom-section-sub" style="font-size: 0.7rem; color: #94a3b8;">※型番・長さ・数量・原価・重量</span>
         </div>
         <table class="bom-table frame-bom-table">
@@ -1188,8 +1462,18 @@ function setupDebugBOMIfRequested() {
         </table>
 
         <!-- 2. パネル類 -->
-        <div class="bom-section-title-bar" style="margin-top: 14px; padding: 10px 12px 6px; display: flex; justify-content: space-between; align-items: center;">
-          <span class="bom-section-title" style="font-weight: 700; color: #34d399;">■ パネル類</span>
+        <div class="bom-section-title-bar" style="margin-top: 14px; padding: 10px 12px 6px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span class="bom-section-title" style="font-weight: 700; color: #34d399;">■ パネル類</span>
+            <button id="bom-copy-hazaiya-btn" type="button" class="bom-copy-btn bom-copy-btn-hazaiya" title="はざいや様向け全パネル統合発注テキスト（切断のみ＋加工指示を全品目網羅・二重発注防止）を一括コピー" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.5); color: #fbbf24;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span class="bom-copy-btn-text">はざいや発注リスト一括コピー</span>
+            </button>
+          </div>
           <span class="bom-section-sub" style="font-size: 0.7rem; color: #94a3b8;">※正面扉→前窓→床面→側面→背面→天面→調整板→支え板→プラダン</span>
         </div>
         <table class="bom-table panel-bom-table">
@@ -1206,6 +1490,20 @@ function setupDebugBOMIfRequested() {
           <tbody id="bom-panel-tbody"></tbody>
           <tfoot id="bom-panel-tfoot"></tfoot>
         </table>
+
+        <!-- 2-2. はざいや全パネル統合発注 展開プレビューボックス -->
+        <div id="bom-hazaiya-preview-container" style="margin: 8px 0 10px; padding: 8px 12px; background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 6px; font-size: 0.73rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" id="bom-hazaiya-toggle-btn">
+            <span style="font-weight: 700; color: #fbbf24; display: flex; align-items: center; gap: 6px;">
+              <span>📐</span>
+              <span>はざいや全パネル発注リスト（切断のみ＋加工指示・二重発注防止）</span>
+              <span id="hazaiya-parts-badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; padding: 1px 6px; border-radius: 4px; font-size: 0.68rem;">0点</span>
+            </span>
+            <span style="font-size: 0.68rem; color: #94a3b8;" id="bom-hazaiya-toggle-icon">▼ 展開</span>
+          </div>
+          <div id="bom-hazaiya-preview-body" style="margin-top: 8px; display: none; line-height: 1.55; color: #cbd5e1; max-height: 280px; overflow-y: auto;">
+          </div>
+        </div>
 
         <!-- 3. その他部材・金物・付属品 -->
         <div class="bom-section-title-bar" style="margin-top: 14px; padding: 10px 12px 6px; display: flex; justify-content: space-between; align-items: center;">
@@ -1251,6 +1549,66 @@ function setupDebugBOMIfRequested() {
         const isHidden = bomContainer.classList.contains('hidden');
         bomContainer.classList.toggle('hidden', !isHidden);
         bomToggleBtn.classList.toggle('active', isHidden);
+      });
+    }
+
+    // 📋 フレーム発注用テキストコピーボタンのイベント登録
+    const copyFrameBtn = document.getElementById('bom-copy-frame-btn');
+    if (copyFrameBtn) {
+      copyFrameBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const text = generateFrameOrderText(lastConsolidatedFrameParts);
+        if (!text) return;
+        try {
+          await copyTextToClipboard(text);
+          const btnText = copyFrameBtn.querySelector('.bom-copy-btn-text');
+          copyFrameBtn.classList.add('copied');
+          if (btnText) btnText.textContent = 'コピー完了！';
+          setTimeout(() => {
+            copyFrameBtn.classList.remove('copied');
+            if (btnText) btnText.textContent = 'コピー';
+          }, 1800);
+        } catch (err) {
+          console.error('[BOM] クリップボードコピー失敗:', err);
+        }
+      });
+    }
+
+    // 📋 はざいや様向け全パネル統合発注テキストコピーボタンのイベント登録
+    const copyHazaiyaBtn = document.getElementById('bom-copy-hazaiya-btn');
+    if (copyHazaiyaBtn) {
+      copyHazaiyaBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const parts = viewer ? viewer.getPartsSummary() : [];
+        const panelList = calculateHazaiyaPanelOrderList(parts, state);
+        const text = formatHazaiyaPanelOrderClipboardText(panelList, state);
+        if (!text) return;
+        try {
+          await copyTextToClipboard(text);
+          const btnText = copyHazaiyaBtn.querySelector('.bom-copy-btn-text');
+          copyHazaiyaBtn.classList.add('copied');
+          if (btnText) btnText.textContent = 'コピー完了！';
+          setTimeout(() => {
+            copyHazaiyaBtn.classList.remove('copied');
+            if (btnText) btnText.textContent = 'はざいや発注リスト一括コピー';
+          }, 1800);
+        } catch (err) {
+          console.error('[BOM] はざいや発注リストコピー失敗:', err);
+        }
+      });
+    }
+
+    // 📐 はざいや加工指示プレビュー展開・折りたたみ
+    const hazaiyaToggleBtn = document.getElementById('bom-hazaiya-toggle-btn');
+    const hazaiyaPreviewBody = document.getElementById('bom-hazaiya-preview-body');
+    const hazaiyaToggleIcon = document.getElementById('bom-hazaiya-toggle-icon');
+    if (hazaiyaToggleBtn && hazaiyaPreviewBody) {
+      hazaiyaToggleBtn.addEventListener('click', () => {
+        const isHidden = hazaiyaPreviewBody.style.display === 'none';
+        hazaiyaPreviewBody.style.display = isHidden ? 'block' : 'none';
+        if (hazaiyaToggleIcon) {
+          hazaiyaToggleIcon.textContent = isHidden ? '▲ 折りたたむ' : '▼ 展開';
+        }
       });
     }
 
@@ -1366,7 +1724,7 @@ function calculateGrandTotals() {
 
   // 3. 資材原価および基本販売価格（設定ファイルのmarkupRate倍・roundingUnit単位で切り上げ）
   const pricingConfig = materialsConfig.pricing || {};
-  const markupRate = typeof pricingConfig.markupRate === 'number' ? pricingConfig.markupRate : 1.4;
+  const markupRate = typeof pricingConfig.markupRate === 'number' ? pricingConfig.markupRate : 1.3;
   const roundingUnit = typeof pricingConfig.roundingUnit === 'number' ? pricingConfig.roundingUnit : 100;
 
   const baseMaterialsCost = totalFrameCost + totalPanelCost;
@@ -2803,6 +3161,395 @@ function applyCreaturePreset(preset) {
   viewer.setViewPreset('iso', state);
 }
 
+/**
+ * 保存されたケージ仕様オブジェクト（spec）を全UIおよび3Dシミュレーターへ完全同期・復元
+ * @param {Object} targetSpec
+ */
+function applyFullCageSpec(targetSpec) {
+  if (!targetSpec || typeof targetSpec !== 'object') return false;
+
+  // 1. 基本寸法設定
+  if (Number.isFinite(targetSpec.W)) {
+    state.W = Number(targetSpec.W);
+    if (inputW) inputW.value = state.W;
+    if (sliderW) sliderW.value = state.W;
+  }
+  if (Number.isFinite(targetSpec.D)) {
+    state.D = Number(targetSpec.D);
+    if (inputD) inputD.value = state.D;
+    if (sliderD) sliderD.value = state.D;
+  }
+  if (Number.isFinite(targetSpec.H)) {
+    state.H = Number(targetSpec.H);
+    if (inputH) inputH.value = state.H;
+    if (sliderH) sliderH.value = state.H;
+  }
+
+  // 2. ケージタイプ
+  const validTypes = ['A', 'A_FRONT', 'A_FRAMED', 'C'];
+  if (targetSpec.cageType && validTypes.includes(targetSpec.cageType)) {
+    state.cageType = targetSpec.cageType;
+    if (btnTypeA && btnTypeC) {
+      btnTypeA.classList.toggle('active', state.cageType === 'A');
+      btnTypeAFront?.classList.toggle('active', state.cageType === 'A_FRONT');
+      btnTypeAFramed?.classList.toggle('active', state.cageType === 'A_FRAMED');
+      btnTypeC.classList.toggle('active', state.cageType === 'C');
+      if (typeBadge) {
+        if (state.cageType === 'A_FRAMED') {
+          typeBadge.textContent = 'Type A 正面枠囲い 選択中 (高剛性枠・スライド扉)';
+        } else if (state.cageType === 'A_FRONT') {
+          state.doorHingeSide = targetSpec.doorHingeSide || 'left';
+          typeBadge.textContent = `Type A 前開き 選択中 (${getFrontDoorHingeDisplayName()})`;
+        } else {
+          typeBadge.textContent = state.cageType === 'A' ? 'Type A 選択中 (全面スライド扉)' : 'Type C 選択中 (前窓＋扉)';
+        }
+      }
+      if (rowFrontWindow) {
+        rowFrontWindow.classList.toggle('hidden', state.cageType !== 'C');
+      }
+      updateDoorUI();
+    }
+  }
+
+  // 3. 前窓開口高さ (Type C)
+  if (state.cageType === 'C') {
+    const fw = targetSpec.frontWindowH != null ? Number(targetSpec.frontWindowH) : 50;
+    state.frontWindowH = fw;
+    if (inputFW) inputFW.value = fw;
+    if (sliderFW) sliderFW.value = fw;
+  }
+
+  // 4. 前開き扉ヒンジ方向 (Type A 前開き)
+  if (targetSpec.doorHingeSide && (targetSpec.doorHingeSide === 'left' || targetSpec.doorHingeSide === 'right')) {
+    state.doorHingeSide = targetSpec.doorHingeSide;
+  }
+
+  // 5. フレームカラー
+  if (targetSpec.frameColor && (targetSpec.frameColor === 'silver' || targetSpec.frameColor === 'black')) {
+    state.frameColor = targetSpec.frameColor;
+    if (btnFrameSilver && btnFrameBlack) {
+      btnFrameSilver.classList.toggle('active', state.frameColor === 'silver');
+      btnFrameBlack.classList.toggle('active', state.frameColor === 'black');
+    }
+  }
+
+  // 6. 脚仕様 (キャスター / ゴム脚)
+  if (targetSpec.footType && (targetSpec.footType === 'caster' || targetSpec.footType === 'rubber')) {
+    state.footType = targetSpec.footType;
+    if (toggleCaster) toggleCaster.checked = state.footType === 'caster';
+    if (cardCaster) cardCaster.classList.toggle('active', state.footType === 'caster');
+  }
+
+  // 7. 正面幅広フレーム (Type A)
+  if (state.cageType === 'A' && targetSpec.frontWideFrame) {
+    state.frontWideFrame = targetSpec.frontWideFrame;
+    lastTypeAFrontWideFrame = targetSpec.frontWideFrame;
+  } else if (state.cageType !== 'A') {
+    state.frontWideFrame = 'none';
+  }
+
+  // 8. 側面補強フレーム & 側面上部開口高さ
+  if (typeof targetSpec.hasSideReinforcement === 'boolean') {
+    state.hasSideReinforcement = targetSpec.hasSideReinforcement;
+    if (toggleSideReinforce) toggleSideReinforce.checked = state.hasSideReinforcement;
+    if (cardSideReinforce) cardSideReinforce.classList.toggle('active', state.hasSideReinforcement);
+    if (boxSideH) boxSideH.classList.toggle('disabled', !state.hasSideReinforcement);
+    const minSideH = 50;
+    const maxSideH = Math.max(minSideH, state.H - 110);
+    if (inputSideH) {
+      inputSideH.min = minSideH;
+      inputSideH.max = maxSideH;
+    }
+    if (targetSpec.sideOpeningH != null) {
+      state.sideOpeningH = Math.max(minSideH, Math.min(maxSideH, Number(targetSpec.sideOpeningH)));
+      if (inputSideH) inputSideH.value = state.sideOpeningH;
+    }
+  }
+
+  // 側面パネル選択行の表示切り替え
+  if (rowPanelSide && rowPanelSideSplit) {
+    rowPanelSide.classList.toggle('hidden', state.hasSideReinforcement);
+    rowPanelSideSplit.classList.toggle('hidden', !state.hasSideReinforcement);
+  }
+
+  // 9. 扉たわみ防止レール
+  if (typeof targetSpec.hasDoorAntiFlex === 'boolean') {
+    state.hasDoorAntiFlex = targetSpec.hasDoorAntiFlex;
+    if (toggleDoorAntiFlex) toggleDoorAntiFlex.checked = state.hasDoorAntiFlex;
+    if (cardDoorAntiFlex) cardDoorAntiFlex.classList.toggle('active', state.hasDoorAntiFlex);
+  }
+
+  // 10. 側面換気量調整板
+  if (typeof targetSpec.hasSideVentCover === 'boolean') {
+    state.hasSideVentCover = targetSpec.hasSideVentCover;
+    if (toggleSideVentCover) toggleSideVentCover.checked = state.hasSideVentCover;
+    if (cardSideVentCover) cardSideVentCover.classList.toggle('active', state.hasSideVentCover);
+  }
+
+  // 11. 止まり木
+  if (typeof targetSpec.hasPerch === 'boolean') {
+    state.hasPerch = targetSpec.hasPerch;
+    if (togglePerch) togglePerch.checked = state.hasPerch;
+    if (cardPerch) cardPerch.classList.toggle('active', state.hasPerch);
+  }
+
+  // 12. モレ対策ゴムパッキン
+  if (typeof targetSpec.hasRubberPacking === 'boolean') {
+    state.hasRubberPacking = targetSpec.hasRubberPacking;
+    if (toggleRubberPacking) toggleRubberPacking.checked = state.hasRubberPacking;
+    if (cardRubberPacking) cardRubberPacking.classList.toggle('active', state.hasRubberPacking);
+  }
+
+  // 13. 床下パネルヒータ支え板
+  if (typeof targetSpec.hasFloorHeaterSupport === 'boolean') {
+    state.hasFloorHeaterSupport = targetSpec.hasFloorHeaterSupport;
+    if (toggleFloorHeaterSupport) toggleFloorHeaterSupport.checked = state.hasFloorHeaterSupport;
+    if (cardFloorHeaterSupport) cardFloorHeaterSupport.classList.toggle('active', state.hasFloorHeaterSupport);
+  }
+
+  // 14. 床面中央補強フレーム
+  if (typeof targetSpec.hasFloorReinforcement === 'boolean') {
+    state.hasFloorReinforcement = targetSpec.hasFloorReinforcement;
+    if (toggleFloorReinforce) toggleFloorReinforce.checked = state.hasFloorReinforcement;
+    if (cardFloorReinforce) cardFloorReinforce.classList.toggle('active', state.hasFloorReinforcement);
+  } else {
+    updateFloorReinforceByArea();
+  }
+
+  // 15. 天板中央補強フレーム
+  if (state.W > 940) {
+    if (toggleTopReinforce) {
+      toggleTopReinforce.checked = true;
+      toggleTopReinforce.disabled = true;
+    }
+    if (cardTopReinforce) cardTopReinforce.classList.add('disabled');
+    if (topReinfSub) topReinfSub.textContent = '幅940mm超のため必須（解除不可）';
+    state.hasTopReinforcement = true;
+  } else {
+    if (toggleTopReinforce) toggleTopReinforce.disabled = false;
+    if (cardTopReinforce) cardTopReinforce.classList.remove('disabled');
+    if (topReinfSub) topReinfSub.textContent = '940mm以下は任意指定（W>940mmは必須）';
+    state.hasTopReinforcement = !!targetSpec.hasTopReinforcement;
+    if (toggleTopReinforce) toggleTopReinforce.checked = state.hasTopReinforcement;
+    if (cardTopReinforce) cardTopReinforce.classList.toggle('active', state.hasTopReinforcement);
+  }
+
+  // 天板パネル選択行の表示切り替え
+  const isTopSplit = state.hasTopReinforcement || state.W > 940;
+  if (rowPanelTop && rowPanelTopSplit) {
+    rowPanelTop.classList.toggle('hidden', isTopSplit);
+    rowPanelTopSplit.classList.toggle('hidden', !isTopSplit);
+  }
+
+  // 16. ２室分け（仕切り板）
+  if (typeof targetSpec.hasRoomDivider === 'boolean') {
+    state.hasRoomDivider = targetSpec.hasRoomDivider;
+    if (toggleRoomDivider) toggleRoomDivider.checked = state.hasRoomDivider;
+    if (cardRoomDivider) cardRoomDivider.classList.toggle('active', state.hasRoomDivider);
+    if (rowPanelPartition) rowPanelPartition.classList.toggle('hidden', !state.hasRoomDivider);
+    if (state.hasRoomDivider && togglePerch) {
+      state.hasPerch = false;
+      togglePerch.checked = false;
+      togglePerch.disabled = true;
+      if (cardPerch) cardPerch.classList.add('disabled');
+    }
+  }
+
+  // 17. 特注LED照明オプション
+  if (targetSpec.ledType) {
+    state.ledType = targetSpec.ledType;
+    if (selectLedType) selectLedType.value = state.ledType;
+    if (typeof targetSpec.ledPower === 'boolean') state.ledPower = targetSpec.ledPower;
+    if (typeof targetSpec.ledBrightness === 'number') state.ledBrightness = targetSpec.ledBrightness;
+    if (targetSpec.ledColorMode) state.ledColorMode = targetSpec.ledColorMode;
+    if (targetSpec.ledRgbColor) state.ledRgbColor = targetSpec.ledRgbColor;
+    updateLedUI();
+  }
+
+  // 18. パネル素材設定 (panelConfig)
+  if (targetSpec.panelConfig && typeof targetSpec.panelConfig === 'object') {
+    state.panelConfig = {
+      ...state.panelConfig,
+      ...targetSpec.panelConfig
+    };
+    if (selectPanelFloor && state.panelConfig.floor) selectPanelFloor.value = state.panelConfig.floor;
+    if (selectPanelBack && state.panelConfig.back) selectPanelBack.value = state.panelConfig.back;
+    if (selectPanelSide && state.panelConfig.side) selectPanelSide.value = state.panelConfig.side;
+    if (selectPanelSideUpper && state.panelConfig.sideUpper) selectPanelSideUpper.value = state.panelConfig.sideUpper;
+    if (selectPanelSideLower && state.panelConfig.sideLower) selectPanelSideLower.value = state.panelConfig.sideLower;
+    if (selectPanelTop && state.panelConfig.top) selectPanelTop.value = state.panelConfig.top;
+    if (selectPanelTopLeft && state.panelConfig.topLeft) selectPanelTopLeft.value = state.panelConfig.topLeft;
+    if (selectPanelTopRight && state.panelConfig.topRight) selectPanelTopRight.value = state.panelConfig.topRight;
+    if (selectPanelPartition && state.panelConfig.partition) selectPanelPartition.value = state.panelConfig.partition;
+  }
+
+  // 19. プリセットカードのアクティブ解除
+  if (creaturePresetGrid) {
+    const allCards = creaturePresetGrid.querySelectorAll('.creature-card');
+    allCards.forEach(c => c.classList.remove('active'));
+  }
+
+  // 20. 各種状態・3Dビュー・最新積算を同期
+  updateFrontWideFrameAvailability();
+  updateSideVentCoverAvailability();
+  syncUpdate();
+  viewer.setViewPreset('iso', state);
+
+  // 重要：ユーザー様の設計方針に従い、再現後の価格・重量は「その時点の最新価格」で再計算して表示
+  if (typeof runStructuralAndCostSimulation === 'function') {
+    runStructuralAndCostSimulation();
+  }
+
+  return true;
+}
+
+/**
+ * 見積りIDから仕様を検索・復元実行
+ * @param {string} targetEstimateId
+ */
+async function restoreEstimateById(targetEstimateId) {
+  if (!targetEstimateId || typeof targetEstimateId !== 'string') {
+    setRestoreStatusMessage('error', '見積りIDを入力してください。');
+    return;
+  }
+
+  const cleanId = targetEstimateId.trim().toUpperCase();
+  if (!cleanId.startsWith('EST-') || cleanId.length < 10) {
+    setRestoreStatusMessage('error', '見積りIDの形式が正しくありません。（例: EST-20261005-AB12）');
+    return;
+  }
+
+  setRestoreStatusMessage('loading', `⏳ 見積ID「${cleanId}」の仕様データを検索中...`);
+  if (btnRestoreEstimate) btnRestoreEstimate.disabled = true;
+
+  try {
+    let foundSpec = null;
+    let foundMeta = null;
+
+    // 1. スプレッドシート（GAS API）への問い合わせ
+    const endpoint = materialsConfig?.system?.gasLogEndpointUrl;
+    let gasDeployNeeded = false;
+    let gasNotFound = false;
+
+    if (endpoint && endpoint.startsWith('http')) {
+      try {
+        const queryUrl = `${endpoint}?estimateId=${encodeURIComponent(cleanId)}`;
+        console.log('[Restore] GASへ見積りデータ問い合わせ中:', queryUrl);
+        const res = await fetch(queryUrl, { method: 'GET', mode: 'cors' });
+        const rawText = await res.text();
+
+        if (rawText.includes('スクリプト関数が見つかりません') || rawText.includes('doGet')) {
+          gasDeployNeeded = true;
+          console.warn('[Restore] GAS側に doGet が未デプロイです。');
+        } else {
+          try {
+            const json = JSON.parse(rawText);
+            if (json.status === 'success' && json.spec) {
+              foundSpec = json.spec;
+              foundMeta = json;
+              console.log('[Restore] GASから仕様データを正常に受信:', json);
+            } else if (json.status === 'not_found') {
+              gasNotFound = true;
+              console.warn('[Restore] GAS上で該当見積りが見つかりませんでした:', json.message);
+            }
+          } catch (pe) {
+            console.warn('[Restore] レスポンスのJSONパースに失敗:', pe, rawText.substring(0, 200));
+          }
+        }
+      } catch (gasErr) {
+        console.warn('[Restore] GAS通信エラー（ローカルキャッシュ検索へフォールバック）:', gasErr);
+      }
+    }
+
+    // 2. ローカルストレージからのフォールバック検索（直近同端末での試算やオフライン用）
+    if (!foundSpec) {
+      try {
+        const localDataStr = localStorage.getItem(`kinato_estimate_${cleanId}`);
+        if (localDataStr) {
+          const localData = JSON.parse(localDataStr);
+          if (localData && localData.spec) {
+            foundSpec = localData.spec;
+            foundMeta = localData;
+            console.log('[Restore] localStorageから仕様データを復元:', localData);
+          }
+        } else {
+          // 直近の見積もりデータもチェック
+          const latestStr = localStorage.getItem('kinato_latest_estimate');
+          if (latestStr) {
+            const latestData = JSON.parse(latestStr);
+            if (latestData && latestData.estimateId === cleanId && latestData.spec) {
+              foundSpec = latestData.spec;
+              foundMeta = latestData;
+              console.log('[Restore] 最新localStorageキャッシュから仕様データを復元:', latestData);
+            }
+          }
+        }
+      } catch (locErr) {
+        console.warn('[Restore] localStorage検索エラー:', locErr);
+      }
+    }
+
+    if (!foundSpec) {
+      if (gasDeployNeeded) {
+        setRestoreStatusMessage('error', `⚠️ スプレッドシート側のGASに最新コード（doGet）がまだ保存・デプロイされていません。Google Apps Scriptを更新して再度お試しください。`);
+      } else if (gasNotFound) {
+        setRestoreStatusMessage('error', `❌ スプレッドシート内に見積ID「${cleanId}」の記録が見つかりませんでした。IDをお確かめください。`);
+      } else {
+        setRestoreStatusMessage('error', `❌ 見積ID「${cleanId}」が見つかりませんでした。入力内容をお確かめください。`);
+      }
+      return;
+    }
+
+    // 仕様の完全適用
+    applyFullCageSpec(foundSpec);
+
+    // 開発検証ログ（過去記録時の価格・重量と、現在計算後の価格・重量の比較）
+    if (foundMeta) {
+      const origP = foundMeta.summary?.originalPrice || foundMeta.totals?.priceWithMarkup || foundMeta.originalTotals?.priceWithMarkup;
+      const origW = foundMeta.summary?.originalWeight || foundMeta.totals?.weight || foundMeta.originalTotals?.weight;
+      console.log(`[仕様再現 検証] 見積ID: ${cleanId} | 記録時価格: ¥${origP?.toLocaleString()} / 重量: ${origW}kg`);
+    }
+
+    setRestoreStatusMessage('success', `✅ 見積ID「${cleanId}」のケージ仕様・全オプションを完全再現しました！`);
+    showNoticeToast(`✅ 見積ID: ${cleanId} の仕様を完全に読み込みました！`, 4500);
+
+  } catch (err) {
+    console.error('[Restore] 復元処理エラー:', err);
+    setRestoreStatusMessage('error', `エラーが発生しました: ${err.message}`);
+  } finally {
+    if (btnRestoreEstimate) btnRestoreEstimate.disabled = false;
+  }
+}
+
+/**
+ * 復元ステータスメッセージ表示
+ */
+function setRestoreStatusMessage(type, message) {
+  if (!restoreStatusMsg) return;
+  restoreStatusMsg.className = `restore-status-msg ${type}`;
+  restoreStatusMsg.textContent = message;
+  restoreStatusMsg.classList.remove('hidden');
+}
+
+// 見積りID仕様確定ボタン & Enterキー押下イベント
+if (btnRestoreEstimate && inputRestoreEstimateId) {
+  btnRestoreEstimate.addEventListener('click', () => {
+    restoreEstimateById(inputRestoreEstimateId.value);
+  });
+
+  inputRestoreEstimateId.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      restoreEstimateById(inputRestoreEstimateId.value);
+    }
+  });
+
+  // 入力文字を自動で大文字化
+  inputRestoreEstimateId.addEventListener('input', (e) => {
+    e.target.value = e.target.value.toUpperCase();
+  });
+}
+
 // =================================================================
 // 2. 見積もり計算完了・ID発行・仕様テキスト生成 & モーダル連携
 // =================================================================
@@ -2977,6 +3724,12 @@ function finalizeEstimateCalculation(totals) {
   };
 
   lastEstimatedState = JSON.parse(JSON.stringify(state));
+
+  // ローカル復元・オフライン用キャッシュ保存
+  try {
+    localStorage.setItem(`kinato_estimate_${currentEstimateId}`, JSON.stringify(currentEstimateData));
+    localStorage.setItem('kinato_latest_estimate', JSON.stringify(currentEstimateData));
+  } catch (e) {}
 
   // 【開発計画2】Googleスプレッドシートへのログ送信（URL設定時のみ自動実行）
   maybeSendEstimateLog(currentEstimateData);
@@ -3942,6 +4695,18 @@ function checkInitialStateFromStorageOrUrl() {
     // 2. URLクエリパラメータのフォールバックチェック
     if (!incomingState && window.location.search) {
       const urlParams = new URLSearchParams(window.location.search);
+
+      // 見積りIDからの復元指定がある場合
+      if (urlParams.has('estimateId') || urlParams.has('id')) {
+        const targetId = urlParams.get('estimateId') || urlParams.get('id');
+        if (inputRestoreEstimateId) inputRestoreEstimateId.value = targetId;
+        restoreEstimateById(targetId);
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        return;
+      }
+
       incomingState = {};
       if (urlParams.has('preset')) incomingState.preset = urlParams.get('preset');
       if (urlParams.has('w')) incomingState.W = parseInt(urlParams.get('w'), 10);

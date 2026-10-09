@@ -26,11 +26,11 @@ if not exist "node_modules\" (
 )
 
 echo Starting development server...
-echo Browser will automatically open at http://localhost:5173/
+echo Browser will automatically open at http://localhost:5173/?debug=bom
 echo.
 echo Press Ctrl + C or close this window to stop.
 echo.
 
-start "" cmd /c "timeout /t 2 /nobreak >nul && start http://localhost:5173/"
+start "" cmd /c "timeout /t 2 /nobreak >nul && start \"\" \"http://localhost:5173/?debug=bom\""
 
 call npm run dev

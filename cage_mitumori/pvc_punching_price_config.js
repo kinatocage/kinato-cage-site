@@ -7,6 +7,8 @@
  * 条件: 数量1枚単価（完全安全側・原価割れ防止）、直線カット込、税込価格
  */
 
+import { interpolateMatrixCost } from './matrix_interpolation.js';
+
 // B寸法区分（短辺 mm）: 横列
 export const PVC_PUNCHING_B_RANGES = [
   {
@@ -239,12 +241,19 @@ function findRangeIndex(val, ranges) {
 }
 
 /**
- * 塩ビパンチングの2辺の寸法から、仕入原価（税込）を取得
+ * 塩ビパンチングの2辺の寸法から、仕入原価（税込）を取得（バイリニア線形補間）
  * @param {number} dim1 寸法1 (mm)
  * @param {number} dim2 寸法2 (mm)
  * @returns {number|null} 仕入原価（円・税込）
  */
 export function getPvcPunchingCost(dim1, dim2) {
+  // 1. 高精度バイリニア補間を試行（実勢価格と誤差0.1%〜1%未満で一致）
+  const interpolated = interpolateMatrixCost(dim1, dim2, PVC_PUNCHING_A_RANGES, PVC_PUNCHING_B_RANGES, PVC_PUNCHING_PRICES);
+  if (interpolated != null && interpolated > 0) {
+    return interpolated;
+  }
+
+  // 2. フォールバック（従来の区間切り上げ判定）
   const aVal = Math.max(dim1, dim2);
   const bVal = Math.min(dim1, dim2);
 

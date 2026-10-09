@@ -99,7 +99,7 @@ function verifyFloorHeater(label, params) {
 
   // 4. 床下パネルヒータ支え板全体の部材原価・工賃・販売加算額
   const totalRawCost = acrylicTotalCost + danplateTotalCost + processingTotalCost;
-  const markupRate = materialsConfig.pricing.markupRate; // 1.4
+  const markupRate = materialsConfig.pricing.markupRate; // 1.3
   const laborPrice = materialsConfig.options.labor.floorHeaterSupport.price; // 1000
   const standaloneMarkupPrice = Math.ceil((totalRawCost * markupRate) / 100) * 100;
   const standaloneOptionSellingPrice = standaloneMarkupPrice + laborPrice;
@@ -114,7 +114,7 @@ function verifyFloorHeater(label, params) {
   console.log(`--------------------------------------------------------------------------------`);
   console.log(`  加工費＋ネジ代小計:    ${processingTotalCost} 円`);
   console.log(`  オプション部材原価計:  ${totalRawCost} 円 (材料費 + 加工費 + ネジ代)`);
-  console.log(`  マークアップ後価格:    ${standaloneMarkupPrice} 円 (原価 × 1.4、100円単位切上)`);
+  console.log(`  マークアップ後価格:    ${standaloneMarkupPrice} 円 (原価 × 1.3、100円単位切上)`);
   console.log(`  固定オプション工賃:    +${laborPrice} 円`);
   console.log(`  単体販売加算目安:      ${standaloneOptionSellingPrice} 円`);
 

@@ -528,9 +528,9 @@ export const materialsConfig = {
         name: '側面換気量調整板 (つまみネジ付)',
         price: 500,           // 販売価格への加算額 (円・固定)
         cost: 200,            // 基本部材原価 (つまみネジ等、円・非表示)
-        holeCostPerPiece: 94, // 穴加工費単価 (円/穴・φ9mm穴あけ)
-        holesPerPanel: 4,     // 調整板1枚あたりの穴数 (φ9mm×4箇所)
-        note: 't1.5透明アクリル外張り＋φ9mm穴加工4箇所/枚＋No.1化粧つまみネジ (穴加工費は原価に積み上げ)'
+        holeCostPerPiece: 94, // 穴加工費単価 (円/穴・φ6mm穴あけ)
+        holesPerPanel: 4,     // 調整板1枚あたりの穴数 (φ6mm×4箇所)
+        note: 't1.5透明アクリル外張り＋φ6mm穴加工4箇所/枚＋No.1化粧つまみネジ (穴加工費は原価に積み上げ)'
       },
 
       // --- LED照明オプション ---
@@ -566,7 +566,7 @@ export const materialsConfig = {
   // 6. 価格計算・マークアップ倍率設定
   // =================================================================
   pricing: {
-    markupRate: 1.4,          // 資材原価に対する販売価格の乗数（基本販売価格 = 原価 × markupRate）
+    markupRate: 1.3,          // 資材原価に対する販売価格の乗数（基本販売価格 = 原価 × markupRate）
     roundingUnit: 100,        // 端数切り上げ単位（円）: 100円単位で切り上げ
     note: '基本販売価格 = Math.ceil((baseMaterialsCost * markupRate) / roundingUnit) * roundingUnit'
   },
