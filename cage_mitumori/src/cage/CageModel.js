@@ -829,6 +829,146 @@ export class CageModel {
         });
       }
 
+    } else if (cageType === 'C_FRAMED') {
+      // ---------------- Type C 正面枠囲い ----------------
+      // 床・左右フレーム (2020、長さ D - 6mm、前後3mmエンドキャップで全長D)
+      this.addFrameMember('2020', depthFrameL, new THREE.Vector3(-W / 2 + 10, 10, 0), rotZ, '床・左2020');
+      this.addFrameMember('2020', depthFrameL, new THREE.Vector3(W / 2 - 10, 10, 0), rotZ, '床・右2020');
+      this.recordPart(getFramePartNumber('2020', depthFrameL, frameColor), depthFrameL, 2, '床面 左右通し (前後3mm短縮・キャップ取付)', 'frame');
+
+      // 2040横向き配置用の回転オイラー角 (高さ20mm、奥行40mm、長手方向X軸)
+      const m2040Flat = new THREE.Matrix4().makeBasis(
+        new THREE.Vector3(0, 1, 0),
+        new THREE.Vector3(0, 0, 1),
+        new THREE.Vector3(1, 0, 0)
+      );
+      const rot2040Flat = new THREE.Euler().setFromRotationMatrix(m2040Flat);
+
+      // 床・正面フレーム (AFS-2040-4横向き: 高さ20mm x 奥行40mm、長さ W - 40mm)
+      // 正面最前面 Z = D/2 から奥行き40mm (Z: D/2 - 40 〜 D/2, 中心 Z = D/2 - 20)
+      // 高さ Y: 0 〜 20 (中心 Y = 10)
+      const floorFrontL = Math.max(10, W - 40);
+      const floorFrontPartCode = getFrameBaseCode('2040', frameColor);
+      const floorFrontPartNumber = `${floorFrontPartCode}-${floorFrontL}`;
+      this.addFrameMember('2040', floorFrontL, new THREE.Vector3(0, 10, D / 2 - 20), rot2040Flat, '床・正面2040 (横向き枠囲い下部)');
+      this.recordPart(floorFrontPartNumber, floorFrontL, 1, '床面 正面 2040横向き (枠囲い下部・AFS-2040-4)', 'frame', {
+        partCode: floorFrontPartCode,
+        lengthMm: floorFrontL,
+        unitType: 'm'
+      });
+
+      // 床・背面フレーム (2020、長さ W - 40)
+      const floorBackL = Math.max(10, W - 40);
+      this.addFrameMember('2020', floorBackL, new THREE.Vector3(0, 10, -D / 2 + 10), rotX, '床・背面2020');
+      this.recordPart(getFramePartNumber('2020', floorBackL, frameColor), floorBackL, 1, '床面 背面', 'frame');
+
+      // 床・中央補強フレーム (長さ D - 60mm、中心 Z = -10)
+      if (hasFloorReinforcement) {
+        const floorCenterL = Math.max(10, D - 60);
+        const reinfProfile = isSilver ? '2020_flat' : '2020';
+        this.addFrameMember(reinfProfile, floorCenterL, new THREE.Vector3(0, 10, -10), rotZ, '床・中央補強2020', null, 'top');
+        this.recordPart(getFramePartNumber('2020', floorCenterL, frameColor, false, true), floorCenterL, 1, '床面 中央補強 (2分割・D-60mm)', 'frame');
+      }
+
+      // 柱フレーム
+      // 奥側2本: 2020 (長さ H - 40mm, Z = -D/2 + 10)
+      const pillarY = H / 2;
+      this.addFrameMember('2020', pillarLength, new THREE.Vector3(-W / 2 + 10, pillarY, -D / 2 + 10), rotY, '柱・奥左2020');
+      this.addFrameMember('2020', pillarLength, new THREE.Vector3(W / 2 - 10, pillarY, -D / 2 + 10), rotY, '柱・奥右2020');
+      this.recordPart(getFramePartNumber('2020', pillarLength, frameColor), pillarLength, 2, '柱 (奥2隅)', 'frame');
+
+      // 手前側2本: 2040 (幅20mm x 奥行40mm, 長さ H - 40mm, Z = D/2 - 20)
+      this.addFrameMember('2040', pillarLength, new THREE.Vector3(-W / 2 + 10, pillarY, D / 2 - 20), rotY, '柱・手前左2040');
+      this.addFrameMember('2040', pillarLength, new THREE.Vector3(W / 2 - 10, pillarY, D / 2 - 20), rotY, '柱・手前右2040');
+      this.recordPart(getFramePartNumber('2040', pillarLength, frameColor), pillarLength, 2, '柱・正面枠囲い (2040・奥行40mm)', 'frame');
+
+      // 正面中桟フレーム (2040横向き: 高さ20mm x 奥行40mm、長さ W - 40mm)
+      // 下側フレーム(20mm) + 前窓開口高さ(frontWindowH) の上 (Y: 20 + frontWindowH 〜 40 + frontWindowH, 中心 Y = 30 + frontWindowH)
+      // 奥行き中心 Z = D/2 - 20 (手前2040柱の内側にすっぽり収まる)
+      const midBarY = 30 + frontWindowH;
+      const midBarL = Math.max(10, W - 40);
+      const midBarPartCode = getFrameBaseCode('2040', frameColor);
+      const midBarPartNumber = `${midBarPartCode}-${midBarL}`;
+      this.addFrameMember('2040', midBarL, new THREE.Vector3(0, midBarY, D / 2 - 20), rot2040Flat, '正面・中桟2040 (前窓上・横向き枠囲いレール受)');
+      this.recordPart(midBarPartNumber, midBarL, 1, '正面中桟 2040横向き (前窓上・枠囲い扉レール受)', 'frame', {
+        partCode: midBarPartCode,
+        lengthMm: midBarL,
+        unitType: 'm'
+      });
+
+      // 天面フレームの金網仕様判定（シルバー金網仕様時は金網に接する天面フレームすべて 5シリーズ）
+      const needTopSplit = hasTopReinforcement || (W > 940);
+      const topConfig = this.params.panelConfig || {};
+
+      let isTopMesh = false;
+      if (needTopSplit) {
+        const isLeftMesh = Boolean(topConfig.topLeft && topConfig.topLeft.startsWith('mesh'));
+        const isRightMesh = Boolean(topConfig.topRight && topConfig.topRight.startsWith('mesh'));
+        isTopMesh = isLeftMesh || isRightMesh;
+      } else {
+        isTopMesh = Boolean(topConfig.top && topConfig.top.startsWith('mesh'));
+      }
+      const isSilverTopMesh = isSilver && isTopMesh;
+
+      // 天面・左右フレーム (2020、長さ D - 6mm)
+      const topDepthPartCode = isSilverTopMesh ? 'AFS-2020-5' : getFrameBaseCode('2020', frameColor);
+      const topDepthPartNumber = `${topDepthPartCode}-${depthFrameL}`;
+      const topDepthNote = isSilverTopMesh
+        ? '天面 左右通し (天面金網受用・AFS-2020-5)'
+        : '天面 左右通し (前後3mm短縮・キャップ取付)';
+      this.addFrameMember('2020', depthFrameL, new THREE.Vector3(-W / 2 + 10, H - 10, 0), rotZ, '天面・左2020');
+      this.addFrameMember('2020', depthFrameL, new THREE.Vector3(W / 2 - 10, H - 10, 0), rotZ, '天面・右2020');
+      this.recordPart(topDepthPartNumber, depthFrameL, 2, topDepthNote, 'frame', {
+        partCode: topDepthPartCode,
+        lengthMm: depthFrameL,
+        unitType: 'm'
+      });
+
+      // 天面・背面フレーム (2020、長さ W - 40mm)
+      const topBackL = Math.max(10, W - 40);
+      const topBackPartCode = isSilverTopMesh ? 'AFS-2020-5' : getFrameBaseCode('2020', frameColor);
+      const topBackPartNumber = `${topBackPartCode}-${topBackL}`;
+      const topBackNote = isSilverTopMesh
+        ? '天面 背面 (天面金網受用・AFS-2020-5)'
+        : '天面 背面';
+      this.addFrameMember('2020', topBackL, new THREE.Vector3(0, H - 10, -D / 2 + 10), rotX, '天面・背面2020');
+      this.recordPart(topBackPartNumber, topBackL, 1, topBackNote, 'frame', {
+        partCode: topBackPartCode,
+        lengthMm: topBackL,
+        unitType: 'm'
+      });
+
+      // 天面・手前フレーム (AFS-2040-4横向き: 高さ20mm x 奥行40mm、長さ W - 40mm)
+      const topFrontPartCode = isSilverTopMesh ? 'AFS-2040-5' : getFrameBaseCode('2040', frameColor);
+      const topFrontPartNumber = `${topFrontPartCode}-${floorFrontL}`;
+      const topFrontNote = isSilverTopMesh
+        ? '正面上部 2040横向き (天面金網受用・AFS-2040-5)'
+        : '正面上部 2040横向き (奥行40mm・AFS-2040-4)';
+
+      this.addFrameMember('2040', floorFrontL, new THREE.Vector3(0, H - 10, D / 2 - 20), rot2040Flat, '天面・手前2040 (横向き枠囲い上部)');
+      this.recordPart(topFrontPartNumber, floorFrontL, 1, topFrontNote, 'frame', {
+        partCode: topFrontPartCode,
+        lengthMm: floorFrontL,
+        unitType: 'm'
+      });
+
+      // 天面・中央補強フレーム (W>940mmで必須、またはオプション指定、長さ D - 60mm、中心 Z = -10)
+      if (hasTopReinforcement || W > 940) {
+        const topCenterL = Math.max(10, D - 60);
+        const topCenterPartCode = isSilverTopMesh ? 'AFS-2020-5' : getFrameBaseCode('2020', frameColor, false, true);
+        const topCenterPartNumber = `${topCenterPartCode}-${topCenterL}`;
+        const topCenterNote = isSilverTopMesh
+          ? '天面 中央補強 (天面金網受用・AFS-2020-5)'
+          : '天面 中央補強 (2分割・D-60mm)';
+        const reinfProfile = (isSilver && !isSilverTopMesh) ? '2020_flat' : '2020';
+        this.addFrameMember(reinfProfile, topCenterL, new THREE.Vector3(0, H - 10, -10), rotZ, '天面・中央補強2020', null, 'bottom');
+        this.recordPart(topCenterPartNumber, topCenterL, 1, topCenterNote, 'frame', {
+          partCode: topCenterPartCode,
+          lengthMm: topCenterL,
+          unitType: 'm'
+        });
+      }
+
     } else if (cageType === 'A' || cageType === 'A_FRONT') {
       // ---------------- Type A / Type A 前開き ----------------
       // 床・左右フレーム (2020、長さ D - 6mm、前後3mmエンドキャップで全長D)
@@ -1076,7 +1216,7 @@ export class CageModel {
     // 側面補強フレーム (オプション: 左右対称、長さ 通常: D - 40 / 枠囲い: D - 60)
     // 溝のない面をケージ室内側（左フレーム: 右向き/right、右フレーム: 左向き/left）に配置
     if (hasSideReinforcement) {
-      const isFramed = (cageType === 'A_FRAMED');
+      const isFramed = (cageType === 'A_FRAMED' || cageType === 'C_FRAMED');
       const sideReinfL = Math.max(10, isFramed ? D - 60 : D - 40);
       const sideReinfZ = isFramed ? -10 : 0;
       const upperH = sideOpeningH;
@@ -1166,7 +1306,7 @@ export class CageModel {
     const topRightMatType = panelConfig.topRight || 'punching';
 
     // 1. 底面パネル（間口+10mm: 通常 D-30 / 枠囲い D-50）
-    const isFramed = (cageType === 'A_FRAMED');
+    const isFramed = (cageType === 'A_FRAMED' || cageType === 'C_FRAMED');
     const floorMatD = isFramed ? D - 50 : D - 30; // (D - 60) + 10 or (D - 40) + 10
     const floorCenterZ = isFramed ? -10 : 0;
     const isFloorBlackMatte = (floorMatType === 'black_matte');
@@ -2007,7 +2147,7 @@ export class CageModel {
     }
 
     // 6. Type C の前窓（はめ殺し固定窓・透明アクリル押出板 t3: 間口+10mm）
-    if (cageType === 'C') {
+    if (cageType === 'C' || cageType === 'C_FRAMED') {
       const fwMatW = W - 30; // (W - 40) + 10
       const fwMatH = frontWindowH + 10; // 間口高さ + 10 (上下溝5mm x 2)
       const fwGeom = new THREE.BoxGeometry(fwMatW, fwMatH, panelT);
@@ -2216,16 +2356,18 @@ export class CageModel {
    * - 上下に各1mm隙間
    */
   buildFramedDoors() {
-    const { W, D, H, doorState, frameColor } = this.params;
+    const { W, D, H, doorState, frameColor, cageType, frontWindowH } = this.params;
     const isSilver = (frameColor === 'silver');
+    const isCFramed = (cageType === 'C_FRAMED');
 
     const openingW = Math.max(10, W - 40); // 間口幅 (左右柱内寸)
-    const openingH = Math.max(10, H - 60); // 間口高さ (下4040、上2040横向き)
+    // 間口高さ: TypeAは H - 60 (下4040、上2040横向き) / TypeC枠囲いは H - 60 - frontWindowH (下2040、前窓、中桟2040、上2040)
+    const openingH = Math.max(10, isCFramed ? (H - 60 - frontWindowH) : (H - 60));
 
     // 幅方向フレーム長さ: 間口860mmで442mm => Math.round(openingW / 2 + 12)
     const doorFrameW = Math.max(10, Math.round(openingW / 2 + 12));
 
-    // 高さ方向フレーム長さ: 間口440mmで398mm => openingH - 42
+    // 高さ方向フレーム長さ: openingH - 42
     const doorFrameH = Math.max(10, openingH - 42);
 
     // アクリル板寸法
@@ -2233,10 +2375,14 @@ export class CageModel {
     const panelH = Math.max(10, doorFrameH + 10); // 398 + 10 = 408mm
 
     // 開口部と扉の垂直位置
-    // 間口下端 Y=40, 間口上端 Y=H-20, 扉下端 Y=41 (+1mm隙間), 扉上端 Y=H-21 (-1mm隙間)
-    const doorCenterY = (H + 20) / 2;
-    const bottomFrameY = 51; // 41 + 10
-    const topFrameY = H - 31; // H - 21 - 10
+    // 間口下端: TypeAは Y=40, TypeC枠囲いは Y = 40 + frontWindowH (中桟2040の上面)
+    // 間口上端: Y = H - 20 (天面手前2040の下面)
+    // 扉下端: bottomOpeningY + 1 (+1mm隙間), 扉上端: topOpeningY - 1 (-1mm隙間)
+    const bottomOpeningY = isCFramed ? (40 + frontWindowH) : 40;
+    const topOpeningY = H - 20;
+    const doorCenterY = (bottomOpeningY + topOpeningY) / 2;
+    const bottomFrameY = bottomOpeningY + 11; // 扉下端 + 1mm隙間 + フレーム半径10mm
+    const topFrameY = topOpeningY - 11;       // 扉上端 - 1mm隙間 - フレーム半径10mm
 
     // スライド限界と基準位置
     // 全閉時: フレーム（柱内面 ±openingW / 2）との隙間を2mm開けた位置を全閉位置とする
@@ -2418,8 +2564,8 @@ export class CageModel {
     this.clearGroup(this.doorGroup);
     const { W, D, H, cageType, frontWindowH, doorState, hasDoorAntiFlex, frameColor } = this.params;
 
-    // TypeA 正面枠囲いは専用の枠囲い扉を生成
-    if (cageType === 'A_FRAMED') {
+    // 正面枠囲い (Type A / Type C) は専用の枠囲い扉を生成
+    if (cageType === 'A_FRAMED' || cageType === 'C_FRAMED') {
       this.buildFramedDoors();
       return;
     }
@@ -2942,7 +3088,7 @@ export class CageModel {
   }
 
   /**
-   * TypeA 正面枠囲い用の扉部材・BOM一括記録
+   * 正面枠囲い (Type A / Type C) 用の扉部材・BOM一括記録
    * - 幅方向フレーム: AFSF-2020-4 (黒: AFS-2020-4-BK) × 4本
    * - 高さ方向フレーム: AFSF-2040-4 (黒: AFS-2040-4-BK) × 4本
    * - エンドキャップ: ECP-2020-4-GY (黒: ECP-2020-4) × 8個
@@ -2950,11 +3096,12 @@ export class CageModel {
    * - スライド用黒マット地アクリル: (幅フレーム-22mm) × 14mm × 厚さ3mm × 4枚
    */
   buildFramedDoorPartsRecord() {
-    const { W, H, frameColor } = this.params;
+    const { W, H, frameColor, cageType, frontWindowH } = this.params;
     const isSilver = (frameColor === 'silver');
+    const isCFramed = (cageType === 'C_FRAMED');
 
     const openingW = Math.max(10, W - 40);
-    const openingH = Math.max(10, H - 60);
+    const openingH = Math.max(10, isCFramed ? (H - 60 - frontWindowH) : (H - 60));
 
     const doorFrameW = Math.max(10, Math.round(openingW / 2 + 12));
     const doorFrameH = Math.max(10, openingH - 42);
@@ -3045,8 +3192,8 @@ export class CageModel {
   buildDoorPartsRecord() {
     const { W, H, cageType, frontWindowH, hasDoorAntiFlex, frameColor } = this.params;
 
-    // TypeA 正面枠囲い用の扉部材・BOM記録
-    if (cageType === 'A_FRAMED') {
+    // 正面枠囲い (Type A / Type C) 用の扉部材・BOM記録
+    if (cageType === 'A_FRAMED' || cageType === 'C_FRAMED') {
       this.buildFramedDoorPartsRecord();
       return;
     }

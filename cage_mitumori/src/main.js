@@ -103,6 +103,7 @@ const btnTypeA = document.getElementById('btn-type-a');
 const btnTypeAFront = document.getElementById('btn-type-a-front');
 const btnTypeAFramed = document.getElementById('btn-type-a-framed');
 const btnTypeC = document.getElementById('btn-type-c');
+const btnTypeCFramed = document.getElementById('btn-type-c-framed');
 const typeBadge = document.getElementById('type-badge');
 
 // 資材リスト（BOM・動的デバッグ生成用）
@@ -499,22 +500,22 @@ function updateSideVentCoverAvailability() {
  * - ブラックフレームの場合: 3倍幅はAFS-2060がないため、40mm幅+20mm幅の2段重ね構成案内
  */
 function updateFrontWideFrameAvailability() {
-  if (state.cageType === 'C' || state.cageType === 'A_FRAMED') {
-    // Type CまたはType A 正面枠囲いは選択不可（正面枠囲いは4040固定のため）
+  if (state.cageType === 'C' || state.cageType === 'C_FRAMED' || state.cageType === 'A_FRAMED') {
+    // Type CまたはType A/C 正面枠囲いは選択不可（枠固定または前窓構造のため）
     toggleFrontWide2x.checked = false;
     toggleFrontWide2x.disabled = true;
     cardFrontWide2x.classList.remove('active');
     cardFrontWide2x.classList.add('disabled');
-    frontWide2xSub.textContent = state.cageType === 'A_FRAMED'
-      ? '※正面枠囲いは正面下部40x40固定のため選択不可'
+    frontWide2xSub.textContent = (state.cageType === 'A_FRAMED' || state.cageType === 'C_FRAMED')
+      ? '※正面枠囲いは専用枠固定のため選択不可'
       : '※Type Cは前窓構造のため選択不可（Type A専用）';
 
     toggleFrontWide3x.checked = false;
     toggleFrontWide3x.disabled = true;
     cardFrontWide3x.classList.remove('active');
     cardFrontWide3x.classList.add('disabled');
-    frontWide3xSub.textContent = state.cageType === 'A_FRAMED'
-      ? '※正面枠囲いは正面下部40x40固定のため選択不可'
+    frontWide3xSub.textContent = (state.cageType === 'A_FRAMED' || state.cageType === 'C_FRAMED')
+      ? '※正面枠囲いは専用枠固定のため選択不可'
       : '※Type Cは前窓構造のため選択不可（Type A専用）';
   } else {
     // Type Aの場合
@@ -1235,8 +1236,9 @@ function updateBOMTable() {
       totalPanelCost += totalCost;
       totalPanelWeight += totalWeight;
 
+      const isFramedDoor = (part.note && part.note.includes('枠囲い')) || (part.name && part.name.includes('枠囲い'));
       const isMachiningPanel = (part.name && (
-        part.name.includes('扉') ||
+        (part.name.includes('扉') && !isFramedDoor) ||
         part.name.includes('換気量調整板') ||
         part.name.includes('ヒンジ座板') ||
         part.name.includes('ロック受座板') ||
@@ -1671,7 +1673,7 @@ function calculateGrandTotals() {
   // 各種オプションの適用判定
   const isFloorSplit = !!state.hasFloorReinforcement;
   const isTopSplit = !!(state.hasTopReinforcement || state.W > 940);
-  const isTypeC = state.cageType === 'C';
+  const isTypeC = (state.cageType === 'C' || state.cageType === 'C_FRAMED');
   const isSideSplit = !!state.hasSideReinforcement;
   const isFrontWide3x = state.cageType === 'A' && state.frontWideFrame === '3x';
   const isCaster = state.footType === 'caster';
@@ -1680,7 +1682,7 @@ function calculateGrandTotals() {
   const isRubberPacking = !!state.hasRubberPacking;
   const isRoomDivider = !!state.hasRoomDivider;
   const isTypeAFront = state.cageType === 'A_FRONT';
-  const isTypeAFramed = state.cageType === 'A_FRAMED';
+  const isTypeAFramed = (state.cageType === 'A_FRAMED' || state.cageType === 'C_FRAMED');
   const isFloorHeaterSupport = !!state.hasFloorHeaterSupport;
 
   // 1. オプション加工工賃（資材費とは別で単純に販売価格へ加算）
@@ -1889,6 +1891,8 @@ function getFrontDoorHingeDisplayName(side = state.doorHingeSide) {
 function getCageTypeDisplayName(detailed = false) {
   if (state.cageType === 'A_FRAMED') {
     return detailed ? 'Type A 正面枠囲い（高剛性アルミ枠スライド扉仕様）' : 'Type A 正面枠囲い';
+  } else if (state.cageType === 'C_FRAMED') {
+    return detailed ? 'Type C 正面枠囲い（下部前窓＋高剛性アルミ枠スライド扉仕様）' : 'Type C 正面枠囲い';
   } else if (state.cageType === 'A_FRONT') {
     const hingeText = getFrontDoorHingeDisplayName();
     return detailed ? `Type A 前開き (${hingeText})` : `Type A 前開き (${hingeText})`;
@@ -2107,7 +2111,7 @@ function updateDoorAntiFlexAvailability() {
   if (!toggleDoorAntiFlex || !cardDoorAntiFlex) return;
 
   const isFrontOpen = state.cageType === 'A_FRONT';
-  const isFramed = state.cageType === 'A_FRAMED';
+  const isFramed = state.cageType === 'A_FRAMED' || state.cageType === 'C_FRAMED';
   const doorAntiFlexSub = document.getElementById('door-anti-flex-sub');
 
   if (isFrontOpen || isFramed) {
@@ -2137,7 +2141,7 @@ function updateRoomDividerAvailability() {
   if (!toggleRoomDivider || !cardRoomDivider) return;
 
   const isFrontOpen = state.cageType === 'A_FRONT';
-  const isFramed = state.cageType === 'A_FRAMED';
+  const isFramed = state.cageType === 'A_FRAMED' || state.cageType === 'C_FRAMED';
   const isPerchActive = state.hasPerch;
 
   if (isFrontOpen || isPerchActive || isFramed) {
@@ -2340,6 +2344,7 @@ btnTypeA.addEventListener('click', () => {
   btnTypeAFront?.classList.remove('active');
   btnTypeAFramed?.classList.remove('active');
   btnTypeC.classList.remove('active');
+  btnTypeCFramed?.classList.remove('active');
   rowFrontWindow.classList.add('hidden');
   typeBadge.textContent = 'Type A 選択中 (全面スライド扉)';
   updateDoorUI();
@@ -2353,6 +2358,7 @@ btnTypeAFront?.addEventListener('click', () => {
   btnTypeA.classList.remove('active');
   btnTypeAFramed?.classList.remove('active');
   btnTypeC.classList.remove('active');
+  btnTypeCFramed?.classList.remove('active');
   rowFrontWindow.classList.add('hidden');
   typeBadge.textContent = `Type A 前開き 選択中 (${getFrontDoorHingeDisplayName()})`;
   updateDoorUI();
@@ -2365,6 +2371,7 @@ btnTypeAFramed?.addEventListener('click', () => {
   btnTypeA.classList.remove('active');
   btnTypeAFront?.classList.remove('active');
   btnTypeC.classList.remove('active');
+  btnTypeCFramed?.classList.remove('active');
   rowFrontWindow.classList.add('hidden');
   typeBadge.textContent = 'Type A 正面枠囲い 選択中 (高剛性枠・スライド扉)';
   updateDoorUI();
@@ -2378,8 +2385,23 @@ btnTypeC.addEventListener('click', () => {
   btnTypeA.classList.remove('active');
   btnTypeAFront?.classList.remove('active');
   btnTypeAFramed?.classList.remove('active');
+  btnTypeCFramed?.classList.remove('active');
   rowFrontWindow.classList.remove('hidden');
   typeBadge.textContent = 'Type C 選択中 (前窓＋扉)';
+  updateDoorUI();
+  syncUpdate();
+});
+
+btnTypeCFramed?.addEventListener('click', () => {
+  state.cageType = 'C_FRAMED';
+  state.frontWideFrame = 'none'; // Type Cは前窓構造のため幅広フレームなし
+  btnTypeCFramed.classList.add('active');
+  btnTypeA.classList.remove('active');
+  btnTypeAFront?.classList.remove('active');
+  btnTypeAFramed?.classList.remove('active');
+  btnTypeC.classList.remove('active');
+  rowFrontWindow.classList.remove('hidden');
+  typeBadge.textContent = 'Type C 正面枠囲い 選択中 (前窓＋高剛性枠スライド扉)';
   updateDoorUI();
   syncUpdate();
 });
@@ -2395,13 +2417,13 @@ const STANDARD_MAX_H = 900;
 
 /**
  * ケージタイプに応じた寸法上限・下限（幅・高さ）の制限更新
- * - TypeA 正面枠囲い: 幅900mm以上、高さ450mm以上
+ * - TypeA / TypeC 正面枠囲い: 幅900mm以上、高さ450mm以上
  * - TypeA 前開き: 幅600mmまで、高さ700mmまで
  * - 標準ケージ: 幅300〜1800mm、高さ200〜900mm
  */
 function updateDimensionLimits() {
   const isFrontOpen = state.cageType === 'A_FRONT';
-  const isFramed = state.cageType === 'A_FRAMED';
+  const isFramed = state.cageType === 'A_FRAMED' || state.cageType === 'C_FRAMED';
   const minW = isFramed ? FRAMED_MIN_W : STANDARD_MIN_W;
   const minH = isFramed ? FRAMED_MIN_H : STANDARD_MIN_H;
   const maxW = isFrontOpen ? FRONT_OPEN_MAX_W : STANDARD_MAX_W;
@@ -2444,14 +2466,15 @@ function updateDimensionLimits() {
 
 function updateDoorUI() {
   const isFrontOpen = state.cageType === 'A_FRONT';
-  const isFramed = state.cageType === 'A_FRAMED';
+  const isFramed = state.cageType === 'A_FRAMED' || state.cageType === 'C_FRAMED';
+  const isTypeC = state.cageType === 'C' || state.cageType === 'C_FRAMED';
   updateDimensionLimits();
   updateDoorAntiFlexAvailability();
   updateRoomDividerAvailability();
 
-  // 正面幅広フレームオプションの表示制御（A_FRAMED または Type C のときは非表示）
-  cardFrontWide2x?.classList.toggle('hidden', isFramed || state.cageType === 'C');
-  cardFrontWide3x?.classList.toggle('hidden', isFramed || state.cageType === 'C');
+  // 正面幅広フレームオプションの表示制御（正面枠囲い または Type C のときは非表示）
+  cardFrontWide2x?.classList.toggle('hidden', isFramed || isTypeC);
+  cardFrontWide3x?.classList.toggle('hidden', isFramed || isTypeC);
 
   if (sectionFrontDoorHinge) {
     if (isFrontOpen) {
@@ -3021,16 +3044,19 @@ function applyCreaturePreset(preset) {
   state.H = preset.H;
 
   // 2. ケージタイプ（指定があれば連動）
-  if (preset.cageType && (preset.cageType === 'A' || preset.cageType === 'A_FRONT' || preset.cageType === 'A_FRAMED' || preset.cageType === 'C')) {
+  if (preset.cageType && (preset.cageType === 'A' || preset.cageType === 'A_FRONT' || preset.cageType === 'A_FRAMED' || preset.cageType === 'C' || preset.cageType === 'C_FRAMED')) {
     state.cageType = preset.cageType;
     if (btnTypeA && btnTypeC) {
       btnTypeA.classList.toggle('active', state.cageType === 'A');
       btnTypeAFront?.classList.toggle('active', state.cageType === 'A_FRONT');
       btnTypeAFramed?.classList.toggle('active', state.cageType === 'A_FRAMED');
       btnTypeC.classList.toggle('active', state.cageType === 'C');
+      btnTypeCFramed?.classList.toggle('active', state.cageType === 'C_FRAMED');
       if (typeBadge) {
         if (state.cageType === 'A_FRAMED') {
           typeBadge.textContent = 'Type A 正面枠囲い 選択中 (高剛性枠・スライド扉)';
+        } else if (state.cageType === 'C_FRAMED') {
+          typeBadge.textContent = 'Type C 正面枠囲い 選択中 (前窓＋高剛性枠スライド扉)';
         } else if (state.cageType === 'A_FRONT') {
           state.doorHingeSide = preset.doorHingeSide || 'left';
           typeBadge.textContent = `Type A 前開き 選択中 (${getFrontDoorHingeDisplayName()})`;
@@ -3039,14 +3065,14 @@ function applyCreaturePreset(preset) {
         }
       }
       if (rowFrontWindow) {
-        rowFrontWindow.classList.toggle('hidden', state.cageType !== 'C');
+        rowFrontWindow.classList.toggle('hidden', state.cageType !== 'C' && state.cageType !== 'C_FRAMED');
       }
       updateDoorUI();
     }
   }
 
-  // 3. 前窓開口高さ (Type C)
-  if (state.cageType === 'C') {
+  // 3. 前窓開口高さ (Type C / Type C 正面枠囲い)
+  if (state.cageType === 'C' || state.cageType === 'C_FRAMED') {
     const fw = preset.frontWindowH != null ? preset.frontWindowH : 50;
     state.frontWindowH = fw;
     if (inputFW) inputFW.value = fw;
@@ -3191,7 +3217,7 @@ function applyFullCageSpec(targetSpec) {
   }
 
   // 2. ケージタイプ
-  const validTypes = ['A', 'A_FRONT', 'A_FRAMED', 'C'];
+  const validTypes = ['A', 'A_FRONT', 'A_FRAMED', 'C', 'C_FRAMED'];
   if (targetSpec.cageType && validTypes.includes(targetSpec.cageType)) {
     state.cageType = targetSpec.cageType;
     if (btnTypeA && btnTypeC) {
@@ -3199,9 +3225,12 @@ function applyFullCageSpec(targetSpec) {
       btnTypeAFront?.classList.toggle('active', state.cageType === 'A_FRONT');
       btnTypeAFramed?.classList.toggle('active', state.cageType === 'A_FRAMED');
       btnTypeC.classList.toggle('active', state.cageType === 'C');
+      btnTypeCFramed?.classList.toggle('active', state.cageType === 'C_FRAMED');
       if (typeBadge) {
         if (state.cageType === 'A_FRAMED') {
           typeBadge.textContent = 'Type A 正面枠囲い 選択中 (高剛性枠・スライド扉)';
+        } else if (state.cageType === 'C_FRAMED') {
+          typeBadge.textContent = 'Type C 正面枠囲い 選択中 (前窓＋高剛性枠スライド扉)';
         } else if (state.cageType === 'A_FRONT') {
           state.doorHingeSide = targetSpec.doorHingeSide || 'left';
           typeBadge.textContent = `Type A 前開き 選択中 (${getFrontDoorHingeDisplayName()})`;
@@ -3210,14 +3239,14 @@ function applyFullCageSpec(targetSpec) {
         }
       }
       if (rowFrontWindow) {
-        rowFrontWindow.classList.toggle('hidden', state.cageType !== 'C');
+        rowFrontWindow.classList.toggle('hidden', state.cageType !== 'C' && state.cageType !== 'C_FRAMED');
       }
       updateDoorUI();
     }
   }
 
-  // 3. 前窓開口高さ (Type C)
-  if (state.cageType === 'C') {
+  // 3. 前窓開口高さ (Type C / Type C 正面枠囲い)
+  if (state.cageType === 'C' || state.cageType === 'C_FRAMED') {
     const fw = targetSpec.frontWindowH != null ? Number(targetSpec.frontWindowH) : 50;
     state.frontWindowH = fw;
     if (inputFW) inputFW.value = fw;
@@ -4764,16 +4793,19 @@ function checkInitialStateFromStorageOrUrl() {
       if (inputH) inputH.value = state.H;
       if (sliderH) sliderH.value = state.H;
     }
-    if (incomingState.cageType === 'A' || incomingState.cageType === 'A_FRONT' || incomingState.cageType === 'A_FRAMED' || incomingState.cageType === 'C') {
+    if (incomingState.cageType === 'A' || incomingState.cageType === 'A_FRONT' || incomingState.cageType === 'A_FRAMED' || incomingState.cageType === 'C' || incomingState.cageType === 'C_FRAMED') {
       state.cageType = incomingState.cageType;
       if (btnTypeA && btnTypeC) {
         btnTypeA.classList.toggle('active', state.cageType === 'A');
         btnTypeAFront?.classList.toggle('active', state.cageType === 'A_FRONT');
         btnTypeAFramed?.classList.toggle('active', state.cageType === 'A_FRAMED');
         btnTypeC.classList.toggle('active', state.cageType === 'C');
+        btnTypeCFramed?.classList.toggle('active', state.cageType === 'C_FRAMED');
         if (typeBadge) {
           if (state.cageType === 'A_FRAMED') {
             typeBadge.textContent = 'Type A 正面枠囲い 選択中 (高剛性枠・スライド扉)';
+          } else if (state.cageType === 'C_FRAMED') {
+            typeBadge.textContent = 'Type C 正面枠囲い 選択中 (前窓＋高剛性枠スライド扉)';
           } else if (state.cageType === 'A_FRONT') {
             state.doorHingeSide = incomingState.doorHingeSide || 'left';
             typeBadge.textContent = `Type A 前開き 選択中 (${getFrontDoorHingeDisplayName()})`;
@@ -4782,7 +4814,7 @@ function checkInitialStateFromStorageOrUrl() {
           }
         }
         if (rowFrontWindow) {
-          rowFrontWindow.classList.toggle('hidden', state.cageType !== 'C');
+          rowFrontWindow.classList.toggle('hidden', state.cageType !== 'C' && state.cageType !== 'C_FRAMED');
         }
         updateDoorUI();
       }
