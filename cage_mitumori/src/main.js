@@ -1383,7 +1383,12 @@ function updateBOMTable() {
  */
 function setupDebugBOMIfRequested() {
   try {
-    // 🛡️ 原価・部材漏洩の完全遮断: ローカル開発環境でのみ有効化（本番環境では絶対に生成されません）
+    // 🛡️ 原価・部材漏洩の完全遮断:
+    // 1. 本番用ビルド成果物（production）では完全に無効化（ビルドレベル遮断）
+    if (import.meta.env.PROD) {
+      return;
+    }
+    // 2. ローカル開発環境（localhost / 127.0.0.1）でのみ有効化（本番URLでは絶対に生成されません）
     if (!isLocalDevelopmentEnvironment()) {
       return;
     }
