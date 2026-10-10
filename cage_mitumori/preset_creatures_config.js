@@ -15,6 +15,9 @@
  * - hasDoorAntiFlex: 正面スライド扉たわみ防止レール (boolean)
  * - hasSideVentCover: 側面換気量調整板 (boolean)
  * - hasFloorReinforcement: 床面中央補強フレーム (boolean)
+ * - floorSplitCount: 床面補強分割数 (2 | 3) (デフォルト: 2)
+ * - hasBackReinforcement: 背面補強フレーム (boolean)
+ * - backSplitCount: 背面補強分割数 (2 | 3) (デフォルト: 2)
  * - hasTopReinforcement: 天板中央補強フレーム (boolean)
  * - footType: 脚仕様 ('rubber' または 'caster')
  * - panelConfig: 各面パネル素材 (floor, back, side, sideUpper, sideLower, top, topLeft, topRight)
@@ -128,6 +131,7 @@ export const creaturePresets = [
     hasSideReinforcement: false,
     hasSideVentCover: false,
     hasFloorReinforcement: true,
+    floorSplitCount: 2,
     hasTopReinforcement: false,
     footType: 'rubber',
     panelConfig: {
@@ -159,6 +163,7 @@ export const creaturePresets = [
     hasSideReinforcement: false,
     hasSideVentCover: false,
     hasFloorReinforcement: true,
+    floorSplitCount: 2,
     hasTopReinforcement: false,
     footType: 'rubber',
     panelConfig: {
@@ -191,6 +196,7 @@ export const creaturePresets = [
     sideOpeningH: 200,
     hasSideVentCover: false,
     hasFloorReinforcement: true,
+    floorSplitCount: 2,
     hasTopReinforcement: false,
     footType: 'rubber',
     panelConfig: {

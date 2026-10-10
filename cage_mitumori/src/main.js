@@ -2013,7 +2013,13 @@ function updateFloorReinforceByArea() {
     state.hasFloorReinforcement = isOver;
     toggleFloorReinforce.checked = isOver;
   }
-  if (selectFloorSplit) selectFloorSplit.disabled = !state.hasFloorReinforcement;
+  if (!state.floorSplitCount) {
+    state.floorSplitCount = 2;
+  }
+  if (selectFloorSplit) {
+    if (!selectFloorSplit.value) selectFloorSplit.value = String(state.floorSplitCount);
+    selectFloorSplit.disabled = !state.hasFloorReinforcement;
+  }
   if (cardFloorReinforce) cardFloorReinforce.classList.toggle('active', state.hasFloorReinforcement);
 }
 
@@ -2042,7 +2048,13 @@ function updateBackReinforce() {
     if (cardBackReinforce) cardBackReinforce.classList.remove('disabled', 'required-locked');
     if (backReinfSub) backReinfSub.textContent = '940mm以下は任意指定（W>940mmは必須）';
   }
-  if (selectBackSplit) selectBackSplit.disabled = !state.hasBackReinforcement;
+  if (!state.backSplitCount) {
+    state.backSplitCount = 2;
+  }
+  if (selectBackSplit) {
+    if (!selectBackSplit.value) selectBackSplit.value = String(state.backSplitCount);
+    selectBackSplit.disabled = !state.hasBackReinforcement;
+  }
   if (cardBackReinforce) cardBackReinforce.classList.toggle('active', state.hasBackReinforcement);
 }
 
@@ -2146,7 +2158,13 @@ toggleSideReinforce.addEventListener('change', (e) => {
 // 床面中央補強フレームのトグル
 toggleFloorReinforce.addEventListener('change', (e) => {
   state.hasFloorReinforcement = e.target.checked;
-  if (selectFloorSplit) selectFloorSplit.disabled = !state.hasFloorReinforcement;
+  if (!state.floorSplitCount) {
+    state.floorSplitCount = 2;
+  }
+  if (selectFloorSplit) {
+    if (!selectFloorSplit.value) selectFloorSplit.value = String(state.floorSplitCount);
+    selectFloorSplit.disabled = !state.hasFloorReinforcement;
+  }
   if (cardFloorReinforce) cardFloorReinforce.classList.toggle('active', state.hasFloorReinforcement);
   syncUpdate();
 });
@@ -2163,7 +2181,13 @@ if (selectFloorSplit) {
 if (toggleBackReinforce) {
   toggleBackReinforce.addEventListener('change', (e) => {
     state.hasBackReinforcement = e.target.checked;
-    if (selectBackSplit) selectBackSplit.disabled = !state.hasBackReinforcement;
+    if (!state.backSplitCount) {
+      state.backSplitCount = 2;
+    }
+    if (selectBackSplit) {
+      if (!selectBackSplit.value) selectBackSplit.value = String(state.backSplitCount);
+      selectBackSplit.disabled = !state.hasBackReinforcement;
+    }
     if (cardBackReinforce) cardBackReinforce.classList.toggle('active', state.hasBackReinforcement);
     syncUpdate();
   });
@@ -2175,6 +2199,16 @@ if (selectBackSplit) {
     state.backSplitCount = parseInt(e.target.value, 10);
     syncUpdate();
   });
+}
+
+// 分割数セレクトボックスの初期値確定（デフォルト2分割を明示保証）
+if (selectFloorSplit) {
+  selectFloorSplit.value = String(state.floorSplitCount || 2);
+  selectFloorSplit.disabled = !state.hasFloorReinforcement;
+}
+if (selectBackSplit) {
+  selectBackSplit.value = String(state.backSplitCount || 2);
+  selectBackSplit.disabled = !state.hasBackReinforcement;
 }
 
 // 天板中央補強フレームのトグル
@@ -3255,10 +3289,9 @@ function applyCreaturePreset(preset) {
   if (sliderH) sliderH.value = state.H;
 
   // 12. 床面・背面・天板補強ルールの判定
-  if (preset.floorSplitCount != null) {
-    state.floorSplitCount = preset.floorSplitCount;
-    if (selectFloorSplit) selectFloorSplit.value = String(state.floorSplitCount);
-  }
+  state.floorSplitCount = (preset.floorSplitCount != null) ? preset.floorSplitCount : 2;
+  if (selectFloorSplit) selectFloorSplit.value = String(state.floorSplitCount);
+
   if (preset.hasFloorReinforcement != null) {
     state.hasFloorReinforcement = !!preset.hasFloorReinforcement;
     if (toggleFloorReinforce) toggleFloorReinforce.checked = state.hasFloorReinforcement;
@@ -3268,10 +3301,9 @@ function applyCreaturePreset(preset) {
   if (selectFloorSplit) selectFloorSplit.disabled = !state.hasFloorReinforcement;
   if (cardFloorReinforce) cardFloorReinforce.classList.toggle('active', state.hasFloorReinforcement);
 
-  if (preset.backSplitCount != null) {
-    state.backSplitCount = preset.backSplitCount;
-    if (selectBackSplit) selectBackSplit.value = String(state.backSplitCount);
-  }
+  state.backSplitCount = (preset.backSplitCount != null) ? preset.backSplitCount : 2;
+  if (selectBackSplit) selectBackSplit.value = String(state.backSplitCount);
+
   if (preset.hasBackReinforcement != null) {
     state.hasBackReinforcement = !!preset.hasBackReinforcement;
     if (toggleBackReinforce) toggleBackReinforce.checked = state.hasBackReinforcement;
@@ -5104,10 +5136,8 @@ function checkInitialStateFromStorageOrUrl() {
         if (cardPerch) cardPerch.classList.add('disabled');
       }
     }
-    if (incomingState.floorSplitCount != null) {
-      state.floorSplitCount = incomingState.floorSplitCount;
-      if (selectFloorSplit) selectFloorSplit.value = String(state.floorSplitCount);
-    }
+    state.floorSplitCount = (incomingState.floorSplitCount != null) ? incomingState.floorSplitCount : (state.floorSplitCount || 2);
+    if (selectFloorSplit) selectFloorSplit.value = String(state.floorSplitCount);
     if (typeof incomingState.hasFloorReinforcement === 'boolean') {
       state.hasFloorReinforcement = incomingState.hasFloorReinforcement;
       if (toggleFloorReinforce) toggleFloorReinforce.checked = state.hasFloorReinforcement;
@@ -5117,10 +5147,8 @@ function checkInitialStateFromStorageOrUrl() {
     if (selectFloorSplit) selectFloorSplit.disabled = !state.hasFloorReinforcement;
     if (cardFloorReinforce) cardFloorReinforce.classList.toggle('active', state.hasFloorReinforcement);
 
-    if (incomingState.backSplitCount != null) {
-      state.backSplitCount = incomingState.backSplitCount;
-      if (selectBackSplit) selectBackSplit.value = String(state.backSplitCount);
-    }
+    state.backSplitCount = (incomingState.backSplitCount != null) ? incomingState.backSplitCount : (state.backSplitCount || 2);
+    if (selectBackSplit) selectBackSplit.value = String(state.backSplitCount);
     if (typeof incomingState.hasBackReinforcement === 'boolean') {
       state.hasBackReinforcement = incomingState.hasBackReinforcement;
       if (toggleBackReinforce) toggleBackReinforce.checked = state.hasBackReinforcement;
