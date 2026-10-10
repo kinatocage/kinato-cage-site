@@ -58,7 +58,7 @@
               </div>
             </div>
             <div class="cost-hud-beta-notice">
-              ※まだβ版なので誤差（最大±8%程度）が出ております。詳細はDMよりお問い合わせください。
+              ※まだβ版なので誤差（最大±5%程度）が出ております。詳細はDMよりお問い合わせください。
             </div>
             <!-- 見積もり詳細＆画像保存モーダルを開くボタン（価格・重量の真下にワイド配置） -->
             <button class="btn-open-estimate-modal" id="btn-open-estimate-modal" title="お見積もり結果の詳細確認・画像保存・仕様コピー">
@@ -655,6 +655,29 @@
                     <span class="option-sub" id="floor-reinf-sub">床面積が 750×450mm 超で推奨。解除時はたわみにご注意ください</span>
                   </div>
                 </label>
+                <div class="split-select-wrap">
+                  <select id="select-floor-split" class="split-select" title="床面分割数">
+                    <option value="2">2分割</option>
+                    <option value="3">3分割</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- 背面補強フレーム -->
+              <div class="option-inline-card" id="card-back-reinforce" style="margin-top: 8px;">
+                <label class="option-checkbox-label">
+                  <input type="checkbox" id="toggle-back-reinforce" class="custom-checkbox" />
+                  <div class="option-text-wrap">
+                    <span class="option-title">背面補強フレーム</span>
+                    <span class="option-sub" id="back-reinf-sub">940mm以下は任意指定（W&gt;940mmは必須）</span>
+                  </div>
+                </label>
+                <div class="split-select-wrap">
+                  <select id="select-back-split" class="split-select" title="背面分割数">
+                    <option value="2">2分割</option>
+                    <option value="3">3分割</option>
+                  </select>
+                </div>
               </div>
 
               <!-- 床下パネルヒータ支え板 -->
@@ -676,7 +699,7 @@
                 <label class="option-checkbox-label">
                   <input type="checkbox" id="toggle-top-reinforce" class="custom-checkbox" />
                   <div class="option-text-wrap">
-                    <span class="option-title">天板中央補強フレーム</span>
+                    <span class="option-title">天板中央補強フレーム（2分割）</span>
                     <span class="option-sub" id="top-reinf-sub">940mm以下は任意指定（W&gt;940mmは必須）</span>
                   </div>
                 </label>
@@ -819,7 +842,7 @@
             <span class="modal-weight-val" id="modal-weight-total">0.0 kg</span>
           </div>
           <div class="modal-beta-notice">
-            ※まだβ版なので誤差（最大±8%程度）が出ております。詳細はDMよりお問い合わせください。
+            ※まだβ版なので誤差（最大±5%程度）が出ております。詳細はDMよりお問い合わせください。
           </div>
         </div>
 
@@ -850,6 +873,22 @@
               <div class="preview-press-hint">👆 画像を長押しして「写真」に保存も可能です</div>
             </div>
           </div>
+        </div>
+
+        <!-- 🔗 仕様再現URLセクション -->
+        <div class="modal-share-url-section">
+          <div class="modal-share-url-header">
+            <span class="modal-share-url-title">🔗 仕様再現URL</span>
+            <button type="button" class="modal-btn-copy-url" id="btn-copy-share-url-modal" title="仕様再現URLをクリップボードにコピー">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <span class="copy-url-label">URLをコピー</span>
+            </button>
+          </div>
+          <div class="share-url-input-wrap">
+            <input type="text" class="modal-share-url-input" id="modal-share-url-input" readonly spellcheck="false" />
+          </div>
+          <div class="modal-copy-url-toast hidden" id="modal-copy-url-toast">✅ 仕様再現URLをコピーしました！</div>
+          <span class="modal-share-url-hint">※URLを控えることで、この仕様にてロードされます。</span>
         </div>
 
         <!-- 📋 仕様テキスト＆コピー -->

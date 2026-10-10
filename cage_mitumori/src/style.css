@@ -969,7 +969,22 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 .option-inline-card.active {
   border-color: var(--color-primary);
+  background: rgba(138, 154, 134, 0.14);
+}
+
+/* 幅940mm超などの必須固定（解除不可）カードスタイル */
+.option-inline-card.required-locked {
+  border-color: rgba(138, 154, 134, 0.45);
   background: rgba(138, 154, 134, 0.12);
+}
+
+.option-inline-card.required-locked label {
+  cursor: default;
+}
+
+.option-inline-card.required-locked input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.9;
 }
 
 .option-inline-card.disabled {
@@ -982,10 +997,68 @@ input[type="range"]::-webkit-slider-thumb:hover {
   cursor: not-allowed;
 }
 
+/* 万一親カードがdisabledでも、セレクトボックス自体が有効な場合は明瞭に表示 */
+.option-inline-card.disabled .split-select:not(:disabled) {
+  opacity: 1 !important;
+  filter: none !important;
+}
+
 .option-title-row {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.split-select-wrap {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.split-select {
+  padding: 5px 26px 5px 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background-color: #242c3d;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23e2e8f0' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  color: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.split-select:hover:not(:disabled) {
+  border-color: var(--color-primary-dark, #a2b49e);
+  background-color: #2e374d;
+  box-shadow: 0 0 0 1px rgba(162, 180, 158, 0.35);
+}
+
+.split-select:focus {
+  border-color: var(--color-primary, #8A9A86);
+  box-shadow: 0 0 0 2px rgba(138, 154, 134, 0.35);
+}
+
+.split-select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background-color: #1a1f2b;
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #64748b;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
+.split-select option {
+  background-color: #1e2433;
+  color: #f8fafc;
+  font-weight: 600;
 }
 
 .option-cond-badge {
@@ -3105,6 +3178,109 @@ button.creature-card.active {
   font-weight: 600 !important;
   text-align: center !important;
   letter-spacing: 0.02em !important;
+}
+
+/* 🔗 お客様共有用URLセクション */
+.modal-share-url-section {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.85), rgba(30, 41, 59, 0.85)) !important;
+  border: 1px solid rgba(56, 189, 248, 0.35) !important;
+  border-radius: 10px !important;
+  padding: 12px 14px !important;
+  position: relative !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25) !important;
+}
+
+.modal-share-url-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.modal-share-url-title {
+  font-size: 0.8rem !important;
+  font-weight: 700 !important;
+  color: #38bdf8 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  letter-spacing: 0.02em !important;
+}
+
+.modal-btn-copy-url {
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  padding: 5px 12px !important;
+  background: linear-gradient(135deg, #0284c7, #0ea5e9) !important;
+  border: 1px solid rgba(56, 189, 248, 0.6) !important;
+  color: #ffffff !important;
+  border-radius: 6px !important;
+  font-size: 0.74rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.35) !important;
+}
+
+.modal-btn-copy-url:hover {
+  background: linear-gradient(135deg, #0ea5e9, #38bdf8) !important;
+  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.55) !important;
+  transform: translateY(-1px) !important;
+}
+
+.modal-btn-copy-url:active {
+  transform: translateY(0) !important;
+}
+
+.share-url-input-wrap {
+  width: 100% !important;
+}
+
+.modal-share-url-input {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  background: rgba(2, 6, 23, 0.8) !important;
+  color: #7dd3fc !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  border-radius: 6px !important;
+  font-size: 0.78rem !important;
+  padding: 8px 12px !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+}
+
+.modal-share-url-input:focus {
+  outline: none !important;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.3) !important;
+}
+
+.modal-share-url-hint {
+  font-size: 0.68rem !important;
+  color: #94a3b8 !important;
+  line-height: 1.4 !important;
+}
+
+.modal-copy-url-toast {
+  position: absolute !important;
+  bottom: 24px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  background: #10b981 !important;
+  color: #ffffff !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  padding: 7px 16px !important;
+  border-radius: 20px !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6) !important;
+  pointer-events: none !important;
+  z-index: 10 !important;
+  white-space: nowrap !important;
+  animation: modalToastPop 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 /* 📋 仕様テキスト＆コピー */

@@ -1,36 +1,49 @@
 @echo off
-setlocal
+chcp 65001 >nul
 cd /d "%~dp0"
 
 echo ========================================================
-echo   Kinato Cage 3D Simulator Starting...
+echo   きなとのケージ屋さん 3Dシミュレーター (資材リスト表示モード)
 echo ========================================================
 echo.
 
+:: 1. Node.js の存在確認
 where node >nul 2>nul
 if %errorlevel% neq 0 (
-    echo [ERROR] Node.js was not found.
-    echo Please install Node.js from https://nodejs.org/
+    echo [エラー] Node.js が見つかりませんでした。
+    echo https://nodejs.org/ よりインストールしてください。
     pause
     exit /b 1
 )
 
+:: 2. 依存パッケージの確認
 if not exist "node_modules\" (
-    echo Installing dependencies...
+    echo 依存パッケージをインストール中...
     call npm install
     if %errorlevel% neq 0 (
-        echo [ERROR] Package installation failed.
+        echo [エラー] パッケージのインストールに失敗しました。
         pause
         exit /b 1
     )
 )
 
-echo Starting development server...
-echo Browser will automatically open at http://localhost:5173/?debug=bom
+:: 3. ポート 5173 を使用中の既存プロセスを終了（ポート番号のズレを防止）
+echo ポート 5173 の使用状況を確認中...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | Where-Object { $_ -gt 0 } | ForEach-Object { Write-Host '  - 既存のサーバープロセス (PID:' $_ ') を停止して再起動します...'; Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }"
+
+:: ポート解放の安定化のため少し待機
+timeout /t 1 /nobreak >nul
+
 echo.
-echo Press Ctrl + C or close this window to stop.
+echo 開発サーバー（ポート 5173）を起動しています...
+echo ブラウザで資材リスト（BOM）付きURLを自動的に開きます:
+echo   URL: http://localhost:5173/?debug=bom
+echo.
+echo ※終了する場合は、このウィンドウを閉じるか Ctrl + C を押してください。
 echo.
 
+:: 4. 2秒後に資材リスト表示モードのURLでブラウザを開く
 start "" cmd /c "timeout /t 2 /nobreak >nul && start \"\" \"http://localhost:5173/?debug=bom\""
 
-call npm run dev
+:: 5. Vite サーバーをポート 5173 固定で起動
+call npm run dev -- --port 5173 --strictPort

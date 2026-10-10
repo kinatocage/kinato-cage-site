@@ -91,6 +91,9 @@ export class CageModel {
       hasSideReinforcement: false, // 側面補強フレームの有無 (左右対称)
       sideOpeningH: 120,       // 側面上部フレーム間開口高さ (デフォルト: 上下均等 120mm)
       hasFloorReinforcement: false, // 床面中央補強フレーム (床面積 > 750×450mm で推奨ON)
+      floorSplitCount: 2,          // 床面補強分割数 (2 | 3)
+      hasBackReinforcement: false, // 背面補強フレーム (W>940mmで必須ON、940mm以下は任意)
+      backSplitCount: 2,           // 背面補強分割数 (2 | 3)
       hasTopReinforcement: false,  // 天面中央補強フレーム (W>940mmで必須ON、940mm以下は任意)
       hasDoorAntiFlex: false,      // 強力爬虫類向けスライド扉たわみ防止レール (扉幅-2mm)
       hasSideVentCover: false,     // 側面換気量調整板 (t1.5外張りアクリル板)
@@ -668,8 +671,13 @@ export class CageModel {
     } else if (newParams) {
       Object.assign(this.params, newParams);
     }
-    const { W, D, H, cageType, frontWindowH, hasSideReinforcement, sideOpeningH, showPanels, frameColor, hasFloorReinforcement, hasTopReinforcement, footType, doorHingeSide, hasFloorHeaterSupport } = this.params;
+    const { W, D, H, cageType, frontWindowH, hasSideReinforcement, sideOpeningH, showPanels, frameColor, hasFloorReinforcement, floorSplitCount, hasBackReinforcement, backSplitCount, hasTopReinforcement, footType, doorHingeSide, hasFloorHeaterSupport } = this.params;
     const isSilver = (frameColor === 'silver');
+
+    // 3分割時の共通開口幅と補強フレーム中心X座標（内寸 W-40mm、補強フレーム2本計40mmを引いた開口を3等分）
+    const win3 = (W - 80) / 3;
+    const reinfLeftX = -W / 2 + 30 + win3;
+    const reinfRightX = W / 2 - 30 - win3;
 
     if (frameColor) {
       this.materials.setFrameColor(frameColor);
@@ -725,12 +733,18 @@ export class CageModel {
       this.addFrameMember('2020', floorBackL, new THREE.Vector3(0, 10, -D / 2 + 10), rotX, '床・背面2020');
       this.recordPart(getFramePartNumber('2020', floorBackL, frameColor), floorBackL, 1, '床面 背面', 'frame');
 
-      // 床・中央補強フレーム (長さ D - 60mm、中心 Z = -10)
+      // 床・補強フレーム (長さ D - 60mm、中心 Z = -10)
       if (hasFloorReinforcement) {
         const floorCenterL = Math.max(10, D - 60);
         const reinfProfile = isSilver ? '2020_flat' : '2020';
-        this.addFrameMember(reinfProfile, floorCenterL, new THREE.Vector3(0, 10, -10), rotZ, '床・中央補強2020', null, 'top');
-        this.recordPart(getFramePartNumber('2020', floorCenterL, frameColor, false, true), floorCenterL, 1, '床面 中央補強 (2分割・D-60mm)', 'frame');
+        if (floorSplitCount === 3) {
+          this.addFrameMember(reinfProfile, floorCenterL, new THREE.Vector3(reinfLeftX, 10, -10), rotZ, '床・補強2020(左)', null, 'top');
+          this.addFrameMember(reinfProfile, floorCenterL, new THREE.Vector3(reinfRightX, 10, -10), rotZ, '床・補強2020(右)', null, 'top');
+          this.recordPart(getFramePartNumber('2020', floorCenterL, frameColor, false, true), floorCenterL, 2, '床面 補強フレーム (3分割・D-60mm)', 'frame');
+        } else {
+          this.addFrameMember(reinfProfile, floorCenterL, new THREE.Vector3(0, 10, -10), rotZ, '床・中央補強2020', null, 'top');
+          this.recordPart(getFramePartNumber('2020', floorCenterL, frameColor, false, true), floorCenterL, 1, '床面 中央補強 (2分割・D-60mm)', 'frame');
+        }
       }
 
       // 柱フレーム
@@ -739,6 +753,19 @@ export class CageModel {
       this.addFrameMember('2020', pillarLength, new THREE.Vector3(-W / 2 + 10, pillarY, -D / 2 + 10), rotY, '柱・奥左2020');
       this.addFrameMember('2020', pillarLength, new THREE.Vector3(W / 2 - 10, pillarY, -D / 2 + 10), rotY, '柱・奥右2020');
       this.recordPart(getFramePartNumber('2020', pillarLength, frameColor), pillarLength, 2, '柱 (奥2隅)', 'frame');
+
+      // 背面補強フレーム (W>940mmで必須、またはオプション指定、長さ H - 40mm, Z = -D/2 + 10)
+      if (hasBackReinforcement) {
+        const backReinfProfile = isSilver ? '2020_flat' : '2020';
+        if (backSplitCount === 3) {
+          this.addFrameMember(backReinfProfile, pillarLength, new THREE.Vector3(reinfLeftX, pillarY, -D / 2 + 10), rotY, '背面・補強2020(左)');
+          this.addFrameMember(backReinfProfile, pillarLength, new THREE.Vector3(reinfRightX, pillarY, -D / 2 + 10), rotY, '背面・補強2020(右)');
+          this.recordPart(getFramePartNumber('2020', pillarLength, frameColor, false, true), pillarLength, 2, '背面 補強フレーム (3分割)', 'frame');
+        } else {
+          this.addFrameMember(backReinfProfile, pillarLength, new THREE.Vector3(0, pillarY, -D / 2 + 10), rotY, '背面・中央補強2020');
+          this.recordPart(getFramePartNumber('2020', pillarLength, frameColor, false, true), pillarLength, 1, '背面 中央補強 (2分割)', 'frame');
+        }
+      }
 
       // 手前側2本: 2040 (幅20mm x 奥行40mm, 長さ H - 40mm, Z = D/2 - 20)
       this.addFrameMember('2040', pillarLength, new THREE.Vector3(-W / 2 + 10, pillarY, D / 2 - 20), rotY, '柱・手前左2040');
@@ -862,12 +889,18 @@ export class CageModel {
       this.addFrameMember('2020', floorBackL, new THREE.Vector3(0, 10, -D / 2 + 10), rotX, '床・背面2020');
       this.recordPart(getFramePartNumber('2020', floorBackL, frameColor), floorBackL, 1, '床面 背面', 'frame');
 
-      // 床・中央補強フレーム (長さ D - 60mm、中心 Z = -10)
+      // 床・補強フレーム (長さ D - 60mm、中心 Z = -10)
       if (hasFloorReinforcement) {
         const floorCenterL = Math.max(10, D - 60);
         const reinfProfile = isSilver ? '2020_flat' : '2020';
-        this.addFrameMember(reinfProfile, floorCenterL, new THREE.Vector3(0, 10, -10), rotZ, '床・中央補強2020', null, 'top');
-        this.recordPart(getFramePartNumber('2020', floorCenterL, frameColor, false, true), floorCenterL, 1, '床面 中央補強 (2分割・D-60mm)', 'frame');
+        if (floorSplitCount === 3) {
+          this.addFrameMember(reinfProfile, floorCenterL, new THREE.Vector3(reinfLeftX, 10, -10), rotZ, '床・補強2020(左)', null, 'top');
+          this.addFrameMember(reinfProfile, floorCenterL, new THREE.Vector3(reinfRightX, 10, -10), rotZ, '床・補強2020(右)', null, 'top');
+          this.recordPart(getFramePartNumber('2020', floorCenterL, frameColor, false, true), floorCenterL, 2, '床面 補強フレーム (3分割・D-60mm)', 'frame');
+        } else {
+          this.addFrameMember(reinfProfile, floorCenterL, new THREE.Vector3(0, 10, -10), rotZ, '床・中央補強2020', null, 'top');
+          this.recordPart(getFramePartNumber('2020', floorCenterL, frameColor, false, true), floorCenterL, 1, '床面 中央補強 (2分割・D-60mm)', 'frame');
+        }
       }
 
       // 柱フレーム
@@ -876,6 +909,19 @@ export class CageModel {
       this.addFrameMember('2020', pillarLength, new THREE.Vector3(-W / 2 + 10, pillarY, -D / 2 + 10), rotY, '柱・奥左2020');
       this.addFrameMember('2020', pillarLength, new THREE.Vector3(W / 2 - 10, pillarY, -D / 2 + 10), rotY, '柱・奥右2020');
       this.recordPart(getFramePartNumber('2020', pillarLength, frameColor), pillarLength, 2, '柱 (奥2隅)', 'frame');
+
+      // 背面補強フレーム (W>940mmで必須、またはオプション指定、長さ H - 40mm, Z = -D/2 + 10)
+      if (hasBackReinforcement) {
+        const backReinfProfile = isSilver ? '2020_flat' : '2020';
+        if (backSplitCount === 3) {
+          this.addFrameMember(backReinfProfile, pillarLength, new THREE.Vector3(reinfLeftX, pillarY, -D / 2 + 10), rotY, '背面・補強2020(左)');
+          this.addFrameMember(backReinfProfile, pillarLength, new THREE.Vector3(reinfRightX, pillarY, -D / 2 + 10), rotY, '背面・補強2020(右)');
+          this.recordPart(getFramePartNumber('2020', pillarLength, frameColor, false, true), pillarLength, 2, '背面 補強フレーム (3分割)', 'frame');
+        } else {
+          this.addFrameMember(backReinfProfile, pillarLength, new THREE.Vector3(0, pillarY, -D / 2 + 10), rotY, '背面・中央補強2020');
+          this.recordPart(getFramePartNumber('2020', pillarLength, frameColor, false, true), pillarLength, 1, '背面 中央補強 (2分割)', 'frame');
+        }
+      }
 
       // 手前側2本: 2040 (幅20mm x 奥行40mm, 長さ H - 40mm, Z = D/2 - 20)
       this.addFrameMember('2040', pillarLength, new THREE.Vector3(-W / 2 + 10, pillarY, D / 2 - 20), rotY, '柱・手前左2040');
@@ -1010,12 +1056,18 @@ export class CageModel {
       this.addFrameMember('2020', floorBackL, new THREE.Vector3(0, 10, -D / 2 + 10), rotX, '床・背面2020');
       this.recordPart(getFramePartNumber('2020', floorBackL, frameColor), floorBackL, 1, '床面 背面', 'frame');
 
-      // 床・中央補強フレーム (オプションまたはW>750mmで連動、長さ D - 40)
+      // 床・補強フレーム (オプションまたはW>750mmで連動、長さ D - 40)
       if (hasFloorReinforcement) {
         const floorCenterL = Math.max(10, D - 40);
         const reinfProfile = isSilver ? '2020_flat' : '2020';
-        this.addFrameMember(reinfProfile, floorCenterL, new THREE.Vector3(0, 10, 0), rotZ, '床・中央補強2020', null, 'top');
-        this.recordPart(getFramePartNumber('2020', floorCenterL, frameColor, false, true), floorCenterL, 1, '床面 中央補強 (2分割)', 'frame');
+        if (floorSplitCount === 3) {
+          this.addFrameMember(reinfProfile, floorCenterL, new THREE.Vector3(reinfLeftX, 10, 0), rotZ, '床・補強2020(左)', null, 'top');
+          this.addFrameMember(reinfProfile, floorCenterL, new THREE.Vector3(reinfRightX, 10, 0), rotZ, '床・補強2020(右)', null, 'top');
+          this.recordPart(getFramePartNumber('2020', floorCenterL, frameColor, false, true), floorCenterL, 2, '床面 補強フレーム (3分割)', 'frame');
+        } else {
+          this.addFrameMember(reinfProfile, floorCenterL, new THREE.Vector3(0, 10, 0), rotZ, '床・中央補強2020', null, 'top');
+          this.recordPart(getFramePartNumber('2020', floorCenterL, frameColor, false, true), floorCenterL, 1, '床面 中央補強 (2分割)', 'frame');
+        }
       }
 
       // 柱フレーム (4本すべて H - 40mm、床奥行きフレーム Y=20 に乗る)
@@ -1025,6 +1077,19 @@ export class CageModel {
       this.addFrameMember('2020', pillarLength, new THREE.Vector3(-W / 2 + 10, pillarY, -D / 2 + 10), rotY, '柱・奥左');
       this.addFrameMember('2020', pillarLength, new THREE.Vector3(W / 2 - 10, pillarY, -D / 2 + 10), rotY, '柱・奥右');
       this.recordPart(getFramePartNumber('2020', pillarLength, frameColor), pillarLength, 4, '柱 (4隅・床奥行き乗せ)', 'frame');
+
+      // 背面補強フレーム (W>940mmで必須、またはオプション指定、長さ H - 40mm, Z = -D/2 + 10)
+      if (hasBackReinforcement) {
+        const backReinfProfile = isSilver ? '2020_flat' : '2020';
+        if (backSplitCount === 3) {
+          this.addFrameMember(backReinfProfile, pillarLength, new THREE.Vector3(reinfLeftX, pillarY, -D / 2 + 10), rotY, '背面・補強2020(左)');
+          this.addFrameMember(backReinfProfile, pillarLength, new THREE.Vector3(reinfRightX, pillarY, -D / 2 + 10), rotY, '背面・補強2020(右)');
+          this.recordPart(getFramePartNumber('2020', pillarLength, frameColor, false, true), pillarLength, 2, '背面 補強フレーム (3分割)', 'frame');
+        } else {
+          this.addFrameMember(backReinfProfile, pillarLength, new THREE.Vector3(0, pillarY, -D / 2 + 10), rotY, '背面・中央補強2020');
+          this.recordPart(getFramePartNumber('2020', pillarLength, frameColor, false, true), pillarLength, 1, '背面 中央補強 (2分割)', 'frame');
+        }
+      }
 
       // 天面フレームの金網仕様判定（シルバー金網仕様時は金網に接する天面フレームすべて 5シリーズ）
       const needTopSplit = hasTopReinforcement || (W > 940);
@@ -1103,12 +1168,18 @@ export class CageModel {
       this.addFrameMember('2020', floorFrontBackL, new THREE.Vector3(0, 10, -D / 2 + 10), rotX, '床・背面2020');
       this.recordPart(getFramePartNumber('2020', floorFrontBackL, frameColor), floorFrontBackL, 2, '床面 前後', 'frame');
 
-      // 床・中央補強フレーム (オプションまたはW>750mmで連動、長さ D - 40)
+      // 床・補強フレーム (オプションまたはW>750mmで連動、長さ D - 40)
       if (hasFloorReinforcement) {
         const floorCenterL = Math.max(10, D - 40);
         const reinfProfile = isSilver ? '2020_flat' : '2020';
-        this.addFrameMember(reinfProfile, floorCenterL, new THREE.Vector3(0, 10, 0), rotZ, '床・中央補強2020', null, 'top');
-        this.recordPart(getFramePartNumber('2020', floorCenterL, frameColor, false, true), floorCenterL, 1, '床面 中央補強 (2分割)', 'frame');
+        if (floorSplitCount === 3) {
+          this.addFrameMember(reinfProfile, floorCenterL, new THREE.Vector3(reinfLeftX, 10, 0), rotZ, '床・補強2020(左)', null, 'top');
+          this.addFrameMember(reinfProfile, floorCenterL, new THREE.Vector3(reinfRightX, 10, 0), rotZ, '床・補強2020(右)', null, 'top');
+          this.recordPart(getFramePartNumber('2020', floorCenterL, frameColor, false, true), floorCenterL, 2, '床面 補強フレーム (3分割)', 'frame');
+        } else {
+          this.addFrameMember(reinfProfile, floorCenterL, new THREE.Vector3(0, 10, 0), rotZ, '床・中央補強2020', null, 'top');
+          this.recordPart(getFramePartNumber('2020', floorCenterL, frameColor, false, true), floorCenterL, 1, '床面 中央補強 (2分割)', 'frame');
+        }
       }
 
       // 柱フレーム (4本すべて H - 40mm)
@@ -1118,6 +1189,19 @@ export class CageModel {
       this.addFrameMember('2020', pillarLength, new THREE.Vector3(-W / 2 + 10, pillarY, -D / 2 + 10), rotY, '柱・奥左');
       this.addFrameMember('2020', pillarLength, new THREE.Vector3(W / 2 - 10, pillarY, -D / 2 + 10), rotY, '柱・奥右');
       this.recordPart(getFramePartNumber('2020', pillarLength, frameColor), pillarLength, 4, '柱 (4隅)', 'frame');
+
+      // 背面補強フレーム (W>940mmで必須、またはオプション指定、長さ H - 40mm, Z = -D/2 + 10)
+      if (hasBackReinforcement) {
+        const backReinfProfile = isSilver ? '2020_flat' : '2020';
+        if (backSplitCount === 3) {
+          this.addFrameMember(backReinfProfile, pillarLength, new THREE.Vector3(reinfLeftX, pillarY, -D / 2 + 10), rotY, '背面・補強2020(左)');
+          this.addFrameMember(backReinfProfile, pillarLength, new THREE.Vector3(reinfRightX, pillarY, -D / 2 + 10), rotY, '背面・補強2020(右)');
+          this.recordPart(getFramePartNumber('2020', pillarLength, frameColor, false, true), pillarLength, 2, '背面 補強フレーム (3分割)', 'frame');
+        } else {
+          this.addFrameMember(backReinfProfile, pillarLength, new THREE.Vector3(0, pillarY, -D / 2 + 10), rotY, '背面・中央補強2020');
+          this.recordPart(getFramePartNumber('2020', pillarLength, frameColor, false, true), pillarLength, 1, '背面 中央補強 (2分割)', 'frame');
+        }
+      }
 
       // 天面フレームの金網仕様判定（シルバー金網仕様時は金網に接する天面フレームすべて 5シリーズ）
       const needTopSplitC = hasTopReinforcement || (W > 940);
@@ -1292,7 +1376,7 @@ export class CageModel {
    * - 材料寸法はフレーム溝（深さ5mm）の収まり代を考慮し、各間口寸法（内寸）に+10mm加算
    */
   buildPanels(rotX, rotZ) {
-    const { W, D, H, cageType, frontWindowH, hasSideReinforcement, sideOpeningH, hasFloorReinforcement, hasTopReinforcement, frameColor } = this.params;
+    const { W, D, H, cageType, frontWindowH, hasSideReinforcement, sideOpeningH, hasFloorReinforcement, floorSplitCount, hasBackReinforcement, backSplitCount, hasTopReinforcement, frameColor } = this.params;
     const panelConfig = this.params.panelConfig || {};
     const panelT = 3.0; // アクリル・パネル厚み 3mm
 
@@ -1304,6 +1388,11 @@ export class CageModel {
     const topMatType = panelConfig.top || 'punching';
     const topLeftMatType = panelConfig.topLeft || 'punching';
     const topRightMatType = panelConfig.topRight || 'punching';
+
+    // 3分割時の共通開口幅と補強フレーム中心X座標
+    const win3 = (W - 80) / 3;
+    const reinfLeftX = -W / 2 + 30 + win3;
+    const reinfRightX = W / 2 - 30 - win3;
 
     // 1. 底面パネル（間口+10mm: 通常 D-30 / 枠囲い D-50）
     const isFramed = (cageType === 'A_FRAMED' || cageType === 'C_FRAMED');
@@ -1325,27 +1414,55 @@ export class CageModel {
     }
 
     if (hasFloorReinforcement) {
-      // 2分割底板
-      const splitFloorW = (W - 60) / 2; // 間口幅
-      const splitFloorMatW = Math.round(splitFloorW + 10); // 材料幅 (溝5mm x 2)
-      const floorGeom = new THREE.BoxGeometry(splitFloorMatW, panelT, floorMatD);
-      this.activeGeometries.push(floorGeom);
+      if (floorSplitCount === 3) {
+        // 3分割底板 (3枚同寸法)
+        const openW = (W - 80) / 3;
+        const splitFloorMatW = Math.round(openW + 10);
+        const floorGeom = new THREE.BoxGeometry(splitFloorMatW, panelT, floorMatD);
+        this.activeGeometries.push(floorGeom);
 
-      const leftFloor = new THREE.Mesh(floorGeom, floorMat);
-      leftFloor.position.set(-splitFloorW / 2 - 10, 20 - panelT / 2, floorCenterZ);
-      this.panelGroup.add(leftFloor);
+        const leftFloor = new THREE.Mesh(floorGeom, floorMat);
+        leftFloor.position.set(-W / 2 + 20 + openW / 2, 20 - panelT / 2, floorCenterZ);
+        this.panelGroup.add(leftFloor);
 
-      const rightFloor = new THREE.Mesh(floorGeom, floorMat);
-      rightFloor.position.set(splitFloorW / 2 + 10, 20 - panelT / 2, floorCenterZ);
-      this.panelGroup.add(rightFloor);
+        const centerFloor = new THREE.Mesh(floorGeom, floorMat);
+        centerFloor.position.set(0, 20 - panelT / 2, floorCenterZ);
+        this.panelGroup.add(centerFloor);
 
-      this.recordPart(floorPartName, `${splitFloorMatW} x ${floorMatD} mm`, 2, '床面 (2分割)', 'panel', {
-        panelCode: floorCode,
-        partCode: floorCode,
-        widthMm: splitFloorMatW,
-        heightMm: floorMatD,
-        unitType: 'm2'
-      });
+        const rightFloor = new THREE.Mesh(floorGeom, floorMat);
+        rightFloor.position.set(W / 2 - 20 - openW / 2, 20 - panelT / 2, floorCenterZ);
+        this.panelGroup.add(rightFloor);
+
+        this.recordPart(floorPartName, `${splitFloorMatW} x ${floorMatD} mm`, 3, '床面 (3分割)', 'panel', {
+          panelCode: floorCode,
+          partCode: floorCode,
+          widthMm: splitFloorMatW,
+          heightMm: floorMatD,
+          unitType: 'm2'
+        });
+      } else {
+        // 2分割底板
+        const splitFloorW = (W - 60) / 2; // 間口幅
+        const splitFloorMatW = Math.round(splitFloorW + 10); // 材料幅 (溝5mm x 2)
+        const floorGeom = new THREE.BoxGeometry(splitFloorMatW, panelT, floorMatD);
+        this.activeGeometries.push(floorGeom);
+
+        const leftFloor = new THREE.Mesh(floorGeom, floorMat);
+        leftFloor.position.set(-splitFloorW / 2 - 10, 20 - panelT / 2, floorCenterZ);
+        this.panelGroup.add(leftFloor);
+
+        const rightFloor = new THREE.Mesh(floorGeom, floorMat);
+        rightFloor.position.set(splitFloorW / 2 + 10, 20 - panelT / 2, floorCenterZ);
+        this.panelGroup.add(rightFloor);
+
+        this.recordPart(floorPartName, `${splitFloorMatW} x ${floorMatD} mm`, 2, '床面 (2分割)', 'panel', {
+          panelCode: floorCode,
+          partCode: floorCode,
+          widthMm: splitFloorMatW,
+          heightMm: floorMatD,
+          unitType: 'm2'
+        });
+      }
     } else {
       // 1枚底板
       const floorMatW = W - 30; // (W - 40) + 10
@@ -1369,7 +1486,135 @@ export class CageModel {
       const heaterSupportT = 2.0; // アクリル厚み 2mm
       const danplateT = 4.0;      // プラダン厚み 4mm
 
-      if (hasFloorReinforcement) {
+      if (hasFloorReinforcement && floorSplitCount === 3) {
+        // 【3枚構成・床面3分割】
+        const win3 = (W - 80) / 3;
+        const panelW3 = Math.round(win3 + 20); // 補強フレーム中心までカバー
+        const panelD = D - 2;
+        const cornerCutX = 80;
+        const cornerCutY = 80;
+
+        // 1. 左右パネル用形状（外側奥・手前の角を80x80斜めカット）
+        const sideShape = new THREE.Shape();
+        sideShape.moveTo(cornerCutX, -panelD / 2);
+        sideShape.lineTo(panelW3, -panelD / 2);
+        sideShape.lineTo(panelW3, panelD / 2);
+        sideShape.lineTo(cornerCutX, panelD / 2);
+        sideShape.lineTo(0, panelD / 2 - cornerCutY);
+        sideShape.lineTo(0, -panelD / 2 + cornerCutY);
+        sideShape.closePath();
+
+        const extrudeSettings = { depth: heaterSupportT, bevelEnabled: false };
+        const geomSide = new THREE.ExtrudeGeometry(sideShape, extrudeSettings);
+        geomSide.rotateX(Math.PI / 2);
+        this.activeGeometries.push(geomSide);
+
+        // 左パネル (X = -W/2 + 1)
+        const leftMesh = new THREE.Mesh(geomSide, this.materials.acrylic);
+        leftMesh.position.set(-W / 2 + 1, 0, 0);
+        leftMesh.castShadow = true;
+        this.panelGroup.add(leftMesh);
+
+        // 右パネル (180度回転して X = W/2 - 1)
+        const geomSideRight = geomSide.clone();
+        geomSideRight.rotateY(Math.PI);
+        this.activeGeometries.push(geomSideRight);
+        const rightMesh = new THREE.Mesh(geomSideRight, this.materials.acrylic);
+        rightMesh.position.set(W / 2 - 1, 0, 0);
+        rightMesh.castShadow = true;
+        this.panelGroup.add(rightMesh);
+
+        // 2. 中央パネル用形状（フラット長方形）
+        const centerPanelW = Math.round(win3 + 20);
+        const centerShape = new THREE.Shape();
+        const chw = centerPanelW / 2;
+        const chd = panelD / 2;
+        centerShape.moveTo(-chw, -chd);
+        centerShape.lineTo(chw, -chd);
+        centerShape.lineTo(chw, chd);
+        centerShape.lineTo(-chw, chd);
+        centerShape.closePath();
+
+        const geomCenter = new THREE.ExtrudeGeometry(centerShape, extrudeSettings);
+        geomCenter.rotateX(Math.PI / 2);
+        this.activeGeometries.push(geomCenter);
+        const centerMesh = new THREE.Mesh(geomCenter, this.materials.acrylic);
+        centerMesh.position.set(0, 0, 0);
+        centerMesh.castShadow = true;
+        this.panelGroup.add(centerMesh);
+
+        // つまみネジ配置 (左右・中央計18箇所)
+        const screwPositions = [
+          // 左側パネル留め (6箇所)
+          { x: -W / 2 + 10, z: -D / 2 + 90 },
+          { x: -W / 2 + 90, z: -D / 2 + 10 },
+          { x: -W / 2 + 10, z: D / 2 - 90 },
+          { x: -W / 2 + 90, z: D / 2 - 10 },
+          { x: reinfLeftX,  z: -D / 2 + 90 },
+          { x: reinfLeftX,  z: D / 2 - 90 },
+
+          // 中央パネル留め (6箇所)
+          { x: reinfLeftX,  z: -D / 4 },
+          { x: reinfLeftX,  z: D / 4 },
+          { x: 0,           z: -D / 2 + 10 },
+          { x: 0,           z: D / 2 - 10 },
+          { x: reinfRightX, z: -D / 4 },
+          { x: reinfRightX, z: D / 4 },
+
+          // 右側パネル留め (6箇所)
+          { x: W / 2 - 10,  z: D / 2 - 90 },
+          { x: W / 2 - 90,  z: D / 2 - 10 },
+          { x: W / 2 - 10,  z: -D / 2 + 90 },
+          { x: W / 2 - 90,  z: -D / 2 + 10 },
+          { x: reinfRightX, z: -D / 2 + 90 },
+          { x: reinfRightX, z: D / 2 - 90 },
+        ];
+
+        for (const sp of screwPositions) {
+          this.addBottomThumbScrew(sp.x, -heaterSupportT, sp.z);
+        }
+
+        // 緩衝プラダン 4.0mm (3枚)
+        const danplateW = Math.max(10, Math.round(win3 - 10));
+        const danplateD = Math.max(10, Math.round((isFramed ? D - 60 : D - 40) - 10));
+        const { map: danMap, bumpMap: danBump } = createHollowPolycaTexture(danplateW, danplateD);
+        this.activeTextures.push(danMap, danBump);
+        const danMat = this.materials.createPolycaMaterial(danMap, danBump);
+        this.activeMaterials.push(danMat);
+
+        const danGeom = new THREE.BoxGeometry(danplateW, danplateT, danplateD);
+        this.activeGeometries.push(danGeom);
+
+        const leftDanMesh = new THREE.Mesh(danGeom, danMat);
+        leftDanMesh.position.set(-W / 2 + 20 + win3 / 2, danplateT / 2, floorCenterZ);
+        this.panelGroup.add(leftDanMesh);
+
+        const centerDanMesh = new THREE.Mesh(danGeom, danMat);
+        centerDanMesh.position.set(0, danplateT / 2, floorCenterZ);
+        this.panelGroup.add(centerDanMesh);
+
+        const rightDanMesh = new THREE.Mesh(danGeom, danMat);
+        rightDanMesh.position.set(W / 2 - 20 - win3 / 2, danplateT / 2, floorCenterZ);
+        this.panelGroup.add(rightDanMesh);
+
+        // BOM記録 (3枚構成)
+        this.recordPart('床下パネルヒータ支え板 (透明アクリル 2.0mm)', `${panelW3} x ${panelD} mm`, 3, '床面外側固定 (3分割用・左右2枚+中央1枚・計3枚)', 'panel', {
+          panelCode: 'acrylic_extrusion_2_0',
+          partCode: 'acrylic_extrusion_2_0',
+          widthMm: panelW3,
+          heightMm: panelD,
+          unitType: 'm2'
+        });
+        this.recordPart('床下パネルヒータ用 緩衝プラダン 4.0mm', `${danplateW} x ${danplateD} mm`, 3, '床下パネルヒータ緩衝用 (間口-10mm・3枚)', 'panel', {
+          panelCode: 'danplate_4_0',
+          partCode: 'danplate_4_0',
+          widthMm: danplateW,
+          heightMm: danplateD,
+          unitType: 'm2'
+        });
+        this.recordPart(`No.1 化粧つまみネジ (${screwColorName})`, '外径φ15mm / M4 (手締め・工具不要)', 18, '床下パネルヒータ支え板 固定用 (計18箇所)', 'other');
+
+      } else if (hasFloorReinforcement) {
         // 【2枚構成・床面2分割】
         // アクリル板1枚あたり寸法: ヨコ Math.round(W / 2 + 9) mm (W=1050で534mm), タテ D - 2 mm
         const panelW = Math.round(W / 2 + 9);
@@ -1567,8 +1812,34 @@ export class CageModel {
     }
 
     // 2. 背面パネル（透明アクリル / 半透明塩ビパンチング / 中空ポリカ / ブラックマット地アクリル: 間口+10mm）
-    const backMatW = W - 30; // (W - 40) + 10
     const backMatH = H - 30; // (H - 40) + 10
+    let backPanelCount = 1;
+    let backMatW = W - 30;
+    let backXPositions = [0];
+    let backSplitSuffix = '';
+
+    if (hasBackReinforcement) {
+      if (backSplitCount === 3) {
+        backPanelCount = 3;
+        const openW = (W - 80) / 3;
+        backMatW = Math.round(openW + 10);
+        backXPositions = [
+          -W / 2 + 20 + openW / 2,
+          0,
+          W / 2 - 20 - openW / 2
+        ];
+        backSplitSuffix = ' (3分割)';
+      } else {
+        backPanelCount = 2;
+        const openW = (W - 60) / 2;
+        backMatW = Math.round(openW + 10);
+        backXPositions = [
+          -openW / 2 - 10,
+          openW / 2 + 10
+        ];
+        backSplitSuffix = ' (2分割)';
+      }
+    }
 
     if (backMatType === 'punching') {
       const backPunchingTex = createPunchingTexture(backMatW, backMatH, false);
@@ -1578,10 +1849,12 @@ export class CageModel {
 
       const backGeom = new THREE.PlaneGeometry(backMatW, backMatH);
       this.activeGeometries.push(backGeom);
-      const backMesh = new THREE.Mesh(backGeom, backPunchingMat);
-      backMesh.position.set(0, H / 2, -D / 2 + 10);
-      this.panelGroup.add(backMesh);
-      this.recordPart('塩ビパンチングボード 透明 3.0mm 背板', `${backMatW} x ${backMatH} mm`, 1, '背面 (通気パネル・φ3.1-P7)', 'panel', {
+      for (const bx of backXPositions) {
+        const backMesh = new THREE.Mesh(backGeom, backPunchingMat);
+        backMesh.position.set(bx, H / 2, -D / 2 + 10);
+        this.panelGroup.add(backMesh);
+      }
+      this.recordPart('塩ビパンチングボード 透明 3.0mm 背板', `${backMatW} x ${backMatH} mm`, backPanelCount, `背面 (通気パネル・φ3.1-P7${backSplitSuffix})`, 'panel', {
         panelCode: 'pvc_punching_3_0',
         partCode: 'pvc_punching_3_0',
         widthMm: backMatW,
@@ -1597,10 +1870,12 @@ export class CageModel {
 
       const backGeom = new THREE.BoxGeometry(backMatW, backMatH, 4.0);
       this.activeGeometries.push(backGeom);
-      const backMesh = new THREE.Mesh(backGeom, backPolycaMat);
-      backMesh.position.set(0, H / 2, -D / 2 + 10);
-      this.panelGroup.add(backMesh);
-      this.recordPart('中空ポリカ 4.0mm 背板', `${backMatW} x ${backMatH} mm`, 1, '背面 (中空ポリカ・横筋)', 'panel', {
+      for (const bx of backXPositions) {
+        const backMesh = new THREE.Mesh(backGeom, backPolycaMat);
+        backMesh.position.set(bx, H / 2, -D / 2 + 10);
+        this.panelGroup.add(backMesh);
+      }
+      this.recordPart('中空ポリカ 4.0mm 背板', `${backMatW} x ${backMatH} mm`, backPanelCount, `背面 (中空ポリカ・横筋${backSplitSuffix})`, 'panel', {
         panelCode: 'polyca_4_0',
         partCode: 'polyca_4_0',
         widthMm: backMatW,
@@ -1611,10 +1886,12 @@ export class CageModel {
       // ブラックマット地アクリル（完全不透明・低グロス）
       const backGeom = new THREE.BoxGeometry(backMatW, backMatH, panelT);
       this.activeGeometries.push(backGeom);
-      const backMesh = new THREE.Mesh(backGeom, this.materials.blackMatteAcrylic);
-      backMesh.position.set(0, H / 2, -D / 2 + 10);
-      this.panelGroup.add(backMesh);
-      this.recordPart('アクリル黒両面マット 3.0mm 背板', `${backMatW} x ${backMatH} mm`, 1, '背面', 'panel', {
+      for (const bx of backXPositions) {
+        const backMesh = new THREE.Mesh(backGeom, this.materials.blackMatteAcrylic);
+        backMesh.position.set(bx, H / 2, -D / 2 + 10);
+        this.panelGroup.add(backMesh);
+      }
+      this.recordPart('アクリル黒両面マット 3.0mm 背板', `${backMatW} x ${backMatH} mm`, backPanelCount, `背面${backSplitSuffix}`, 'panel', {
         panelCode: 'acrylic_black_matte_3_0',
         partCode: 'acrylic_black_matte_3_0',
         widthMm: backMatW,
@@ -1625,10 +1902,12 @@ export class CageModel {
       // グレースモーク半透明アクリル
       const backGeom = new THREE.BoxGeometry(backMatW, backMatH, panelT);
       this.activeGeometries.push(backGeom);
-      const backMesh = new THREE.Mesh(backGeom, this.materials.smokeGrayAcrylic);
-      backMesh.position.set(0, H / 2, -D / 2 + 10);
-      this.panelGroup.add(backMesh);
-      this.recordPart('アクリル グレースモーク半透明 3.0mm 背板', `${backMatW} x ${backMatH} mm`, 1, '背面', 'panel', {
+      for (const bx of backXPositions) {
+        const backMesh = new THREE.Mesh(backGeom, this.materials.smokeGrayAcrylic);
+        backMesh.position.set(bx, H / 2, -D / 2 + 10);
+        this.panelGroup.add(backMesh);
+      }
+      this.recordPart('アクリル グレースモーク半透明 3.0mm 背板', `${backMatW} x ${backMatH} mm`, backPanelCount, `背面${backSplitSuffix}`, 'panel', {
         panelCode: 'acrylic_smoke_gray_3_0',
         partCode: 'acrylic_smoke_gray_3_0',
         widthMm: backMatW,
@@ -1639,10 +1918,12 @@ export class CageModel {
       // 透明アクリル
       const backGeom = new THREE.BoxGeometry(backMatW, backMatH, panelT);
       this.activeGeometries.push(backGeom);
-      const backMesh = new THREE.Mesh(backGeom, this.materials.acrylic);
-      backMesh.position.set(0, H / 2, -D / 2 + 10);
-      this.panelGroup.add(backMesh);
-      this.recordPart('透明アクリル 3.0mm 背板', `${backMatW} x ${backMatH} mm`, 1, '背面', 'panel', {
+      for (const bx of backXPositions) {
+        const backMesh = new THREE.Mesh(backGeom, this.materials.acrylic);
+        backMesh.position.set(bx, H / 2, -D / 2 + 10);
+        this.panelGroup.add(backMesh);
+      }
+      this.recordPart('透明アクリル 3.0mm 背板', `${backMatW} x ${backMatH} mm`, backPanelCount, `背面${backSplitSuffix}`, 'panel', {
         panelCode: 'acrylic_extrusion_3_0',
         partCode: 'acrylic_extrusion_3_0',
         widthMm: backMatW,
@@ -4125,20 +4406,30 @@ export class CageModel {
     rightMesh.position.set(W / 2 - 20, 20, 0);
     this.caulkingGroup.add(rightMesh);
 
-    // 4. 床面中央補強フレームの境界 (左右両側)
+    // 4. 床面補強フレームの境界 (左右両側)
     if (hasFloorReinforcement) {
-      // 中央フレーム左側 (X = -10, -X方向に幅5mm)
-      const centerLeftGeom = createCaulkingBead(sideL);
-      const centerLeftMesh = new THREE.Mesh(centerLeftGeom, caulkingMat);
-      centerLeftMesh.rotation.y = Math.PI;
-      centerLeftMesh.position.set(-10, 20, 0);
-      this.caulkingGroup.add(centerLeftMesh);
+      const { floorSplitCount } = this.params;
+      const win3 = (W - 80) / 3;
+      const reinfLeftX = -W / 2 + 30 + win3;
+      const reinfRightX = W / 2 - 30 - win3;
+      const reinfPositions = floorSplitCount === 3
+        ? [reinfLeftX, reinfRightX]
+        : [0];
 
-      // 中央フレーム右側 (X = +10, +X方向に幅5mm)
-      const centerRightGeom = createCaulkingBead(sideL);
-      const centerRightMesh = new THREE.Mesh(centerRightGeom, caulkingMat);
-      centerRightMesh.position.set(10, 20, 0);
-      this.caulkingGroup.add(centerRightMesh);
+      for (const cx of reinfPositions) {
+        // 補強フレーム左側 (X = cx - 10, -X方向に幅5mm)
+        const beadLeftGeom = createCaulkingBead(sideL);
+        const beadLeftMesh = new THREE.Mesh(beadLeftGeom, caulkingMat);
+        beadLeftMesh.rotation.y = Math.PI;
+        beadLeftMesh.position.set(cx - 10, 20, 0);
+        this.caulkingGroup.add(beadLeftMesh);
+
+        // 補強フレーム右側 (X = cx + 10, +X方向に幅5mm)
+        const beadRightGeom = createCaulkingBead(sideL);
+        const beadRightMesh = new THREE.Mesh(beadRightGeom, caulkingMat);
+        beadRightMesh.position.set(cx + 10, 20, 0);
+        this.caulkingGroup.add(beadRightMesh);
+      }
     }
   }
 

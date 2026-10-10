@@ -44,6 +44,9 @@ const downloadSuccessTitle = document.getElementById('download-success-title');
 const downloadFilenameLabel = document.getElementById('download-filename-label');
 const modalPreviewSection = document.getElementById('modal-preview-section');
 const modalPreviewImg = document.getElementById('modal-preview-img');
+const modalShareUrlInput = document.getElementById('modal-share-url-input');
+const btnCopyShareUrlModal = document.getElementById('btn-copy-share-url-modal');
+const modalCopyUrlToast = document.getElementById('modal-copy-url-toast');
 
 // 見積IDおよび最新計算データの保持変数
 let currentEstimateId = null;
@@ -132,10 +135,16 @@ const btnHingeRight = document.getElementById('btn-hinge-right');
 const toggleCaster = document.getElementById('toggle-caster');
 const cardCaster = document.getElementById('card-caster');
 
-// 床面・天板補強オプション
+// 床面・背面・天板補強オプション
 const toggleFloorReinforce = document.getElementById('toggle-floor-reinforce');
 const cardFloorReinforce = document.getElementById('card-floor-reinforce');
 const floorReinfSub = document.getElementById('floor-reinf-sub');
+const selectFloorSplit = document.getElementById('select-floor-split');
+
+const toggleBackReinforce = document.getElementById('toggle-back-reinforce');
+const cardBackReinforce = document.getElementById('card-back-reinforce');
+const backReinfSub = document.getElementById('back-reinf-sub');
+const selectBackSplit = document.getElementById('select-back-split');
 
 const toggleTopReinforce = document.getElementById('toggle-top-reinforce');
 const cardTopReinforce = document.getElementById('card-top-reinforce');
@@ -256,6 +265,9 @@ const state = {
   frameColor: 'silver',        // 'silver' | 'black'
   footType: 'rubber',          // 'rubber' | 'caster'
   hasFloorReinforcement: false,// 床面中央補強フレーム (床面積 > 750×450mm で自動推奨ON)
+  floorSplitCount: 2,          // 床面補強分割数 (2 | 3)
+  hasBackReinforcement: false, // 背面補強フレーム (W>940mmで必須ON、940mm以下は任意)
+  backSplitCount: 2,           // 背面補強分割数 (2 | 3)
   hasTopReinforcement: false,  // 天板中央補強フレーム (W>940mmで必須ON、940mm以下は任意)
   hasDoorAntiFlex: false,      // 正面スライド扉たわみ防止レール (扉幅-2mm)
   hasSideVentCover: false,     // 側面換気量調整板 (t1.5外張りアクリル板)
@@ -354,7 +366,7 @@ function syncUpdate() {
   } else if (state.hasFloorReinforcement) {
     floorWarningBanner.classList.add('hidden');
     reinforceTip.classList.add('reinforced');
-    reinforceText.textContent = `床面中央補強フレーム（2分割）が配置されています`;
+    reinforceText.textContent = `床面補強フレーム（${state.floorSplitCount}分割）が配置されています`;
   } else {
     floorWarningBanner.classList.add('hidden');
     reinforceTip.classList.remove('reinforced');
@@ -622,10 +634,10 @@ function updateRubberPackingAvailability() {
     }
   }
 
-  // 床下パネルヒータ支え板のバッジ連動（床面中央補強フレームの有無で1枚/2枚が切り替わる）
+  // 床下パネルヒータ支え板のバッジ連動（床面補強フレームの有無・分割数で切り替わる）
   if (floorHeaterSupportBadge && floorHeaterSupportSub) {
     if (state.hasFloorReinforcement) {
-      floorHeaterSupportBadge.textContent = '床面2分割用 (2枚)';
+      floorHeaterSupportBadge.textContent = state.floorSplitCount === 3 ? '床面3分割用 (3枚)' : '床面2分割用 (2枚)';
       floorHeaterSupportBadge.className = 'option-cond-badge info';
       floorHeaterSupportBadge.classList.remove('hidden');
     } else {
@@ -1981,7 +1993,7 @@ function bindInputPair(slider, input, key, callback) {
 }
 
 /**
- * 寸法変更時の床面中央補強フレーム（2分割）の連動
+ * 寸法変更時の床面補強フレームの連動
  * - 幅 W > 940mm: 必須で補強あり（解除不可）
  * - 幅 W ≦ 940mm: 面積 > 750×450mm（337,500 mm²）で推奨自動ON、以下で自動OFF（任意指定可）
  */
@@ -1989,38 +2001,75 @@ function updateFloorReinforceByArea() {
   if (state.W > 940) {
     toggleFloorReinforce.checked = true;
     toggleFloorReinforce.disabled = true;
-    cardFloorReinforce.classList.add('disabled');
+    cardFloorReinforce.classList.remove('disabled');
+    cardFloorReinforce.classList.add('required-locked');
     floorReinfSub.textContent = '幅940mm超のため必須（解除不可）';
     state.hasFloorReinforcement = true;
   } else {
     toggleFloorReinforce.disabled = false;
-    cardFloorReinforce.classList.remove('disabled');
+    cardFloorReinforce.classList.remove('disabled', 'required-locked');
     floorReinfSub.textContent = '床面積が 750×450mm 超で推奨。解除時はたわみにご注意ください';
     const isOver = (state.W * state.D) > FLOOR_REINFORCE_THRESHOLD_AREA;
     state.hasFloorReinforcement = isOver;
     toggleFloorReinforce.checked = isOver;
   }
+  if (selectFloorSplit) selectFloorSplit.disabled = !state.hasFloorReinforcement;
+  if (cardFloorReinforce) cardFloorReinforce.classList.toggle('active', state.hasFloorReinforcement);
+}
+
+/**
+ * 寸法変更時の背面補強フレームの連動
+ * - 幅 W > 940mm: 必須で補強あり（解除不可）
+ * - 幅 W ≦ 940mm: デフォルトOFF（任意指定可）
+ */
+function updateBackReinforce() {
+  if (!toggleBackReinforce) return;
+  if (state.W > 940) {
+    toggleBackReinforce.checked = true;
+    toggleBackReinforce.disabled = true;
+    if (cardBackReinforce) {
+      cardBackReinforce.classList.remove('disabled');
+      cardBackReinforce.classList.add('required-locked');
+    }
+    if (backReinfSub) backReinfSub.textContent = '幅940mm超のため必須（解除不可）';
+    state.hasBackReinforcement = true;
+  } else {
+    if (toggleBackReinforce.disabled) {
+      toggleBackReinforce.checked = false;
+      state.hasBackReinforcement = false;
+    }
+    toggleBackReinforce.disabled = false;
+    if (cardBackReinforce) cardBackReinforce.classList.remove('disabled', 'required-locked');
+    if (backReinfSub) backReinfSub.textContent = '940mm以下は任意指定（W>940mmは必須）';
+  }
+  if (selectBackSplit) selectBackSplit.disabled = !state.hasBackReinforcement;
+  if (cardBackReinforce) cardBackReinforce.classList.toggle('active', state.hasBackReinforcement);
 }
 
 // 入力イベントバインド
 bindInputPair(sliderW, inputW, 'W', (newW) => {
-  // 床面2分割の連動（W>940で必須、以下は面積判定）
+  // 床面・背面の連動（W>940で必須）
   updateFloorReinforceByArea();
+  updateBackReinforce();
 
   // 天板2分割の必須判定（W > 940mm は必須・解除不可、940mm以下は自動OFF・任意指定可）
   if (newW > 940) {
     toggleTopReinforce.checked = true;
     toggleTopReinforce.disabled = true;
-    cardTopReinforce.classList.add('disabled');
+    if (cardTopReinforce) {
+      cardTopReinforce.classList.remove('disabled');
+      cardTopReinforce.classList.add('required-locked');
+    }
     topReinfSub.textContent = '幅940mm超のため必須（解除不可）';
     state.hasTopReinforcement = true;
   } else {
     toggleTopReinforce.disabled = false;
-    cardTopReinforce.classList.remove('disabled');
+    if (cardTopReinforce) cardTopReinforce.classList.remove('disabled', 'required-locked');
     topReinfSub.textContent = '940mm以下は任意指定（W>940mmは必須）';
     toggleTopReinforce.checked = false;
     state.hasTopReinforcement = false;
   }
+  if (cardTopReinforce) cardTopReinforce.classList.toggle('active', state.hasTopReinforcement);
 });
 bindInputPair(sliderD, inputD, 'D', () => {
   // 床面2分割の連動（W>940で必須、以下は面積判定）
@@ -2097,12 +2146,41 @@ toggleSideReinforce.addEventListener('change', (e) => {
 // 床面中央補強フレームのトグル
 toggleFloorReinforce.addEventListener('change', (e) => {
   state.hasFloorReinforcement = e.target.checked;
+  if (selectFloorSplit) selectFloorSplit.disabled = !state.hasFloorReinforcement;
+  if (cardFloorReinforce) cardFloorReinforce.classList.toggle('active', state.hasFloorReinforcement);
   syncUpdate();
 });
+
+// 床面分割数セレクト
+if (selectFloorSplit) {
+  selectFloorSplit.addEventListener('change', (e) => {
+    state.floorSplitCount = parseInt(e.target.value, 10);
+    syncUpdate();
+  });
+}
+
+// 背面補強フレームのトグル
+if (toggleBackReinforce) {
+  toggleBackReinforce.addEventListener('change', (e) => {
+    state.hasBackReinforcement = e.target.checked;
+    if (selectBackSplit) selectBackSplit.disabled = !state.hasBackReinforcement;
+    if (cardBackReinforce) cardBackReinforce.classList.toggle('active', state.hasBackReinforcement);
+    syncUpdate();
+  });
+}
+
+// 背面分割数セレクト
+if (selectBackSplit) {
+  selectBackSplit.addEventListener('change', (e) => {
+    state.backSplitCount = parseInt(e.target.value, 10);
+    syncUpdate();
+  });
+}
 
 // 天板中央補強フレームのトグル
 toggleTopReinforce.addEventListener('change', (e) => {
   state.hasTopReinforcement = e.target.checked;
+  if (cardTopReinforce) cardTopReinforce.classList.toggle('active', state.hasTopReinforcement);
   syncUpdate();
 });
 
@@ -2770,12 +2848,35 @@ btnResetSpecs.addEventListener('click', () => {
   toggleFloorReinforce.checked = false;
   toggleFloorReinforce.disabled = false;
   cardFloorReinforce.classList.remove('disabled');
+  cardFloorReinforce.classList.remove('active');
   floorReinfSub.textContent = '床面積が 750×450mm 超で推奨。解除時はたわみにご注意ください';
   state.hasFloorReinforcement = false;
+  state.floorSplitCount = 2;
+  if (selectFloorSplit) {
+    selectFloorSplit.value = '2';
+    selectFloorSplit.disabled = true;
+  }
+
+  if (toggleBackReinforce) {
+    toggleBackReinforce.checked = false;
+    toggleBackReinforce.disabled = false;
+    if (cardBackReinforce) {
+      cardBackReinforce.classList.remove('disabled');
+      cardBackReinforce.classList.remove('active');
+    }
+    if (backReinfSub) backReinfSub.textContent = '940mm以下は任意指定（W>940mmは必須）';
+    state.hasBackReinforcement = false;
+    state.backSplitCount = 2;
+    if (selectBackSplit) {
+      selectBackSplit.value = '2';
+      selectBackSplit.disabled = true;
+    }
+  }
 
   toggleTopReinforce.checked = false;
   toggleTopReinforce.disabled = false;
   cardTopReinforce.classList.remove('disabled');
+  cardTopReinforce.classList.remove('active');
   topReinfSub.textContent = '940mm以下は任意指定（W>940mmは必須）';
   state.hasTopReinforcement = false;
 
@@ -3153,27 +3254,50 @@ function applyCreaturePreset(preset) {
   if (inputH) inputH.value = state.H;
   if (sliderH) sliderH.value = state.H;
 
-  // 12. 床面・天板補強ルールの判定
+  // 12. 床面・背面・天板補強ルールの判定
+  if (preset.floorSplitCount != null) {
+    state.floorSplitCount = preset.floorSplitCount;
+    if (selectFloorSplit) selectFloorSplit.value = String(state.floorSplitCount);
+  }
   if (preset.hasFloorReinforcement != null) {
     state.hasFloorReinforcement = !!preset.hasFloorReinforcement;
     if (toggleFloorReinforce) toggleFloorReinforce.checked = state.hasFloorReinforcement;
   } else {
     updateFloorReinforceByArea();
   }
+  if (selectFloorSplit) selectFloorSplit.disabled = !state.hasFloorReinforcement;
+  if (cardFloorReinforce) cardFloorReinforce.classList.toggle('active', state.hasFloorReinforcement);
+
+  if (preset.backSplitCount != null) {
+    state.backSplitCount = preset.backSplitCount;
+    if (selectBackSplit) selectBackSplit.value = String(state.backSplitCount);
+  }
+  if (preset.hasBackReinforcement != null) {
+    state.hasBackReinforcement = !!preset.hasBackReinforcement;
+    if (toggleBackReinforce) toggleBackReinforce.checked = state.hasBackReinforcement;
+  } else {
+    updateBackReinforce();
+  }
+  if (selectBackSplit) selectBackSplit.disabled = !state.hasBackReinforcement;
+  if (cardBackReinforce) cardBackReinforce.classList.toggle('active', state.hasBackReinforcement);
 
   if (state.W > 940) {
     toggleTopReinforce.checked = true;
     toggleTopReinforce.disabled = true;
-    cardTopReinforce.classList.add('disabled');
+    if (cardTopReinforce) {
+      cardTopReinforce.classList.remove('disabled');
+      cardTopReinforce.classList.add('required-locked');
+    }
     topReinfSub.textContent = '幅940mm超のため必須（解除不可）';
     state.hasTopReinforcement = true;
   } else {
     toggleTopReinforce.disabled = false;
-    cardTopReinforce.classList.remove('disabled');
+    if (cardTopReinforce) cardTopReinforce.classList.remove('disabled', 'required-locked');
     topReinfSub.textContent = '940mm以下は任意指定（W>940mmは必須）';
     state.hasTopReinforcement = !!preset.hasTopReinforcement;
     toggleTopReinforce.checked = state.hasTopReinforcement;
   }
+  if (cardTopReinforce) cardTopReinforce.classList.toggle('active', state.hasTopReinforcement);
 
   // 13. 幅広フレームおよび換気量調整板の排他・利用可否状態を更新
   updateFrontWideFrameAvailability();
@@ -3341,7 +3465,11 @@ function applyFullCageSpec(targetSpec) {
     if (cardFloorHeaterSupport) cardFloorHeaterSupport.classList.toggle('active', state.hasFloorHeaterSupport);
   }
 
-  // 14. 床面中央補強フレーム
+  // 14. 床面補強フレーム
+  if (targetSpec.floorSplitCount != null) {
+    state.floorSplitCount = Number(targetSpec.floorSplitCount);
+    if (selectFloorSplit) selectFloorSplit.value = String(state.floorSplitCount);
+  }
   if (typeof targetSpec.hasFloorReinforcement === 'boolean') {
     state.hasFloorReinforcement = targetSpec.hasFloorReinforcement;
     if (toggleFloorReinforce) toggleFloorReinforce.checked = state.hasFloorReinforcement;
@@ -3349,6 +3477,21 @@ function applyFullCageSpec(targetSpec) {
   } else {
     updateFloorReinforceByArea();
   }
+  if (selectFloorSplit) selectFloorSplit.disabled = !state.hasFloorReinforcement;
+
+  // 14-2. 背面補強フレーム
+  if (targetSpec.backSplitCount != null) {
+    state.backSplitCount = Number(targetSpec.backSplitCount);
+    if (selectBackSplit) selectBackSplit.value = String(state.backSplitCount);
+  }
+  if (typeof targetSpec.hasBackReinforcement === 'boolean') {
+    state.hasBackReinforcement = targetSpec.hasBackReinforcement;
+    if (toggleBackReinforce) toggleBackReinforce.checked = state.hasBackReinforcement;
+    if (cardBackReinforce) cardBackReinforce.classList.toggle('active', state.hasBackReinforcement);
+  } else {
+    updateBackReinforce();
+  }
+  if (selectBackSplit) selectBackSplit.disabled = !state.hasBackReinforcement;
 
   // 15. 天板中央補強フレーム
   if (state.W > 940) {
@@ -3356,12 +3499,15 @@ function applyFullCageSpec(targetSpec) {
       toggleTopReinforce.checked = true;
       toggleTopReinforce.disabled = true;
     }
-    if (cardTopReinforce) cardTopReinforce.classList.add('disabled');
+    if (cardTopReinforce) {
+      cardTopReinforce.classList.remove('disabled');
+      cardTopReinforce.classList.add('required-locked');
+    }
     if (topReinfSub) topReinfSub.textContent = '幅940mm超のため必須（解除不可）';
     state.hasTopReinforcement = true;
   } else {
     if (toggleTopReinforce) toggleTopReinforce.disabled = false;
-    if (cardTopReinforce) cardTopReinforce.classList.remove('disabled');
+    if (cardTopReinforce) cardTopReinforce.classList.remove('disabled', 'required-locked');
     if (topReinfSub) topReinfSub.textContent = '940mm以下は任意指定（W>940mmは必須）';
     state.hasTopReinforcement = !!targetSpec.hasTopReinforcement;
     if (toggleTopReinforce) toggleTopReinforce.checked = state.hasTopReinforcement;
@@ -3596,6 +3742,25 @@ function generateEstimateId() {
   return `EST-${dateStr}-${randStr}`;
 }
 
+/**
+ * お客様共有用URLを生成
+ * （本番環境の場合は https://kinato-cage-site.pages.dev/sim/?estimateId=EST-XXXX、
+ *  ローカル等の場合は現在のホスト＋パスベースで自動生成）
+ * @param {string} estimateId
+ * @returns {string}
+ */
+function getCustomerShareUrl(estimateId) {
+  if (!estimateId) return '';
+  const isProd = window.location.hostname.includes('pages.dev') || window.location.hostname.includes('kinatocage');
+  if (isProd) {
+    return `https://kinato-cage-site.pages.dev/sim/?estimateId=${encodeURIComponent(estimateId)}`;
+  }
+  // ローカル開発・テスト環境
+  const url = new URL(window.location.href);
+  url.search = `?estimateId=${encodeURIComponent(estimateId)}`;
+  return url.toString();
+}
+
 function getOrCreateVisitorId() {
   try {
     let vid = localStorage.getItem('cage_visitor_id');
@@ -3731,6 +3896,7 @@ function finalizeEstimateCalculation(totals) {
   if (modalPriceTotal) modalPriceTotal.textContent = `¥${totals.priceWithMarkup.toLocaleString()}`;
   if (modalWeightTotal) modalWeightTotal.textContent = `${totals.weight.toFixed(1)} kg`;
   if (modalSpecTextarea) modalSpecTextarea.value = specText;
+  if (modalShareUrlInput) modalShareUrlInput.value = getCustomerShareUrl(currentEstimateId);
 
   // モーダルを自動でオープン表示（前回のダウンロード完了通知およびプレビューはリセット）
   if (estimateResultModal) {
@@ -3827,14 +3993,16 @@ function getSelectedPanelsList() {
   }
 
   // 床面
+  const floorSplitLabel = state.floorSplitCount === 3 ? '3分割' : '2分割';
   panels.push({
-    face: state.hasFloorReinforcement ? '床面 (中央2分割)' : '床面',
+    face: state.hasFloorReinforcement ? `床面 (中央${floorSplitLabel})` : '床面',
     name: getPanelMaterialName(state.panelConfig.floor)
   });
 
   // 背面
+  const backSplitLabel = state.backSplitCount === 3 ? '3分割' : '2分割';
   panels.push({
-    face: '背面',
+    face: state.hasBackReinforcement ? `背面 (中央${backSplitLabel})` : '背面',
     name: getPanelMaterialName(state.panelConfig.back)
   });
 
@@ -3922,9 +4090,24 @@ function getSelectedOptionsList() {
     }
   }
 
-  // 5. 床面中央補強フレーム (2分割仕様)
+  // 5. 床面補強フレーム
   if (state.hasFloorReinforcement) {
-    options.push('床面中央補強フレーム (2分割仕様)');
+    const splitText = state.floorSplitCount === 3 ? '3分割仕様' : '2分割仕様';
+    if (state.W > 940) {
+      options.push(`床面補強フレーム (幅940mm超・標準付属/${splitText})`);
+    } else {
+      options.push(`床面補強フレーム (${splitText})`);
+    }
+  }
+
+  // 5-2. 背面補強フレーム
+  if (state.hasBackReinforcement) {
+    const splitText = state.backSplitCount === 3 ? '3分割仕様' : '2分割仕様';
+    if (state.W > 940) {
+      options.push(`背面補強フレーム (幅940mm超・標準付属/${splitText})`);
+    } else {
+      options.push(`背面補強フレーム (${splitText})`);
+    }
   }
 
   // 6. 天板中央補強フレーム (2分割仕様)
@@ -3960,7 +4143,11 @@ function getSelectedOptionsList() {
   // 床下パネルヒータ支え板
   if (state.hasFloorHeaterSupport) {
     if (state.hasFloorReinforcement) {
-      options.push('床下パネルヒータ支え板 (床面2分割用・透明アクリル2.0mm 2枚＋緩衝プラダン4.0mm 2枚＋化粧ネジ付)');
+      if (state.floorSplitCount === 3) {
+        options.push('床下パネルヒータ支え板 (床面3分割用・透明アクリル2.0mm 3枚＋緩衝プラダン4.0mm 3枚＋化粧ネジ付)');
+      } else {
+        options.push('床下パネルヒータ支え板 (床面2分割用・透明アクリル2.0mm 2枚＋緩衝プラダン4.0mm 2枚＋化粧ネジ付)');
+      }
     } else {
       options.push('床下パネルヒータ支え板 (通常床面用・透明アクリル2.0mm 1枚＋緩衝プラダン4.0mm 1枚＋化粧ネジ付)');
     }
@@ -3995,9 +4182,12 @@ function generateInquirySpecText(estimateId, totals) {
 
   const options = getSelectedOptionsList();
   const optLines = options.length > 0 ? options.map(o => `  ・${o}`).join('\n') : '  ・標準構成（追加オプションなし）';
+  const shareUrl = getCustomerShareUrl(estimateId);
 
   return `【ケージお見積もり仕様】
 ・見積ID: ${estimateId}
+・仕様再現URL:
+  ${shareUrl}
 ・ケージ種類: ${typeName}
 ・外寸サイズ: 幅 ${state.W}mm × 奥行 ${state.D}mm × 高さ ${state.H}mm
 ・フレーム色: ${frameColorName}
@@ -4007,7 +4197,8 @@ ${panelLines}
 ${optLines}
 ・概算総重量: 約 ${totals.weight.toFixed(1)} kg
 ・お見積り合計金額: ¥${totals.priceWithMarkup.toLocaleString()}（税込・送料別）
-※まだβ版なので誤差（最大±8%程度）が出ております。詳細はDMよりお問い合わせください。
+※URLを控えることで、この仕様にてロードされます。
+※まだβ版なので誤差（最大±5%程度）が出ております。詳細はDMよりお問い合わせください。
 ※公式サイト: https://kinato-cage-site.pages.dev/`;
 }
 
@@ -4017,6 +4208,9 @@ if (btnOpenEstimateModal && estimateResultModal) {
     if (isEstimateCalculated) {
       if (modalDownloadSuccess) {
         modalDownloadSuccess.classList.add('hidden');
+      }
+      if (modalShareUrlInput && currentEstimateId) {
+        modalShareUrlInput.value = getCustomerShareUrl(currentEstimateId);
       }
       estimateResultModal.classList.remove('hidden');
     } else {
@@ -4069,6 +4263,41 @@ if (btnCopySpecModal && modalSpecTextarea) {
       if (modalCopyToast) {
         modalCopyToast.classList.remove('hidden');
         setTimeout(() => modalCopyToast.classList.add('hidden'), 2200);
+      }
+    }
+  });
+}
+
+// モーダル内 お客様共有用URLコピーボタン
+if (btnCopyShareUrlModal && modalShareUrlInput) {
+  btnCopyShareUrlModal.addEventListener('click', async () => {
+    const url = modalShareUrlInput.value;
+    if (!url) return;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        modalShareUrlInput.select();
+        document.execCommand('copy');
+      }
+      if (modalCopyUrlToast) {
+        modalCopyUrlToast.classList.remove('hidden');
+        setTimeout(() => {
+          modalCopyUrlToast.classList.add('hidden');
+        }, 3000);
+      }
+      const label = btnCopyShareUrlModal.querySelector('.copy-url-label');
+      if (label) {
+        const orig = label.textContent;
+        label.textContent = 'コピー完了！';
+        setTimeout(() => { label.textContent = orig; }, 2000);
+      }
+    } catch (err) {
+      modalShareUrlInput.select();
+      document.execCommand('copy');
+      if (modalCopyUrlToast) {
+        modalCopyUrlToast.classList.remove('hidden');
+        setTimeout(() => modalCopyUrlToast.classList.add('hidden'), 3000);
       }
     }
   });
@@ -4390,7 +4619,7 @@ async function exportEstimateCardImage() {
     // β版価格誤差に関する注意書き
     ctx.fillStyle = '#fcd34d';
     ctx.font = '600 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText('※まだβ版なので誤差（最大±8%程度）が出ております。', priceBoxX + 35, priceBoxY + 220);
+    ctx.fillText('※まだβ版なので誤差（最大±5%程度）が出ております。', priceBoxX + 35, priceBoxY + 220);
     ctx.fillText('　詳細はDMよりお問い合わせください。', priceBoxX + 35, priceBoxY + 244);
 
     // 控えに関する注意書き
@@ -4731,12 +4960,26 @@ function checkInitialStateFromStorageOrUrl() {
       const urlParams = new URLSearchParams(window.location.search);
 
       // 見積りIDからの復元指定がある場合
-      if (urlParams.has('estimateId') || urlParams.has('id')) {
-        const targetId = urlParams.get('estimateId') || urlParams.get('id');
-        if (inputRestoreEstimateId) inputRestoreEstimateId.value = targetId;
-        restoreEstimateById(targetId);
+      // 対応パラメータ名: estimateId, id, estimate_id, estimateid, est, quoteId, quote_id, estimate
+      let targetId = null;
+      for (const [key, val] of urlParams.entries()) {
+        const lowerKey = key.toLowerCase();
+        if (['estimateid', 'id', 'estimate_id', 'est', 'quoteid', 'quote_id', 'estimate'].includes(lowerKey)) {
+          if (val && typeof val === 'string' && val.trim().length > 0) {
+            targetId = val.trim();
+            break;
+          }
+        }
+      }
+
+      if (targetId) {
+        const cleanTargetId = targetId.toUpperCase();
+        if (inputRestoreEstimateId) inputRestoreEstimateId.value = cleanTargetId;
+        restoreEstimateById(cleanTargetId);
+        // お客様がリロードや共有（URLコピー）をしても再現できるよう、正規化した ?estimateId=EST-XXXX をURLに保持
         if (window.history && window.history.replaceState) {
-          window.history.replaceState({}, document.title, window.location.pathname);
+          const canonicalUrl = `${window.location.pathname}?estimateId=${encodeURIComponent(cleanTargetId)}`;
+          window.history.replaceState({}, document.title, canonicalUrl);
         }
         return;
       }
@@ -4754,6 +4997,9 @@ function checkInitialStateFromStorageOrUrl() {
       if (urlParams.has('perch')) incomingState.hasPerch = urlParams.get('perch') === '1' || urlParams.get('perch') === 'true';
       if (urlParams.has('roomDivider')) incomingState.hasRoomDivider = urlParams.get('roomDivider') === '1' || urlParams.get('roomDivider') === 'true';
       if (urlParams.has('floorReinf')) incomingState.hasFloorReinforcement = urlParams.get('floorReinf') === '1' || urlParams.get('floorReinf') === 'true';
+      if (urlParams.has('floorSplit')) incomingState.floorSplitCount = parseInt(urlParams.get('floorSplit'), 10);
+      if (urlParams.has('backReinf')) incomingState.hasBackReinforcement = urlParams.get('backReinf') === '1' || urlParams.get('backReinf') === 'true';
+      if (urlParams.has('backSplit')) incomingState.backSplitCount = parseInt(urlParams.get('backSplit'), 10);
       if (urlParams.has('topReinf')) incomingState.hasTopReinforcement = urlParams.get('topReinf') === '1' || urlParams.get('topReinf') === 'true';
       if (urlParams.has('frontWide')) incomingState.frontWideFrame = urlParams.get('frontWide');
       if (urlParams.has('floorHeater')) incomingState.hasFloorHeaterSupport = urlParams.get('floorHeater') === '1' || urlParams.get('floorHeater') === 'true';
@@ -4858,12 +5104,32 @@ function checkInitialStateFromStorageOrUrl() {
         if (cardPerch) cardPerch.classList.add('disabled');
       }
     }
+    if (incomingState.floorSplitCount != null) {
+      state.floorSplitCount = incomingState.floorSplitCount;
+      if (selectFloorSplit) selectFloorSplit.value = String(state.floorSplitCount);
+    }
     if (typeof incomingState.hasFloorReinforcement === 'boolean') {
       state.hasFloorReinforcement = incomingState.hasFloorReinforcement;
       if (toggleFloorReinforce) toggleFloorReinforce.checked = state.hasFloorReinforcement;
     } else {
       updateFloorReinforceByArea();
     }
+    if (selectFloorSplit) selectFloorSplit.disabled = !state.hasFloorReinforcement;
+    if (cardFloorReinforce) cardFloorReinforce.classList.toggle('active', state.hasFloorReinforcement);
+
+    if (incomingState.backSplitCount != null) {
+      state.backSplitCount = incomingState.backSplitCount;
+      if (selectBackSplit) selectBackSplit.value = String(state.backSplitCount);
+    }
+    if (typeof incomingState.hasBackReinforcement === 'boolean') {
+      state.hasBackReinforcement = incomingState.hasBackReinforcement;
+      if (toggleBackReinforce) toggleBackReinforce.checked = state.hasBackReinforcement;
+    } else {
+      updateBackReinforce();
+    }
+    if (selectBackSplit) selectBackSplit.disabled = !state.hasBackReinforcement;
+    if (cardBackReinforce) cardBackReinforce.classList.toggle('active', state.hasBackReinforcement);
+
     if (typeof incomingState.hasFloorHeaterSupport === 'boolean') {
       state.hasFloorHeaterSupport = incomingState.hasFloorHeaterSupport;
       if (toggleFloorHeaterSupport) toggleFloorHeaterSupport.checked = state.hasFloorHeaterSupport;
