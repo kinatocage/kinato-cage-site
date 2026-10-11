@@ -30,6 +30,7 @@ admin-tools/__pycache__/
 
 # temporary files and logs
 *.txt
+!public/購入者への案内/*.txt
 *.log
 dev_out.txt
 dev_err.txt

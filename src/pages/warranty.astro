@@ -1,0 +1,463 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const pageTitle = "製品保証・初期不良・返品交換規約 | きなとのケージ屋さん";
+---
+
+<Layout title={pageTitle}>
+  <main class="warranty-page">
+    <header class="warranty-hero">
+      <div class="container hero-inner">
+        <div class="hero-text">
+          <div class="hero-badge">
+            <span class="badge-icon">🛡️</span>
+            <span>Terms of Guarantee</span>
+          </div>
+          <h1 class="hero-title">製品保証・初期不良・返品交換規約</h1>
+          <p class="hero-lead">
+            きなとのケージ屋さんにおける、ケージお届け後の初期不良対応・部品交換・保証条件についての詳細規定です。<br />
+            お届け後は必ず内容をご確認の上、ケージの状態をご確認くださいますようお願い申し上げます。
+          </p>
+        </div>
+
+        <div class="hero-chara">
+          <div class="hero-balloon">
+            安心してお使いいただくための<br />
+            大切な保証規定だよ！<br />
+            必ずチェックしてね♪
+          </div>
+          <img
+            src="/assets/characters/clean/pose_finger_point_front.png"
+            alt="きなとちゃん"
+            class="chara-img"
+          />
+        </div>
+      </div>
+    </header>
+
+    <div class="container warranty-content">
+
+      <!-- 最重要サマリーボックス -->
+      <section class="summary-card">
+        <h2 class="summary-title">
+          <span class="icon">⚠️</span> 保証適用における最重要事項
+        </h2>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <span class="item-num">01</span>
+            <strong>到着後【3日以内】にご連絡</strong>
+            <p>運送事故補償・初期不良対応の受付期限は、ケージ配達後3日以内となります。到着後は速やかに開梱・ご確認ください。</p>
+          </div>
+          <div class="summary-item highlight">
+            <span class="item-num">02</span>
+            <strong>生体・用品を入れる前に確認</strong>
+            <p>不具合がある場合、絶対に生体を入れて使用開始しないでください。生体を入れると「中古品」扱いとなり、保証・交換・保険適用がお受けできなくなります。</p>
+          </div>
+          <div class="summary-item">
+            <span class="item-num">03</span>
+            <strong>外箱・梱包資材の保管</strong>
+            <p>運送会社の事故確認調査のため、お届け時のダンボール外箱や緩衝材は破却・廃棄せず保管をお願いいたします。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 保証規定画像セクション（3枚） -->
+      <section class="images-section">
+        <div class="section-title-wrap">
+          <h2>保証規定書（原本）</h2>
+          <p>※画像をタップ・クリックすると大きくご確認いただけます</p>
+        </div>
+
+        <div class="warranty-images-list">
+          <!-- 画像 1 -->
+          <article class="warranty-image-card">
+            <div class="card-header">
+              <span class="page-badge">PAGE 01</span>
+              <h3>保証について（1）保証期間・初期不良・部品交換</h3>
+            </div>
+            <div class="img-wrap">
+              <a href="/保証について1.JPG" target="_blank" rel="noopener noreferrer" title="クリックして拡大表示">
+                <img src="/保証について1.JPG" alt="保証について (1) 保証期間・初期不良" loading="lazy" />
+              </a>
+            </div>
+          </article>
+
+          <!-- 画像 2 -->
+          <article class="warranty-image-card">
+            <div class="card-header">
+              <span class="page-badge">PAGE 02</span>
+              <h3>保証について（2）仕様相違・運送破損・免責事項</h3>
+            </div>
+            <div class="img-wrap">
+              <a href="/保証について2.JPG" target="_blank" rel="noopener noreferrer" title="クリックして拡大表示">
+                <img src="/保証について2.JPG" alt="保証について (2) 仕様相違・免責事項" loading="lazy" />
+              </a>
+            </div>
+          </article>
+
+          <!-- 画像 3 -->
+          <article class="warranty-image-card">
+            <div class="card-header">
+              <span class="page-badge">PAGE 03</span>
+              <h3>保証について（3）注意事項・出荷基準・その他規定</h3>
+            </div>
+            <div class="img-wrap">
+              <a href="/保証について3.JPG" target="_blank" rel="noopener noreferrer" title="クリックして拡大表示">
+                <img src="/保証について3.JPG" alt="保証について (3) 出荷基準・その他規定" loading="lazy" />
+              </a>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ナビゲーションボタン -->
+      <div class="page-actions">
+        <a href="/guide" class="action-btn btn-back">
+          <span>← お届け後ガイドに戻る</span>
+        </a>
+        <a href="/contact" class="action-btn btn-contact">
+          <span>✉️ お問い合わせ・不具合のご連絡</span>
+        </a>
+      </div>
+
+    </div>
+  </main>
+</Layout>
+
+<style>
+  .warranty-page {
+    background: linear-gradient(180deg, #fbfbfd 0%, #f4f6fa 100%);
+    color: #333333;
+    font-family: 'Nunito', 'Kiwi Maru', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding-bottom: 80px;
+    line-height: 1.75;
+  }
+
+  .container {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  /* ヒーロー */
+  .warranty-hero {
+    background: linear-gradient(135deg, #eef9f5 0%, #e3f2fd 50%, #fff1f5 100%);
+    padding: 50px 0 45px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    margin-bottom: 40px;
+  }
+
+  .hero-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 40px;
+  }
+
+  .hero-text {
+    flex: 1;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #ffffff;
+    color: #059669;
+    font-weight: 700;
+    font-size: 0.88rem;
+    padding: 6px 16px;
+    border-radius: 9999px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    margin-bottom: 14px;
+    border: 1px solid #d1fae5;
+  }
+
+  .hero-title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1f2937;
+    line-height: 1.35;
+    margin-bottom: 12px;
+  }
+
+  .hero-lead {
+    font-size: 0.96rem;
+    color: #4b5563;
+    line-height: 1.8;
+    margin: 0;
+  }
+
+  .hero-chara {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    width: 200px;
+  }
+
+  .hero-balloon {
+    position: relative;
+    background: #ffffff;
+    border: 2px solid #34d399;
+    border-radius: 16px;
+    padding: 10px 14px;
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: #065f46;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(52, 211, 153, 0.15);
+    margin-bottom: 10px;
+    line-height: 1.5;
+  }
+
+  .hero-balloon::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid #34d399;
+  }
+
+  .chara-img {
+    width: 130px;
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.12));
+  }
+
+  /* サマリーカード */
+  .summary-card {
+    background: #ffffff;
+    border: 2px solid #fed7aa;
+    border-radius: 20px;
+    padding: 28px;
+    margin-bottom: 40px;
+    box-shadow: 0 6px 25px rgba(234, 88, 12, 0.06);
+  }
+
+  .summary-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #9a3412;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 18px;
+  }
+
+  .summary-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 18px;
+    position: relative;
+  }
+
+  .summary-item.highlight {
+    background: #fff1f2;
+    border-color: #fecdd3;
+  }
+
+  .summary-item.highlight strong {
+    color: #be123c;
+  }
+
+  .item-num {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 800;
+    background: #e2e8f0;
+    color: #475569;
+    padding: 2px 8px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+  }
+
+  .summary-item.highlight .item-num {
+    background: #f43f5e;
+    color: #ffffff;
+  }
+
+  .summary-item strong {
+    display: block;
+    font-size: 1rem;
+    color: #1e293b;
+    margin-bottom: 6px;
+  }
+
+  .summary-item p {
+    font-size: 0.88rem;
+    color: #475569;
+    margin: 0;
+    line-height: 1.6;
+  }
+
+  /* 画像セクション */
+  .images-section {
+    margin-bottom: 40px;
+  }
+
+  .section-title-wrap {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+
+  .section-title-wrap h2 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #1f2937;
+    margin-bottom: 6px;
+  }
+
+  .section-title-wrap p {
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin: 0;
+  }
+
+  .warranty-images-list {
+    display: flex;
+    flex-direction: column;
+    gap: 36px;
+  }
+
+  .warranty-image-card {
+    background: #ffffff;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+  }
+
+  .card-header {
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .page-badge {
+    background: #047857;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 0.8rem;
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+
+  .card-header h3 {
+    font-size: 1.08rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 0;
+  }
+
+  .img-wrap {
+    padding: 20px;
+    background: #f1f5f9;
+    text-align: center;
+  }
+
+  .img-wrap a {
+    display: block;
+    cursor: zoom-in;
+  }
+
+  .img-wrap img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease;
+  }
+
+  .img-wrap a:hover img {
+    transform: scale(1.01);
+  }
+
+  /* アクションボタン */
+  .page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 50px;
+  }
+
+  .action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 32px;
+    border-radius: 9999px;
+    font-size: 0.96rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  .action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  }
+
+  .btn-back {
+    background: #ffffff;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+  }
+  .btn-back:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+  }
+
+  .btn-contact {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    color: #ffffff;
+  }
+  .btn-contact:hover {
+    background: linear-gradient(135deg, #047857 0%, #059669 100%);
+  }
+
+  @media (max-width: 768px) {
+    .hero-inner {
+      flex-direction: column-reverse;
+      text-align: center;
+      gap: 20px;
+    }
+    .hero-badge {
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .hero-title {
+      font-size: 1.6rem;
+    }
+    .card-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .img-wrap {
+      padding: 10px;
+    }
+    .page-actions {
+      flex-direction: column;
+    }
+    .action-btn {
+      width: 100%;
+    }
+  }
+</style>

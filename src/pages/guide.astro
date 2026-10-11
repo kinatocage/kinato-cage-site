@@ -1,0 +1,1915 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+// ガイドページのメタ情報
+const pageTitle = "ケージお届け後のご案内＆セットアップガイド | きなとのケージ屋さん";
+---
+
+<Layout title={pageTitle}>
+  <main class="guide-page">
+
+    <!-- ===== ヒーローセクション ===== -->
+    <header class="guide-hero">
+      <div class="hero-bg-shapes">
+        <span class="shape s1"></span>
+        <span class="shape s2"></span>
+        <span class="shape s3"></span>
+      </div>
+      <div class="container hero-container">
+        <div class="hero-content">
+          <div class="hero-badge">
+            <span class="badge-icon">📦</span>
+            <span>ご購入いただいたお客様へ</span>
+          </div>
+          <h1 class="hero-title">
+            ケージお届け後のご案内<br />
+            <span class="hero-subtitle">初期確認＆セットアップガイド</span>
+          </h1>
+          <p class="hero-lead">
+            この度は「きなとのケージ屋さん」をお選びいただき、誠にありがとうございます！<br />
+            大切なペットちゃんの新しいマイホームを安全・快適にお使いいただくための初期確認手順と、アクリルフィルム剥がし、暖突・配線の取り付け方法を1つにまとめました。
+          </p>
+        </div>
+
+        <div class="hero-chara-area">
+          <div class="hero-speech-bubble">
+            無事にお手元に届いたかな？<br />
+            開梱からセットアップまで、<br class="pc-br" />
+            わたしと一緒に確認していこうね♪
+          </div>
+          <img
+            src="/assets/characters/clean/pose_point_left_back.png"
+            alt="きなとちゃん"
+            class="hero-chara-img"
+          />
+        </div>
+      </div>
+    </header>
+
+    <!-- ===== 目次ナビゲーション ===== -->
+    <nav class="guide-nav-section" aria-label="ガイド目次">
+      <div class="container">
+        <div class="guide-toc-card">
+          <h2 class="toc-title">
+            <span class="toc-icon">📑</span> もくじ（タップで各手順へジャンプ）
+          </h2>
+          <div class="toc-grid">
+            <a href="#step-check" class="toc-item">
+              <span class="toc-num">01</span>
+              <span class="toc-text">開梱と初期状態の確認<span class="toc-badge danger">重要</span></span>
+            </a>
+            <a href="#step-film" class="toc-item">
+              <span class="toc-num">02</span>
+              <span class="toc-text">アクリル保護フィルムの剥がし方</span>
+            </a>
+            <a href="#step-dantotsu" class="toc-item">
+              <span class="toc-num">03</span>
+              <span class="toc-text">暖突の取り付け方法（S / M）</span>
+            </a>
+            <a href="#step-hole" class="toc-item">
+              <span class="toc-num">04</span>
+              <span class="toc-text">暖突の穴が合わない場合の処置</span>
+            </a>
+            <a href="#step-grommet" class="toc-item">
+              <span class="toc-num">05</span>
+              <span class="toc-text">配線口（グロメット）の通し方</span>
+            </a>
+            <a href="#step-type-ah" class="toc-item">
+              <span class="toc-num">06</span>
+              <span class="toc-text">Type AH-B暖突吊り下げ方法</span>
+            </a>
+            <a href="#step-photo" class="toc-item toc-item-highlight">
+              <span class="toc-num">07</span>
+              <span class="toc-text">📸 完成写真・レイアウト写真のご提供</span>
+            </a>
+            <a href="#step-support" class="toc-item">
+              <span class="toc-num">08</span>
+              <span class="toc-text">アフターサポート＆お問い合わせ</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ===== 本文コンテンツ ===== -->
+    <div class="container guide-content-container">
+
+      <!-- STEP 1: 開梱と状態のご確認 -->
+      <section id="step-check" class="guide-step-card">
+        <div class="step-header">
+          <div class="step-badge-wrap">
+            <span class="step-number">STEP 01</span>
+            <span class="step-tag tag-urgent">最重要チェック</span>
+          </div>
+          <h2 class="step-title">ご開梱と商品の状態確認</h2>
+          <p class="step-subtitle">ケージが到着しましたら、まずは速やかに開梱して中身をご確認ください</p>
+        </div>
+
+        <div class="step-body">
+          <p class="step-desc">
+            当工房では細心の注意を払い、頑丈な二重梱包にて発送しておりますが、配送中の強い衝撃等により万が一破損が発生してしまう可能性がございます。<br />
+            お届け後は速やかに外箱を開梱し、アクリル板の状態をご確認ください。
+          </p>
+
+          <!-- 確認項目（アクリル板の割れやヒビ） -->
+          <div class="check-single-box">
+            <div class="check-icon">🔍</div>
+            <div class="check-content">
+              <strong>アクリル板（スライド扉・側面パネル）の割れやヒビ</strong>
+              <p>正面の引き戸（スライド扉）や側面の透明パネル等に、配送時の衝撃によるヒビ割れや欠け、破損がないかご確認ください。</p>
+            </div>
+          </div>
+
+          <!-- 重要アラート：規約に基づく保証条件 -->
+          <div class="alert-box alert-danger">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-text">
+              <h3>【万が一、破損や割れ・初期不良があった場合】</h3>
+              <p>
+                万が一、配送中の事故による破損や仕様書との相違事項がございましたら、<strong>ケージ配達後【3日以内】に必ず当工房までご連絡をお願いいたします。</strong><br />
+                初期不良・破損部位の部品交換にて迅速に保証対応をさせていただきます。
+              </p>
+              
+              <div class="warranty-conditions-box">
+                <h4>⚠️ 保証適用についての重要なお願い</h4>
+                <p class="warning-highlight-text">
+                  <strong>※不具合がある場合、絶対に生体やお世話用品を入れて使用開始しないでください！</strong><br />
+                  一度生体を入れてしまいますと「中古品」という扱いになり、運送保険の適用や部品交換・再発送がお受けできなくなる場合がございます。
+                </p>
+                <ul class="condition-list">
+                  <li><strong>連絡期日：</strong> ケージ配達後、3日以内にご連絡をいただいた場合に限ります。</li>
+                  <li><strong>梱包資材：</strong> 外箱・緩衝材等の梱包資材を破却・廃棄せず保管してください（運送事故調査に必要となります）。</li>
+                  <li><strong>使用状態：</strong> 生体やお世話用品を設置してケージとして使用開始していない状態に限ります。</li>
+                  <li><strong>対象外事項：</strong> 当方の出荷基準を満たす微細な外観キズ、加工上生じるキズ、加工ムダ穴は保証対象外となります。</li>
+                </ul>
+                <div class="warranty-link-action">
+                  <a href="/warranty" class="warranty-btn" target="_blank" rel="noopener noreferrer">
+                    <span>🛡️ 保証規定（初期不良・返品交換についての詳細書）を見る →</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- KINATOちゃんのアドバイス -->
+          <div class="chara-tip-box">
+            <img src="/assets/characters/clean/pose_think_trouble.png" alt="きなとちゃん" class="tip-chara-img" />
+            <div class="tip-speech">
+              <div class="tip-name">きなとちゃんからの注意点</div>
+              <p>
+                運送事故の補償は<strong>【配達後3日以内】</strong>が期日になっているよ！<br />
+                もし何か気になる破損があったら、<strong>生体をお家に入れる前に</strong>スマホで写真を撮ってすぐ教えてね！梱包ダンボールも捨てずに取っておいてね！
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 2: アクリル保護フィルムの剥がし方 -->
+      <section id="step-film" class="guide-step-card">
+        <div class="step-header">
+          <div class="step-badge-wrap">
+            <span class="step-number">STEP 02</span>
+            <span class="step-tag">傷防止のコツ</span>
+          </div>
+          <h2 class="step-title">アクリル保護フィルム（クラフト紙）のめくり方</h2>
+          <p class="step-subtitle">爪で擦らずテープでペロッと！新品アクリルを傷つけないカンタンな剥がし方</p>
+        </div>
+
+        <div class="step-body">
+          <p class="step-desc">
+            アクリル板の表面には、加工時および配送時の擦り傷を防ぐため、茶色のクラフト保護紙（保護フィルム）が貼られています。<br />
+            「端っこが剥がしにくい…」と爪やカッターなどでガリガリ引っ掻いてしまうと、せっかくの新品アクリルに傷がついてしまいますのでご注意ください！
+          </p>
+
+          <div class="guide-method-card">
+            <h3 class="method-title">💡 道具はこれだけ！テープを使った裏ワザ手順</h3>
+            <p class="method-intro">
+              セロハンテープやマスキングテープ（紙テープ、ガムテープ等でも可）をご用意ください。
+            </p>
+
+            <div class="two-step-flex">
+              <div class="step-column-card">
+                <div class="col-badge">手順 ①</div>
+                <div class="col-img-wrap">
+                  <img src="/assets/guide/film_step1.jpg" alt="テープを保護紙からはみ出すように貼り付ける" />
+                </div>
+                <div class="col-desc">
+                  <strong>テープを端からはみ出すように貼る</strong>
+                  <p>アクリル板の角や端っこに、テープを保護紙からはみ出すようにペタッと強めに貼り付けます。</p>
+                </div>
+              </div>
+
+              <div class="step-column-card">
+                <div class="col-badge">手順 ②</div>
+                <div class="col-img-wrap">
+                  <img src="/assets/guide/film_step2.jpg" alt="貼ったテープを持ち上げると保護紙がめくれる" />
+                </div>
+                <div class="col-desc">
+                  <strong>貼ったテープを真上に持ち上げる</strong>
+                  <p>テープの端をつまんでクイッと持ち上げると、保護紙が一緒にめくれ上がります！あとは手で優しく全体を剥がしてください。</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="safe-note-box">
+              <span class="safe-icon">✨</span>
+              <p>
+                <strong>安心仕様：</strong> 保護紙は超低粘着（弱粘着・静電気吸着）で貼り付いています。剥がした後にベタベタする糊残りは一切出ませんのでご安心ください。
+              </p>
+            </div>
+          </div>
+
+          <!-- KINATOちゃんのアドバイス -->
+          <div class="chara-tip-box">
+            <img src="/assets/characters/clean/pose_gutspose_wink.png" alt="きなとちゃん" class="tip-chara-img" />
+            <div class="tip-speech">
+              <div class="tip-name">きなとちゃんのワンポイントTips</div>
+              <p>
+                テープで持ち上げるだけで、力もいらず一瞬でめくれるよ！<br />
+                保護紙を剥がすと、とってもクリアで綺麗な透明アクリルがお目見えするよ〜！ピカピカの視界を楽しんでね♪
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 3: 暖突の取り付け方法 -->
+      <section id="step-dantotsu" class="guide-step-card">
+        <div class="step-header">
+          <div class="step-badge-wrap">
+            <span class="step-number">STEP 03</span>
+            <span class="step-tag">器具の設置</span>
+          </div>
+          <h2 class="step-title">暖突（ヒーター）の取り付け方法（S / Mサイズ）</h2>
+          <p class="step-subtitle">天板の専用ピッチ穴を活用して、一人でもズレずに綺麗に取り付ける手順</p>
+        </div>
+
+        <div class="step-body">
+          <p class="step-desc">
+            ケージ天板（塩ビパンチングパネル）の取付穴ピッチは、みどり商会製「暖突 Sサイズ」「暖突 Mサイズ」のネジ穴間隔に合わせて設計しています。<br />
+            暖突本体に付属しているネジ・ワッシャを使用して固定できます。
+          </p>
+
+          <!-- 危険注意喚起 -->
+          <div class="alert-box alert-warning">
+            <div class="alert-icon">🚫</div>
+            <div class="alert-text">
+              <h3>【暖突を天板の上に「乗せて」のご使用は厳禁です】</h3>
+              <p>
+                暖突を天板の上に直置き（乗せるだけ）で使用されますと、ヒーターから放たれる高熱により、<strong>天板（塩ビパンチングパネル）が熱変形・歪み・溶損を起こす恐れ</strong>があります。<br />
+                必ず天板の内側（ケージ内天井）に吊り下げる形で、ネジ止めにて固定してください。
+              </p>
+            </div>
+          </div>
+
+          <!-- 準備品リスト -->
+          <div class="prep-tools-box">
+            <h3 class="prep-title">🛠️ ご用意いただくもの</h3>
+            <div class="prep-list-grid">
+              <div class="prep-item">
+                <span class="prep-icon">🔥</span>
+                <div>
+                  <strong>暖突本体</strong>
+                  <p>暖突付属の取付ネジ・ワッシャを使用します。</p>
+                </div>
+              </div>
+              <div class="prep-item">
+                <span class="prep-icon">🪛</span>
+                <div>
+                  <strong>＋ドライバー（No.2サイズ推奨）</strong>
+                  <p>※暖突付属の簡易ドライバーは軸が細すぎてネジ山を舐めやすいため、一般的な家庭用ドライバーの使用を強く推奨します。</p>
+                </div>
+              </div>
+              <div class="prep-item">
+                <span class="prep-icon">✂️</span>
+                <div>
+                  <strong>はさみ または カッター</strong>
+                  <p>配線グロメットの切り込み加工に使用します。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- プロの手順解説 -->
+          <div class="install-steps-wrapper">
+            <h3 class="method-title">📋 スムーズに取り付けるための「2段階」手順</h3>
+            <p class="method-intro">最初からワッシャを入れると位置合わせが難しくなります。以下の手順で行うと驚くほどスムーズです！</p>
+
+            <div class="install-diagram-row">
+              <div class="diagram-img-box">
+                <img src="/assets/guide/dantotsu_install_1.jpg" alt="暖突取付方法の準備と注意点" />
+              </div>
+              <div class="diagram-img-box">
+                <img src="/assets/guide/dantotsu_install_2.jpg" alt="暖突取付手順1〜手順5" />
+              </div>
+            </div>
+
+            <ol class="numbered-step-list">
+              <li>
+                <div class="step-num-circle">1</div>
+                <div class="step-content-detail">
+                  <strong>まずはワッシャを使わず、ネジのみで暖突を仮留めする</strong>
+                  <p>天板の外側からネジを通し、暖突本体のネジ穴にネジ先を軽く噛み合わせます。4箇所すべてをネジだけで軽く固定することで、本体が落ちず位置が決まります。</p>
+                </div>
+              </li>
+              <li>
+                <div class="step-num-circle">2</div>
+                <div class="step-content-detail">
+                  <strong>1本ずつネジを外し、ワッシャを挟んで本締めする（4箇所すべて）</strong>
+                  <p>全体の仮留めができたら、1箇所ずつネジを抜き、ワッシャを通して締め直します。1本ずつ作業することで他の3本が本体を支えてくれるため、ズレることなくガッチリ固定できます。</p>
+                </div>
+              </li>
+            </ol>
+          </div>
+
+          <!-- KINATOちゃんのアドバイス -->
+          <div class="chara-tip-box">
+            <img src="/assets/characters/clean/pose_finger_point_front.png" alt="きなとちゃん" class="tip-chara-img" />
+            <div class="tip-speech">
+              <div class="tip-name">きなとちゃんの取り付けアドバイス</div>
+              <p>
+                暖突Lサイズをお使いの場合は、オプションの『暖突Lブラケット』をお使いいただくか、天板の穴を少し広げてお取り付けしてね。<br />
+                ネジ穴がほんの少し外側にズレているときは、暖突本体を手で少し「グッ」と押してあげると、すんなり入ることが多いよ！試してみてね♪
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 4: 暖突取付穴を広げる方法 -->
+      <section id="step-hole" class="guide-step-card">
+        <div class="step-header">
+          <div class="step-badge-wrap">
+            <span class="step-number">STEP 04</span>
+            <span class="step-tag tag-sub">製品個体差への対応</span>
+          </div>
+          <h2 class="step-title">暖突の取付穴が合わない場合の対応（穴拡張方法）</h2>
+          <p class="step-subtitle">暖突本体の寸法バラツキにより穴がズレている場合の簡単な対処法</p>
+        </div>
+
+        <div class="step-body">
+          <p class="step-desc">
+            ケージ天板の穴間隔は市場流通品の暖突を精密採寸して設計しておりますが、近年、暖突側の製造ロットごとの寸法公差（バラツキ）が大きく、稀にネジ穴が内側にズレて取り付けにくい個体が流通しております。<br />
+            穴が内側にズレている場合は、以下の手順で天板の穴を少し広げてご対応をお願いいたします。
+          </p>
+
+          <div class="hole-expand-detail">
+            <div class="expand-img-wrap">
+              <img src="/assets/guide/dantotsu_hole_expand.png" alt="暖突取付穴を広げる方法の図解" />
+            </div>
+
+            <div class="expand-steps-content">
+              <div class="tool-pill">
+                <strong>🔧 準備品：</strong> ドリルネジ（ケージに同封しております）＋ ドライバー（太めのNo.3推奨）
+              </div>
+
+              <ul class="expand-list">
+                <li>
+                  <span class="ex-num">手順 1</span>
+                  <div>
+                    <strong>広げる必要がある穴に印をつける</strong>
+                    <p>暖突を一度仮当てし、どの穴が内側に干渉しているか確認します。※2箇所以上広げる必要がある場合は、4箇所すべて広げると余裕が生まれ取り付けがとても楽になります。</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="ex-num">手順 2</span>
+                  <div>
+                    <strong>ドリルネジをドライバーで押し込む</strong>
+                    <p>付属のドリルネジをドライバーで穴に押し込み、グリグリと回します。※ネジを根本までねじ込む必要はありません。先端の太い部分で穴を1〜2mm押し広げるだけで十分です。</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="ex-num">手順 3</span>
+                  <div>
+                    <strong>削りカスを清掃し、暖突を取り付ける</strong>
+                    <p>穴が広がったら削り粉などのゴミを綺麗に拭き取り、STEP 03の手順で暖突を取り付けます。</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- KINATOちゃんのアドバイス -->
+          <div class="chara-tip-box">
+            <img src="/assets/characters/clean/pose_think_trouble.png" alt="きなとちゃん" class="tip-chara-img" />
+            <div class="tip-speech">
+              <div class="tip-name">きなとちゃんからのメッセージ</div>
+              <p>
+                「穴が合わない！不良品かな？」と不安になっちゃうかもしれないけれど、暖突本体の個体差によるものなんだ。同封のネジでちょこっと先端を広げてあげれば大丈夫だから、焦らず試してみてね！
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 5: 天板グロメットへの配線通し方 -->
+      <section id="step-grommet" class="guide-step-card">
+        <div class="step-header">
+          <div class="step-badge-wrap">
+            <span class="step-number">STEP 05</span>
+            <span class="step-tag">配線と脱走防止</span>
+          </div>
+          <h2 class="step-title">天板グロメット（配線口）へ暖突コンセントを通す方法</h2>
+          <p class="step-subtitle">ケージの外へスマートに配線しつつ、生体の脱走を確実に防ぐ切り込みのコツ</p>
+        </div>
+
+        <div class="step-body">
+          <p class="step-desc">
+            天板にはコード類を綺麗に通すためのゴム製グロメット（配線キャップ）が取り付けられています。<br />
+            暖突のコンセントプラグを通す際は、以下の手順でグロメットにスリットを入れて通してください。
+          </p>
+
+          <div class="grommet-steps-grid">
+            <div class="grommet-step-item">
+              <div class="grommet-step-num">①</div>
+              <h4>グロメットを取り外す</h4>
+              <p>天板の穴にはまっている黒いゴムグロメットを手で押し出して取り外します。</p>
+            </div>
+            <div class="grommet-step-item">
+              <div class="grommet-step-num">②</div>
+              <h4>中央のゴム膜に切り込みを入れる</h4>
+              <p>はさみやカッターで、中央の薄い膜部分に約1cmの切り込み（スジ）を1本入れます。</p>
+            </div>
+            <div class="grommet-step-item">
+              <div class="grommet-step-num">③</div>
+              <h4>切り込みを伸ばしてプラグを通す</h4>
+              <p>ケージ外側から、ゴムの伸縮性を利用して暖突のコンセント頭を押し通します。</p>
+            </div>
+            <div class="grommet-step-item">
+              <div class="grommet-step-num">④</div>
+              <h4>グロメットを天板へ戻す</h4>
+              <p>コードを通した状態で、グロメットを天板の穴にしっかりとパチンとはめ戻します。</p>
+            </div>
+          </div>
+
+          <div class="alert-box alert-danger">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-text">
+              <h3>【脱走事故防止のための超重要注意点】</h3>
+              <p>
+                <strong>グロメットの外周リング（外枠）は絶対に切らないでください。</strong><br />
+                また、切り込みを大きく十字に切ったり広げすぎると、ヘビやトカゲ、小動物が隙間から頭を押し出して脱走するリスクが生じます。<br />
+                ゴムは伸びますので、<strong>「約1cm程度の一文字スリット」</strong>で十分コンセントが通ります。
+              </p>
+            </div>
+          </div>
+
+          <div class="thermo-hook-info">
+            <div class="info-badge">💡 お役立ち機能</div>
+            <p>
+              <strong>サーモスタットのぶら下げ設置：</strong> ケージ側面フレームに「サーモ等ぶら下げネジ」が付属しているモデルは、サーモスタット本体のフック掛けとして大変便利にご活用いただけます。（※レオパ用等一部イベント販売ケージを除きます）
+            </p>
+          </div>
+
+          <!-- KINATOちゃんのアドバイス -->
+          <div class="chara-tip-box">
+            <img src="/assets/characters/clean/pose_finger_point_front.png" alt="きなとちゃん" class="tip-chara-img" />
+            <div class="tip-speech">
+              <div class="tip-name">きなとちゃんの脱走防止ワンポイント</div>
+              <p>
+                爬虫類や小動物は「こんな小さな隙間から！？」って驚くような穴から脱走しちゃうことがあるの。<br />
+                だからグロメットの切れ目は必要最小限にするのがとっても大切だよ！生体の安全第一で設置しようね♪
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 6: Type AH-B 暖突取付方法 -->
+      <section id="step-type-ah" class="guide-step-card">
+        <div class="step-header">
+          <div class="step-badge-wrap">
+            <span class="step-number">STEP 06</span>
+            <span class="step-tag tag-sub">対応モデル専用</span>
+          </div>
+          <h2 class="step-title">Type AH-B『暖突取付方法』（フック吊り下げタイプ）</h2>
+          <p class="step-subtitle">フック金具と結束バンドを活用した取り付け手順</p>
+        </div>
+
+        <div class="step-body">
+          <p class="step-desc">
+            Type AH-Bなどの天板仕様では、専用フック金具と結束バンドを使用して暖突を吊り下げて固定します。
+          </p>
+
+          <div class="type-ah-container">
+            <div class="ah-img-box">
+              <img src="/assets/guide/dantotsu_install_3.jpg" alt="Type AH-B暖突取付方法とグロメット通し方" />
+            </div>
+
+            <div class="ah-steps-box">
+              <ol class="ah-step-list">
+                <li>
+                  <div class="ah-num">1</div>
+                  <div>
+                    <strong>暖突の取付ネジ部にフック金具を取り付ける</strong>
+                    <p>暖突本体の角にあるネジ穴に、付属の吊り下げ用フック金具を取り付けます。</p>
+                  </div>
+                </li>
+                <li>
+                  <div class="ah-num">2</div>
+                  <div>
+                    <strong>天板穴に結束バンドを通して天板に固定する</strong>
+                    <p>天板のパンチング穴または金網部に結束バンドを通し、フックを引っ掛けてしっかりと留めます。余ったバンドの端はハサミでカットしてください。</p>
+                  </div>
+                </li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 7: 完成写真・レイアウト写真ご提供のお願い -->
+      <section id="step-photo" class="guide-step-card photo-coop-card">
+        <div class="step-header">
+          <div class="step-badge-wrap">
+            <span class="step-number">STEP 07</span>
+            <span class="step-tag tag-heart">📸 皆様へのお願い</span>
+          </div>
+          <h2 class="step-title">完成写真・レイアウト写真のご提供にご協力ください！</h2>
+          <p class="step-subtitle">愛情いっぱいの素敵なマイホームの様子を、ぜひ当工房にお聞かせいただけませんか？</p>
+        </div>
+
+        <div class="step-body">
+          <div class="photo-hero-box">
+            <div class="photo-hero-text">
+              <p class="photo-lead-msg">
+                無事にケージのセットアップやお引越しが完了いたしましたら、<br />
+                <strong>ペットちゃんが寛いでいる様子や、こだわりのレイアウト写真</strong>をぜひお送りいただけますと幸いです！
+              </p>
+              <p>
+                飼い主様が工夫されたレイアウトや、新しいお家でリラックスするペットちゃんの姿を拝見できることは、製作者にとって何よりの喜びであり、今後のケージ作りの大きな励みとなります。
+              </p>
+            </div>
+            <div class="photo-hero-img-wrap">
+              <img src="/assets/characters/clean/pose_jump_happy.png" alt="きなとちゃん" class="photo-chara-hero" />
+            </div>
+          </div>
+
+          <!-- 3つの大切なお知らせ・安心ポイント -->
+          <div class="photo-points-grid">
+            <!-- ポイント1: SNS・Web掲載 -->
+            <div class="photo-point-card">
+              <div class="p-card-icon">🌐</div>
+              <h3>Webサイト＆SNSでの作例紹介</h3>
+              <p>
+                いただいたお写真は、当工房の公式Webサイト（事例紹介ギャラリー）や、公式X（旧Twitter）、Instagram等のSNSにて、素敵な飼育事例としてご紹介させていただく場合がございます。
+              </p>
+            </div>
+
+            <!-- ポイント2: AI画像加工と学習不使用（安心宣言） -->
+            <div class="photo-point-card p-card-secure">
+              <div class="secure-badge-ribbon">🔒 安心・安全宣言</div>
+              <div class="p-card-icon">🤖</div>
+              <h3>AIによる画像加工とプライバシー保護</h3>
+              <p>
+                SNSやWeb掲載にあたり、写真の明るさ調整や背景の美化、お部屋のプライバシー保護（映り込みのぼかし等）を目的として、<strong>AIツールを用いた画像加工を行う場合がございます。</strong>
+              </p>
+              <div class="secure-highlight-inner">
+                <strong>【AIの学習には一切利用されません】</strong>
+                <p>
+                  当工房で使用するAI環境は、<strong>『入力画像・データがAIの学習（トレーニング）に一切利用されない設定（オプトアウト・商用エンタープライズ保護環境）』</strong>を徹底しております。<br />
+                  お客様やペットちゃんの大切なお写真が意図しない形で学習データとして使われることは一切ございませんので、どうぞご安心ください。
+                </p>
+              </div>
+            </div>
+
+            <!-- ポイント3: 他のお客様への大きな貢献 -->
+            <div class="photo-point-card">
+              <div class="p-card-icon">🤝</div>
+              <h3>未来の飼い主様への貴重な参考情報</h3>
+              <p>
+                「このケージサイズにどんなシェルターや流木が入る？」「暖突やライトはどう配置する？」といった実際のレイアウト例は、<strong>これからケージを検討される全国の飼い主様にとっても大変有益で心強い道標となります。</strong><br />
+                ぜひ、みんなの快適な飼育環境作りのためにご協力をお願いいたします！
+              </p>
+            </div>
+          </div>
+
+          <!-- 送信方法のご案内 -->
+          <div class="photo-send-cta">
+            <h3 class="cta-title">📸 お写真の送り方</h3>
+            <p class="cta-desc">
+              公式LINE、公式X（旧Twitter）のDM、またはお問い合わせメール宛てに、お気軽に写真とコメントをお送りください！<br />
+              （ペットちゃんのお名前や種類、こだわったポイントなども教えていただけるととても嬉しいです♪）
+            </p>
+            <div class="cta-btn-group">
+              <a href="/contact" class="guide-btn btn-primary">
+                <span>✉️ お問い合わせ・写真送付はこちら</span>
+              </a>
+              <a href="https://x.com/kinato_cage" target="_blank" rel="noopener noreferrer" class="guide-btn btn-x">
+                <span>𝕏 公式X（旧Twitter）のDMで送る</span>
+              </a>
+              <a href="https://www.instagram.com/kinato_cage/" target="_blank" rel="noopener noreferrer" class="guide-btn btn-insta">
+                <span>📷 公式Instagramで送る</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- KINATOちゃんのメッセージ -->
+          <div class="chara-tip-box chara-happy-tip">
+            <img src="/assets/characters/clean/pose_cheer_jump.png" alt="きなとちゃん" class="tip-chara-img" />
+            <div class="tip-speech">
+              <div class="tip-name">きなとちゃんより</div>
+              <p>
+                みんなが作ってくれた自慢のケージレイアウトを見られるのが、わたしの一番の楽しみなんだ〜！<br />
+                お部屋の写り込みなんかもAIで綺麗にカバーするから、気軽にパシャッと撮って送ってね！待ってるよ〜♪
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 8: アフターサポートとお問い合わせ -->
+      <section id="step-support" class="guide-step-card">
+        <div class="step-header">
+          <div class="step-badge-wrap">
+            <span class="step-number">STEP 08</span>
+            <span class="step-tag">末長いお付き合い</span>
+          </div>
+          <h2 class="step-title">アフターサポート＆お問い合わせ窓口</h2>
+          <p class="step-subtitle">ご不明な点やお困りごとがございましたら、いつでも何なりとお申し付けください</p>
+        </div>
+
+        <div class="step-body">
+          <div class="support-content-layout">
+            <div class="support-text-box">
+              <p>
+                「暖突のネジがどうしても入らない」「配線方法がよくわからない」「パーツを追加したい」など、ご使用中の疑問やお困りごとがございましたら、いつでもお気軽にご相談ください。<br />
+                経験豊富なスタッフが、丁寧にご案内・サポートさせていただきます。
+              </p>
+              <p class="closing-thanks">
+                この度は大切な家族のためのマイホーム作りをお任せいただき、本当にありがとうございました。<br />
+                ペットちゃんと飼い主様のこれからの毎日が、あたたかく笑顔あふれる素晴らしい時間となりますよう、心よりお祈り申し上げます。
+              </p>
+              <div class="support-action-btn">
+                <a href="/contact" class="guide-btn btn-primary btn-large">
+                  <span>ご質問・お問い合わせフォーム</span>
+                </a>
+              </div>
+            </div>
+
+            <div class="support-chara-box">
+              <img src="/assets/characters/clean/pose_pray_thanks.png" alt="きなとちゃん" class="support-chara-img" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</Layout>
+
+<style>
+  /* ===== ページ全体の基本スタイル ===== */
+  .guide-page {
+    background: linear-gradient(180deg, #fbfbfd 0%, #f4f6fa 100%);
+    color: #333333;
+    font-family: 'Nunito', 'Kiwi Maru', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding-bottom: 80px;
+    line-height: 1.75;
+  }
+
+  .container {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  /* ===== ヒーローセクション ===== */
+  .guide-hero {
+    position: relative;
+    background: linear-gradient(135deg, #eef9f5 0%, #e3f2fd 50%, #fff1f5 100%);
+    padding: 60px 0 50px;
+    overflow: hidden;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  .hero-bg-shapes .shape {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(40px);
+    opacity: 0.6;
+    pointer-events: none;
+  }
+  .hero-bg-shapes .s1 {
+    width: 300px;
+    height: 300px;
+    background: #a7f3d0;
+    top: -100px;
+    left: -50px;
+  }
+  .hero-bg-shapes .s2 {
+    width: 250px;
+    height: 250px;
+    background: #bae6fd;
+    bottom: -60px;
+    right: 15%;
+  }
+  .hero-bg-shapes .s3 {
+    width: 200px;
+    height: 200px;
+    background: #fbcfe8;
+    top: 20px;
+    right: -50px;
+  }
+
+  .hero-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 40px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .hero-content {
+    flex: 1;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #ffffff;
+    color: #059669;
+    font-weight: 700;
+    font-size: 0.88rem;
+    padding: 6px 16px;
+    border-radius: 9999px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    margin-bottom: 16px;
+    border: 1px solid #d1fae5;
+  }
+
+  .hero-title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #1f2937;
+    line-height: 1.3;
+    margin-bottom: 16px;
+    letter-spacing: -0.02em;
+  }
+
+  .hero-subtitle {
+    display: block;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #047857;
+    margin-top: 6px;
+  }
+
+  .hero-lead {
+    font-size: 1rem;
+    color: #4b5563;
+    line-height: 1.8;
+  }
+
+  .hero-chara-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    flex-shrink: 0;
+    width: 240px;
+  }
+
+  .hero-speech-bubble {
+    position: relative;
+    background: #ffffff;
+    border: 2px solid #34d399;
+    border-radius: 20px;
+    padding: 12px 18px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #065f46;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(52, 211, 153, 0.2);
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+
+  .hero-speech-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: 10px solid #34d399;
+  }
+
+  .hero-chara-img {
+    width: 160px;
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.12));
+    animation: gentle-bob 3s ease-in-out infinite;
+  }
+
+  @keyframes gentle-bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  /* ===== 目次ナビゲーション ===== */
+  .guide-nav-section {
+    margin-top: -30px;
+    margin-bottom: 40px;
+    position: relative;
+    z-index: 10;
+  }
+
+  .guide-toc-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 24px 28px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  .toc-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #1f2937;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .toc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 12px;
+  }
+
+  .toc-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #f8fafc;
+    border-radius: 12px;
+    text-decoration: none;
+    color: #334155;
+    font-size: 0.92rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    border: 1px solid #e2e8f0;
+  }
+
+  .toc-item:hover {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+    color: #065f46;
+    transform: translateY(-2px);
+  }
+
+  .toc-num {
+    font-size: 0.78rem;
+    font-weight: 800;
+    background: #e2e8f0;
+    color: #64748b;
+    padding: 2px 6px;
+    border-radius: 6px;
+  }
+
+  .toc-item:hover .toc-num {
+    background: #34d399;
+    color: #ffffff;
+  }
+
+  .toc-badge.danger {
+    margin-left: 6px;
+    background: #fee2e2;
+    color: #dc2626;
+    font-size: 0.72rem;
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  .toc-item-highlight {
+    background: #fff7ed;
+    border-color: #fed7aa;
+    color: #c2410c;
+  }
+  .toc-item-highlight:hover {
+    background: #ffedd5;
+    border-color: #fdba74;
+    color: #9a3412;
+  }
+
+  /* ===== ステップ共通カード ===== */
+  .guide-step-card {
+    background: #ffffff;
+    border-radius: 24px;
+    padding: 40px;
+    margin-bottom: 40px;
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.04);
+    border: 1px solid #eef2f6;
+    position: relative;
+    scroll-margin-top: 100px;
+  }
+
+  .step-header {
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 20px;
+    margin-bottom: 28px;
+  }
+
+  .step-badge-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .step-number {
+    font-size: 0.85rem;
+    font-weight: 800;
+    background: #047857;
+    color: #ffffff;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    letter-spacing: 0.05em;
+  }
+
+  .step-tag {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #4b5563;
+    background: #f3f4f6;
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+
+  .step-tag.tag-urgent {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+  }
+
+  .step-tag.tag-heart {
+    background: #fdf2f8;
+    color: #db2777;
+    border: 1px solid #fbcfe8;
+  }
+
+  .step-title {
+    font-size: 1.65rem;
+    font-weight: 800;
+    color: #111827;
+    margin-bottom: 8px;
+    line-height: 1.35;
+  }
+
+  .step-subtitle {
+    font-size: 0.95rem;
+    color: #6b7280;
+    margin: 0;
+  }
+
+  .step-desc {
+    font-size: 1rem;
+    color: #374151;
+    margin-bottom: 24px;
+    line-height: 1.85;
+  }
+
+  /* ===== STEP 1: 単一チェックボックス ===== */
+  .check-single-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    background: #f8fafc;
+    border-radius: 16px;
+    padding: 20px 24px;
+    border: 2px solid #e2e8f0;
+    margin-bottom: 28px;
+  }
+
+  .check-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+  }
+
+  .check-content strong {
+    display: block;
+    font-size: 1.05rem;
+    color: #1e293b;
+    margin-bottom: 6px;
+  }
+
+  .check-content p {
+    font-size: 0.92rem;
+    color: #475569;
+    margin: 0;
+    line-height: 1.65;
+  }
+
+  /* ===== アラートボックス ===== */
+  .alert-box {
+    display: flex;
+    gap: 16px;
+    border-radius: 18px;
+    padding: 24px;
+    margin-bottom: 28px;
+  }
+
+  .alert-box.alert-danger {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+  }
+
+  .alert-box.alert-warning {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    color: #92400e;
+  }
+
+  .alert-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+  }
+
+  .alert-text {
+    flex: 1;
+  }
+
+  .alert-text h3 {
+    font-size: 1.15rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+  }
+
+  .alert-text p {
+    font-size: 0.94rem;
+    line-height: 1.75;
+    margin: 0 0 14px;
+  }
+
+  .warranty-conditions-box {
+    background: #ffffff;
+    border: 1px solid #fca5a5;
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-top: 14px;
+  }
+
+  .warranty-conditions-box h4 {
+    font-size: 0.96rem;
+    font-weight: 800;
+    color: #b91c1c;
+    margin-bottom: 8px;
+  }
+
+  .warning-highlight-text {
+    background: #fff1f2;
+    padding: 10px 14px;
+    border-radius: 8px;
+    color: #be123c;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin-bottom: 12px !important;
+    border-left: 4px solid #f43f5e;
+  }
+
+  .condition-list {
+    margin: 0 0 16px;
+    padding-left: 20px;
+    font-size: 0.88rem;
+    color: #374151;
+    line-height: 1.7;
+  }
+
+  .condition-list li {
+    margin-bottom: 6px;
+  }
+
+  .warranty-link-action {
+    margin-top: 14px;
+    text-align: center;
+  }
+
+  .warranty-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    color: #b91c1c;
+    border: 2px solid #ef4444;
+    padding: 10px 22px;
+    border-radius: 9999px;
+    font-weight: 800;
+    font-size: 0.92rem;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+  }
+
+  .warranty-btn:hover {
+    background: #ef4444;
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+  }
+
+  /* ===== KINATOちゃんのTips吹き出し共通 ===== */
+  .chara-tip-box {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+    border: 2px solid #a7f3d0;
+    border-radius: 20px;
+    padding: 22px 24px;
+    margin-top: 28px;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.08);
+  }
+
+  .chara-happy-tip {
+    background: linear-gradient(135deg, #fff7ed 0%, #fef3c7 100%);
+    border-color: #fde68a;
+  }
+
+  .tip-chara-img {
+    width: 90px;
+    max-width: 90px;
+    height: auto;
+    object-fit: contain;
+    flex-shrink: 0;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+  }
+
+  .tip-speech {
+    flex: 1;
+  }
+
+  .tip-name {
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: #047857;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .chara-happy-tip .tip-name {
+    color: #b45309;
+  }
+
+  .tip-speech p {
+    font-size: 0.94rem;
+    color: #1f2937;
+    margin: 0;
+    line-height: 1.7;
+    font-weight: 500;
+  }
+
+  /* ===== STEP 2: フィルム剥がし ===== */
+  .guide-method-card {
+    background: #f8fafc;
+    border-radius: 20px;
+    padding: 28px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 24px;
+  }
+
+  .method-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin-bottom: 8px;
+  }
+
+  .method-intro {
+    font-size: 0.95rem;
+    color: #475569;
+    margin-bottom: 20px;
+  }
+
+  .two-step-flex {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  .step-column-card {
+    background: #ffffff;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .col-badge {
+    background: #0284c7;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 0.82rem;
+    padding: 6px 14px;
+  }
+
+  .col-img-wrap {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background: #f1f5f9;
+  }
+
+  .col-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+  .col-img-wrap:hover img {
+    transform: scale(1.03);
+  }
+
+  .col-desc {
+    padding: 16px;
+    flex: 1;
+  }
+
+  .col-desc strong {
+    display: block;
+    font-size: 1rem;
+    color: #0f172a;
+    margin-bottom: 6px;
+  }
+
+  .col-desc p {
+    font-size: 0.88rem;
+    color: #475569;
+    margin: 0;
+    line-height: 1.6;
+  }
+
+  .safe-note-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #eff6ff;
+    border-radius: 12px;
+    padding: 14px 18px;
+    border: 1px solid #bfdbfe;
+    font-size: 0.92rem;
+    color: #1e40af;
+  }
+
+  .safe-icon {
+    font-size: 1.4rem;
+  }
+
+  /* ===== STEP 3: 暖突取付 ===== */
+  .prep-tools-box {
+    background: #f8fafc;
+    border-radius: 18px;
+    padding: 24px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 28px;
+  }
+
+  .prep-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin-bottom: 16px;
+  }
+
+  .prep-list-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+  }
+
+  .prep-item {
+    display: flex;
+    gap: 12px;
+    background: #ffffff;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .prep-icon {
+    font-size: 1.6rem;
+    flex-shrink: 0;
+  }
+
+  .prep-item strong {
+    display: block;
+    font-size: 0.95rem;
+    color: #0f172a;
+    margin-bottom: 4px;
+  }
+
+  .prep-item p {
+    font-size: 0.84rem;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .install-diagram-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+
+  .diagram-img-box {
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  }
+
+  .diagram-img-box img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .numbered-step-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .numbered-step-list li {
+    display: flex;
+    gap: 16px;
+    background: #f8fafc;
+    padding: 18px 20px;
+    border-radius: 14px;
+    border-left: 4px solid #059669;
+  }
+
+  .step-num-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #059669;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+  }
+
+  .step-content-detail strong {
+    display: block;
+    font-size: 1.02rem;
+    color: #0f172a;
+    margin-bottom: 4px;
+  }
+
+  .step-content-detail p {
+    font-size: 0.9rem;
+    color: #475569;
+    margin: 0;
+    line-height: 1.65;
+  }
+
+  /* ===== STEP 4: 穴拡張 ===== */
+  .hole-expand-detail {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 24px;
+    align-items: start;
+    background: #f8fafc;
+    border-radius: 20px;
+    padding: 24px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .expand-img-wrap {
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+
+  .expand-img-wrap img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .tool-pill {
+    background: #fef3c7;
+    color: #92400e;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    margin-bottom: 16px;
+    border: 1px solid #fde68a;
+  }
+
+  .expand-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .expand-list li {
+    display: flex;
+    gap: 12px;
+    background: #ffffff;
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .ex-num {
+    background: #d97706;
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 6px;
+    height: fit-content;
+    white-space: nowrap;
+  }
+
+  .expand-list strong {
+    display: block;
+    font-size: 0.95rem;
+    color: #1e293b;
+    margin-bottom: 4px;
+  }
+
+  .expand-list p {
+    font-size: 0.86rem;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.6;
+  }
+
+  /* ===== STEP 5: グロメット ===== */
+  .grommet-steps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .grommet-step-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 18px;
+    position: relative;
+  }
+
+  .grommet-step-num {
+    width: 28px;
+    height: 28px;
+    background: #3b82f6;
+    color: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+  }
+
+  .grommet-step-item h4 {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 6px;
+  }
+
+  .grommet-step-item p {
+    font-size: 0.85rem;
+    color: #475569;
+    margin: 0;
+    line-height: 1.6;
+  }
+
+  .thermo-hook-info {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-top: 18px;
+  }
+
+  .thermo-hook-info .info-badge {
+    display: inline-block;
+    background: #16a34a;
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+  }
+
+  .thermo-hook-info p {
+    font-size: 0.9rem;
+    color: #166534;
+    margin: 0;
+    line-height: 1.65;
+  }
+
+  /* ===== STEP 6: Type AH-B ===== */
+  .type-ah-container {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 24px;
+    align-items: center;
+    background: #f8fafc;
+    border-radius: 20px;
+    padding: 24px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .ah-img-box {
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid #cbd5e1;
+  }
+  .ah-img-box img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .ah-step-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .ah-step-list li {
+    display: flex;
+    gap: 14px;
+    background: #ffffff;
+    padding: 16px;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .ah-num {
+    width: 28px;
+    height: 28px;
+    background: #6366f1;
+    color: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+  }
+
+  .ah-step-list strong {
+    display: block;
+    font-size: 0.96rem;
+    color: #1e293b;
+    margin-bottom: 4px;
+  }
+
+  .ah-step-list p {
+    font-size: 0.86rem;
+    color: #475569;
+    margin: 0;
+    line-height: 1.6;
+  }
+
+  /* ===== STEP 7: 写真提供お願いカード（リッチデザイン） ===== */
+  .photo-coop-card {
+    border: 2px solid #fed7aa;
+    background: linear-gradient(180deg, #ffffff 0%, #fffbf5 100%);
+    box-shadow: 0 10px 35px rgba(234, 88, 12, 0.08);
+  }
+
+  .photo-hero-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 30px;
+    background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+    border-radius: 20px;
+    padding: 30px;
+    margin-bottom: 30px;
+    border: 1px solid #fdba74;
+  }
+
+  .photo-lead-msg {
+    font-size: 1.15rem;
+    color: #9a3412;
+    margin-bottom: 12px;
+    line-height: 1.7;
+  }
+
+  .photo-hero-img-wrap {
+    flex-shrink: 0;
+    width: 140px;
+  }
+
+  .photo-chara-hero {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 6px 12px rgba(234, 88, 12, 0.2));
+  }
+
+  .photo-points-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+
+  .photo-point-card {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 24px;
+    border: 1px solid #fed7aa;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    position: relative;
+  }
+
+  .p-card-secure {
+    border-color: #6ee7b7;
+    background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
+  }
+
+  .secure-badge-ribbon {
+    position: absolute;
+    top: -12px;
+    right: 18px;
+    background: #059669;
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3);
+  }
+
+  .p-card-icon {
+    font-size: 2.2rem;
+    margin-bottom: 12px;
+  }
+
+  .photo-point-card h3 {
+    font-size: 1.08rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin-bottom: 10px;
+  }
+
+  .photo-point-card p {
+    font-size: 0.9rem;
+    color: #475569;
+    line-height: 1.7;
+    margin: 0;
+  }
+
+  .secure-highlight-inner {
+    margin-top: 14px;
+    background: #ecfdf5;
+    border-radius: 12px;
+    padding: 14px;
+    border: 1px solid #a7f3d0;
+  }
+
+  .secure-highlight-inner strong {
+    display: block;
+    font-size: 0.88rem;
+    color: #065f46;
+    margin-bottom: 6px;
+  }
+
+  .secure-highlight-inner p {
+    font-size: 0.84rem;
+    color: #047857;
+    line-height: 1.6;
+  }
+
+  .photo-send-cta {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 30px;
+    border: 1px solid #e2e8f0;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  }
+
+  .cta-title {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 8px;
+  }
+
+  .cta-desc {
+    font-size: 0.94rem;
+    color: #475569;
+    max-width: 680px;
+    margin: 0 auto 24px;
+    line-height: 1.75;
+  }
+
+  .cta-btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 14px;
+  }
+
+  .guide-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 24px;
+    border-radius: 9999px;
+    font-weight: 700;
+    font-size: 0.92rem;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  .guide-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    color: #ffffff;
+  }
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #047857 0%, #059669 100%);
+  }
+
+  .btn-large {
+    padding: 14px 36px;
+    font-size: 1rem;
+  }
+
+  .btn-x {
+    background: #000000;
+    color: #ffffff;
+  }
+  .btn-x:hover {
+    background: #262626;
+  }
+
+  .btn-insta {
+    background: linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%);
+    color: #ffffff;
+  }
+
+  /* ===== STEP 8: アフターサポート ===== */
+  .support-content-layout {
+    display: flex;
+    align-items: center;
+    gap: 36px;
+  }
+
+  .support-text-box {
+    flex: 1;
+  }
+
+  .support-text-box p {
+    font-size: 0.98rem;
+    color: #374151;
+    line-height: 1.85;
+    margin-bottom: 16px;
+  }
+
+  .closing-thanks {
+    background: #f8fafc;
+    border-left: 4px solid #3b82f6;
+    padding: 16px 20px;
+    border-radius: 0 12px 12px 0;
+    font-size: 0.93rem;
+    color: #1e293b;
+    font-style: italic;
+  }
+
+  .support-action-btn {
+    margin-top: 24px;
+  }
+
+  .support-chara-box {
+    flex-shrink: 0;
+    width: 170px;
+  }
+
+  .support-chara-img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.1));
+  }
+
+  /* ===== レスポンシブ対応 (SP) ===== */
+  @media (max-width: 768px) {
+    .guide-hero {
+      padding: 40px 0 35px;
+    }
+    .hero-container {
+      flex-direction: column-reverse;
+      text-align: center;
+      gap: 20px;
+    }
+    .hero-badge {
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .hero-title {
+      font-size: 1.7rem;
+    }
+    .hero-subtitle {
+      font-size: 1.15rem;
+    }
+    .hero-lead {
+      font-size: 0.92rem;
+    }
+    .hero-chara-area {
+      width: 180px;
+    }
+    .hero-chara-img {
+      width: 130px;
+    }
+    .pc-br {
+      display: none;
+    }
+
+    .guide-step-card {
+      padding: 24px 18px;
+      border-radius: 18px;
+      margin-bottom: 28px;
+    }
+    .step-title {
+      font-size: 1.35rem;
+    }
+
+    .hole-expand-detail,
+    .type-ah-container,
+    .support-content-layout,
+    .photo-hero-box {
+      grid-template-columns: 1fr;
+      flex-direction: column;
+      text-align: center;
+    }
+
+    .support-chara-box,
+    .photo-hero-img-wrap {
+      width: 140px;
+      margin: 0 auto;
+    }
+
+    .chara-tip-box {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 18px;
+    }
+    .tip-chara-img {
+      width: 75px;
+    }
+    .tip-name {
+      justify-content: center;
+    }
+
+    .cta-btn-group {
+      flex-direction: column;
+    }
+    .guide-btn {
+      width: 100%;
+    }
+  }
+</style>
