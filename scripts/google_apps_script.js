@@ -117,6 +117,9 @@ function doPost(e) {
     if (logType === 'page_view' || logType === 'page_stay') {
       // 0. Web閲覧履歴ログ（離脱時1行追記方式）の処理
       result = handlePageViewLog(ss, data, contents);
+    } else if (logType === 'ai_chat' || logType === 'chat') {
+      // ★新規: AIチャット履歴ログ（1問1答1行追記方式）の処理
+      result = handleAiChatLog(ss, data, contents);
     } else if (logType === 'web_access' || logType === 'web_history') {
       // 1. Web訪問・流入元・回遊動線ログの処理
       result = handleWebHistoryLog(ss, data, contents);
@@ -202,6 +205,72 @@ function setupPageViewHeader(sheet) {
     .setHorizontalAlignment('center');
   sheet.setFrozenRows(1);
 }
+
+/**
+ * AIチャット履歴ログの保存（1問1答1行追記方式）
+ * ユーザーが質問し、AIが回答したタイミングで1行追記します。
+ */
+function handleAiChatLog(ss, data, rawJson) {
+  let sheet = ss.getSheetByName('AIチャット履歴');
+  if (!sheet) {
+    sheet = ss.insertSheet('AIチャット履歴');
+    setupAiChatHeader(sheet);
+  }
+
+  const now = new Date();
+  const formattedDate = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy-MM-dd HH:mm:ss');
+
+  const visitorId = data.visitorId || data.deviceId || '';
+  const turn = Number(data.turn || data.turnCount || 1);
+  const path = data.path || data.pathname || '/';
+  const question = data.question || data.userMessage || '';
+  const answer = data.answer || data.aiResponse || data.reply || '';
+  const recommendedSpec = data.recommendedSpec || data.specSummary || 'なし';
+  const referrer = data.referrer || 'Direct';
+  const deviceType = data.deviceType || (data.device ? (data.device.type || data.device) : '不明');
+
+  sheet.appendRow([
+    formattedDate,    // 1. 記録日時
+    visitorId,        // 2. 端末ID
+    turn,             // 3. 会話ターン
+    path,             // 4. 相談元ページ
+    question,         // 5. ユーザーの質問
+    answer,           // 6. AIの回答
+    recommendedSpec,  // 7. 提案ケージ仕様
+    referrer,         // 8. 流入元
+    deviceType        // 9. デバイス種別
+  ]);
+
+  return createJsonResponse({
+    status: 'success',
+    action: 'ai_chat_logged',
+    row: sheet.getLastRow()
+  });
+}
+
+/**
+ * AIチャット履歴シートのヘッダー初期設定
+ */
+function setupAiChatHeader(sheet) {
+  const headers = [
+    '記録日時',
+    '端末ID',
+    '会話ターン',
+    '相談元ページ',
+    'ユーザーの質問',
+    'AIの回答',
+    '提案ケージ仕様',
+    '流入元',
+    'デバイス種別'
+  ];
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  sheet.getRange(1, 1, 1, headers.length)
+    .setFontWeight('bold')
+    .setBackground('#fce7f3') // パステルローズ/ピンク（きなとさんチャットのトーン）
+    .setHorizontalAlignment('center');
+  sheet.setFrozenRows(1);
+}
+
 
 /**
  * Web訪問・流入元・回遊動線ログの保存・更新

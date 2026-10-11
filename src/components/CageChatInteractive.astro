@@ -231,6 +231,68 @@
     { role: "system", content: SYSTEM_PROMPT }
   ];
 
+  // AIチャット履歴のGAS自動送信
+  const gasEndpoint = import.meta.env.PUBLIC_GAS_LOG_ENDPOINT_URL || 'https://script.google.com/macros/s/AKfycbwWv5VmeJGCnvvD0U3WTJBkT3ZnrFIj1qUHXXMlF2TA3vn2hSu9J1zp-9fc4PY_whjp/exec';
+  let chatTurnCount = 0;
+
+  function sendAiChatLog(userQuestion, aiReply) {
+    chatTurnCount++;
+    try {
+      let vid = '';
+      try {
+        vid = localStorage.getItem('cage_visitor_id') || '';
+      } catch (e) {}
+
+      // デバイス種別の判定
+      const ua = navigator.userAgent;
+      let type = 'Desktop';
+      if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) {
+        type = 'Tablet';
+      } else if (/Mobile|iP(hone|od)|Android|BlackBerry|IEMobile|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/i.test(ua)) {
+        type = 'Mobile';
+      }
+      let os = '';
+      if (/iPhone/i.test(ua)) os = 'iPhone';
+      else if (/iPad/i.test(ua)) os = 'iPad';
+      else if (/Android/i.test(ua)) os = 'Android';
+      else if (/Mac/i.test(ua)) os = 'Mac';
+      else if (/Win/i.test(ua)) os = 'Windows';
+      else if (/Linux/i.test(ua)) os = 'Linux';
+      const deviceText = os ? `${type} (${os})` : type;
+
+      // 推奨仕様の要約
+      let specSummary = 'なし';
+      try {
+        const spec = extractCageSpecFromMessages();
+        if (spec && (spec.W || spec.preset)) {
+          specSummary = `${spec.cageType ? 'Type ' + spec.cageType + ': ' : ''}${spec.W}×${spec.D}×${spec.H}${spec.preset ? ' (' + spec.preset + ')' : ''}`;
+        }
+      } catch (e) {}
+
+      const payload = {
+        type: 'ai_chat',
+        visitorId: vid,
+        turn: chatTurnCount,
+        path: window.location.pathname || '/',
+        question: userQuestion,
+        answer: aiReply,
+        recommendedSpec: specSummary,
+        referrer: document.referrer || 'Direct',
+        deviceType: deviceText
+      };
+
+      fetch(gasEndpoint, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        keepalive: true
+      }).catch(function () {});
+    } catch (err) {
+      console.warn('[CageChat] ログ送信スキップ:', err);
+    }
+  }
+
   // グローバル公開: 外部（ヘッダーメニュー等）からチャットを開く
   window.openCageChat = () => {
     if (chatWindow?.classList.contains('hidden')) {
@@ -495,6 +557,9 @@
 
       appendMessage('assistant', replyContent);
       messages.push({ role: "assistant", content: replyContent, parts: replyParts });
+
+      // スプレッドシート（『Webシステムのログ』）の「AIチャット履歴」へ送信
+      sendAiChatLog(message, replyContent);
 
       // AIからの回答が来たら連携ボタン（シミュレーター・問い合わせ）を表示
       const actionsWrapper = document.getElementById('ai-chat-actions-wrapper');
