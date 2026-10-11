@@ -1,55 +1,53 @@
 const endpoint = 'https://script.google.com/macros/s/AKfycbwWv5VmeJGCnvvD0U3WTJBkT3ZnrFIj1qUHXXMlF2TA3vn2hSu9J1zp-9fc4PY_whjp/exec';
 
-// 1. Web履歴ログのテスト送信
-const webPayload = {
-  type: 'web_access',
+// 1. Web閲覧履歴ログ（離脱時1行追記方式・全10列）のテスト送信
+const pageViewPayload = {
+  type: 'page_view',
   visitorId: 'usr_test_verification',
-  sessionId: 'ses_test_verification',
-  referrer: 'https://www.instagram.com/',
-  referrerCategory: 'Instagram',
+  path: '/sim/',
+  title: '3Dケージ見積もりシミュレーター',
+  duration: 45,
+  referrer: 'https://www.google.com/search?q=爬虫類ケージ',
+  referrerCategory: 'Google検索',
   landingPage: '/',
-  pageHistory: ['トップ', 'コンセプト', '見積もりシステム'],
-  pageCount: 3,
-  device: {
-    type: 'PC',
-    browser: 'Chrome',
-    screen: '1920x1080'
-  }
+  screen: '1920x1080',
+  deviceType: 'Windows (Chrome)'
 };
 
 // 2. 見積もり詳細ログのテスト送信
 const estimatePayload = {
   type: 'estimate',
   timestamp: new Date().toISOString(),
-  estimateId: 'EST-TEST-VERIFY1',
+  estimateId: 'EST-TEST-VERIFY2',
   visitorId: 'usr_test_verification',
   sessionId: 'ses_test_verification',
   seq: 1,
   device: {
-    type: 'PC',
+    type: 'Windows',
     browser: 'Chrome',
     screen: '1920x1080'
   },
   spec: {
     cageType: 'A',
+    typeName: 'Type A（全面扉）',
     frameColor: 'black',
     frameColorDisplayName: 'ブラック',
-    W: 900,
-    D: 450,
+    W: 800,
+    D: 400,
     H: 450,
-    panelsSummary: '床:透明アクリル | 背:中空ポリカ | 側:パンチング | 天:金網25mm',
-    optionsSummary: '自在キャスター, 換気量調整板'
+    panelsSummary: '標準仕様（側面2分割: 5mmピッチ検証）',
+    optionsSummary: 'なし'
   },
   calculated: {
-    priceWithMarkup: 32000,
-    rawCost: 19500,
-    weight: 8.8
+    priceWithMarkup: 38500,
+    rawCost: 22000,
+    weight: 9.2
   },
   meta: {
-    elapsedSec: 42,
-    referrer: 'https://www.instagram.com/',
-    pageHistory: ['トップ', 'コンセプト', '見積もりシステム'],
-    diffNote: '初回テスト試算'
+    elapsedSec: 35,
+    referrer: 'https://www.google.com/',
+    pageHistory: ['/', '/sim/'],
+    diffNote: '最新デプロイ動作検証'
   }
 };
 
@@ -70,8 +68,8 @@ async function sendTest(payload, name) {
 }
 
 async function runAll() {
-  await sendTest(webPayload, 'Web履歴ログ');
-  await sendTest(estimatePayload, '見積もりシステムログ');
+  await sendTest(pageViewPayload, 'Web閲覧履歴ログ（10列新仕様）');
+  await sendTest(estimatePayload, '見積もりシステムログ（24列正規仕様）');
   console.log('\n=== すべてのテスト送信が完了しました ===');
 }
 

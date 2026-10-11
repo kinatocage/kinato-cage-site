@@ -224,7 +224,7 @@ export const creaturePresets = [
     frameColor: 'silver',
     frontWideFrame: '2x',
     hasSideReinforcement: true,
-    sideOpeningH: 120,
+    sideOpeningH: 120, // 上下パネル同一サイズ2等分（H=300mm時、上下開口各120mm・パネル各130mm）
     hasSideVentCover: true,
     hasDoorAntiFlex: false,
     hasFloorReinforcement: false,

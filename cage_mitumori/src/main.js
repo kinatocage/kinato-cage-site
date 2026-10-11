@@ -2097,12 +2097,13 @@ bindInputPair(sliderH, inputH, 'H', (newH) => {
     inputFW.value = maxFw;
   }
 
-  // 側面上部開口高さの範囲と連動 (どちらかの開口高さが50mmを下回るまで調整可能)
+  // 側面上部開口高さの範囲と連動 (どちらかの開口高さが50mmを下回るまで調整可能・5mmピッチ)
   const minSideH = 50;
   const maxSideH = Math.max(minSideH, newH - 110);
-  const centerSideH = Math.round((newH - 60) / 20) * 10;
+  const centerSideH = Math.round((newH - 60) / 10) * 5;
   inputSideH.min = minSideH;
   inputSideH.max = maxSideH;
+  inputSideH.step = 5;
   if (!state.hasSideReinforcement) {
     state.sideOpeningH = centerSideH;
     inputSideH.value = centerSideH;
@@ -2116,12 +2117,12 @@ bindInputPair(sliderH, inputH, 'H', (newH) => {
 });
 bindInputPair(sliderFW, inputFW, 'frontWindowH');
 
-// 側面補強 側面上部開口高さの入力イベント
+// 側面補強 側面上部開口高さの入力イベント (5mmピッチ)
 inputSideH.addEventListener('change', (e) => {
   let val = parseInt(e.target.value, 10);
   const min = 50;
   const max = Math.max(min, state.H - 110);
-  const step = 10;
+  const step = 5;
 
   if (isNaN(val)) val = min;
   val = Math.round(val / step) * step;
@@ -2142,8 +2143,9 @@ toggleSideReinforce.addEventListener('change', (e) => {
     const maxSideH = Math.max(minSideH, state.H - 110);
     inputSideH.min = minSideH;
     inputSideH.max = maxSideH;
-    // デフォルトは上下均等になる中央配置
-    const centerSideH = Math.round((state.H - 60) / 20) * 10;
+    inputSideH.step = 5;
+    // デフォルトは上下均等（パネル同一サイズ）になる中央配置 (5mmピッチ)
+    const centerSideH = Math.round((state.H - 60) / 10) * 5;
     if (state.sideOpeningH < minSideH || state.sideOpeningH > maxSideH) {
       state.sideOpeningH = centerSideH;
       inputSideH.value = centerSideH;
@@ -2877,6 +2879,7 @@ btnResetSpecs.addEventListener('click', () => {
   boxSideH.classList.add('disabled');
   inputSideH.min = 50;
   inputSideH.max = 190;
+  inputSideH.step = 5;
   inputSideH.value = 120;
 
   toggleFloorReinforce.checked = false;
@@ -3103,10 +3106,11 @@ if (optionsToggleBtn) {
   });
 }
 
-// 側面補強フレームの初期設定 (H=300mm時 min=50, max=190)
+// 側面補強フレームの初期設定 (H=300mm時 min=50, max=190, step=5)
 if (inputSideH) {
   inputSideH.min = 50;
   inputSideH.max = Math.max(50, state.H - 110);
+  inputSideH.step = 5;
   inputSideH.value = state.sideOpeningH;
 }
 
@@ -3242,12 +3246,18 @@ function applyCreaturePreset(preset) {
   if (inputSideH) {
     inputSideH.min = minSideH;
     inputSideH.max = maxSideH;
+    inputSideH.step = 5;
   }
-  if (preset.sideOpeningH != null) {
+  // ハリネズミ(hedgehog)の場合、上下パネル同一サイズ（2等分: (H-60)/2 を5mmピッチに丸めた値）をデフォルトとする
+  if (preset.id === 'hedgehog') {
+    const centerSideH = Math.round((state.H - 60) / 10) * 5;
+    state.sideOpeningH = centerSideH;
+    if (inputSideH) inputSideH.value = centerSideH;
+  } else if (preset.sideOpeningH != null) {
     state.sideOpeningH = Math.max(minSideH, Math.min(maxSideH, preset.sideOpeningH));
     if (inputSideH) inputSideH.value = state.sideOpeningH;
   } else if (state.hasSideReinforcement) {
-    const centerSideH = Math.round((state.H - 60) / 20) * 10;
+    const centerSideH = Math.round((state.H - 60) / 10) * 5;
     state.sideOpeningH = centerSideH;
     if (inputSideH) inputSideH.value = centerSideH;
   }
@@ -5273,40 +5283,7 @@ checkInitialStateFromStorageOrUrl();
     else if (lower.includes('yahoo.')) category = 'Yahoo!検索';
     else if (lower.includes('line.me')) category = 'LINE';
     else if (lower.includes('tiktok.com')) category = 'TikTok';
-    else if (initialReferrer !== 'Direct') category = '外部Webサイト';
-
-    const payload = {
-      type: 'web_access',
-      visitorId: visitorId,
-      sessionId: sessionId,
-      referrer: initialReferrer,
-      referrerCategory: category,
-      landingPage: landingPage,
-      pageHistory: pageHistory,
-      pageCount: pageHistory.length,
-      device: {
-        type: deviceType,
-        browser: browserName,
-        screen: `${window.innerWidth}x${window.innerHeight}`
-      }
-    };
-
-    if (isLocalDevelopmentEnvironment() && SKIP_LOG_ON_LOCALHOST) {
-      console.log('[Log] ローカル開発環境のため、シミュレーター訪問ログ送信をスキップしました。');
-      return;
-    }
-
-    fetch(endpoint, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      keepalive: true
-    }).then(() => {
-      console.log('[Log] シミュレーター訪問ログをGASへ送信完了 (セッション:', sessionId, ')');
-    }).catch(err => {
-      console.warn('[Log] シミュレーター訪問ログ送信エラー:', err);
-    });
+    // ※「Web履歴」シートは「Web閲覧履歴」に統合されたため、web_accessの送信は停止します。
   } catch (err) {
     console.warn('[Log] sendSimAccessLog エラー:', err);
   }
@@ -5340,6 +5317,18 @@ checkInitialStateFromStorageOrUrl();
     return os ? `${type} (${os})` : type;
   }
 
+  function detectCategory(ref) {
+    if (!ref || ref === 'Direct' || ref === '') return '直接 / お気に入り';
+    const lower = ref.toLowerCase();
+    if (lower.includes('instagram.com')) return 'Instagram';
+    if (lower.includes('t.co') || lower.includes('twitter.com') || lower.includes('x.com')) return 'X (Twitter)';
+    if (lower.includes('google.')) return 'Google検索';
+    if (lower.includes('yahoo.')) return 'Yahoo!検索';
+    if (lower.includes('line.me')) return 'LINE';
+    if (lower.includes('tiktok.com')) return 'TikTok';
+    return '外部Webサイト';
+  }
+
   function sendPageViewLog() {
     if (hasSent) return;
 
@@ -5347,7 +5336,10 @@ checkInitialStateFromStorageOrUrl();
     const visitorId = getOrCreateVisitorId();
     const pagePath = window.location.pathname || '/sim';
     const pageTitle = document.title || '3D見積もりシミュレーター';
-    const referrer = document.referrer || 'Direct';
+    const referrer = sessionStorage.getItem('cage_initial_referrer') || document.referrer || 'Direct';
+    const landingPage = sessionStorage.getItem('cage_landing_page') || pagePath;
+    const referrerCategory = detectCategory(referrer);
+    const screen = `${window.innerWidth}x${window.innerHeight}`;
     const deviceType = getDeviceTypeCategory();
 
     const payload = {
@@ -5356,7 +5348,10 @@ checkInitialStateFromStorageOrUrl();
       path: pagePath,
       title: pageTitle,
       duration: durationSeconds,
+      referrerCategory: referrerCategory,
       referrer: referrer,
+      landingPage: landingPage,
+      screen: screen,
       deviceType: deviceType
     };
 

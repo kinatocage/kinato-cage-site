@@ -146,11 +146,15 @@ function doPost(e) {
 /**
  * Web閲覧履歴ログの保存（方式A: 離脱時1行追記方式）
  * 1回のページ閲覧につき必ず「1行のみ」を末尾に追記します。
+ * 流入元種別、流入元URL/リファラ、着地ページ(LP)、画面サイズ、デバイス種別を網羅記録。
  */
 function handlePageViewLog(ss, data, rawJson) {
   let sheet = ss.getSheetByName('Web閲覧履歴');
   if (!sheet) {
     sheet = ss.insertSheet('Web閲覧履歴');
+    setupPageViewHeader(sheet);
+  } else if (sheet.getLastColumn() < 10) {
+    // 既存シートのヘッダーが古い（7列等）場合は最新10列ヘッダーに自動アップデート
     setupPageViewHeader(sheet);
   }
 
@@ -165,17 +169,23 @@ function handlePageViewLog(ss, data, rawJson) {
     ? Math.max(0, Math.round(data.duration))
     : (parseInt(data.duration, 10) || 0);
   const referrer = data.referrer || 'Direct';
+  const referrerCategory = data.referrerCategory || detectReferrerCategory(referrer);
+  const landingPage = data.landingPage || pagePath;
+  const screen = data.screen || (data.device ? (data.device.screen || '') : '');
   const deviceType = data.deviceType || (data.device ? (data.device.type || data.device) : '不明');
 
-  // 1行追記
+  // 1行追記（全10列）
   sheet.appendRow([
-    formattedDate, // 1. 記録日時
-    visitorId,     // 2. 端末ID
-    pagePath,      // 3. ページパス
-    pageTitle,     // 4. ページタイトル
-    duration,      // 5. 滞在時間（秒数）
-    referrer,      // 6. 流入元
-    deviceType     // 7. デバイス種別
+    formattedDate,    // 1. 記録日時
+    visitorId,        // 2. 端末ID
+    pagePath,         // 3. ページパス
+    pageTitle,        // 4. ページタイトル
+    duration,         // 5. 滞在時間（秒数）
+    referrerCategory, // 6. 流入元種別
+    referrer,         // 7. 流入元URL/リファラ
+    landingPage,      // 8. 着地ページ(LP)
+    screen,           // 9. 画面サイズ
+    deviceType        // 10. デバイス種別
   ]);
 
   return createJsonResponse({
@@ -195,7 +205,10 @@ function setupPageViewHeader(sheet) {
     'ページパス',
     'ページタイトル',
     '滞在時間（秒）',
-    '流入元',
+    '流入元種別',
+    '流入元URL/リファラ',
+    '着地ページ(LP)',
+    '画面サイズ',
     'デバイス種別'
   ];
   sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
@@ -543,4 +556,161 @@ function setupErrorLogHeader(sheet) {
     .setHorizontalAlignment('center');
   sheet.setFrozenRows(1);
 }
+
+/**
+ * =================================================================
+ * 【修復用メンテナンス関数】見積もりシステムシートの列ズレ自動修復
+ * =================================================================
+ * 2026/10/11 14:58:11以降に発生した列ズレ行（行199以降等）を自動検出し、
+ * 生データ(JSON)またはズレた各列の値から正しい全24列（A〜X）へ自動復元・整列します。
+ * 
+ * 【使い方】
+ * Google Apps Scriptエディタ画面の上の関数選択プルダウンで「fixEstimateSheetData」を選択し、
+ * 「実行」をクリックするだけで、既存の崩れた行が一瞬で綺麗に復元されます。
+ */
+function fixEstimateSheetData() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('見積もりシステム');
+  if (!sheet) {
+    Logger.log('「見積もりシステム」シートが見つかりません。');
+    return;
+  }
+
+  // ヘッダー行を最新の正規定義にセット
+  setupEstimateHeader(sheet);
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) {
+    Logger.log('修復対象のデータ行がありません。');
+    return;
+  }
+
+  const lastCol = Math.max(24, sheet.getLastColumn());
+  const range = sheet.getRange(2, 1, lastRow - 1, lastCol);
+  const values = range.getValues();
+  let fixCount = 0;
+
+  for (let r = 0; r < values.length; r++) {
+    const row = values[r];
+    const rowNum = r + 2;
+
+    // 崩れ行の判定:
+    // H列が "A" や "C" などのケージ記号、または F列が数値（検討時間）で C・D列が空欄、または G列に変更点テキストが入っている行
+    const colH = String(row[7] || '').trim();
+    const colG = String(row[6] || '').trim();
+    const colF = row[5];
+    const colC = String(row[2] || '').trim();
+
+    const isCorrupted = (
+      colH === 'A' || colH === 'C' || colH === 'A_FRONT' || colH === 'A_FRAMED' || colH === 'C_FRAMED' ||
+      (typeof colF === 'number' && colF > 0 && colC === '') ||
+      (colG.includes('試算') || colG.includes('追加') || colG.includes('解除') || colG.includes('変更'))
+    );
+
+    if (!isCorrupted) continue;
+
+    // 行内のセルから生データJSONを探す
+    let rawJsonStr = '';
+    for (let c = row.length - 1; c >= 0; c--) {
+      const valStr = String(row[c] || '').trim();
+      if (valStr.startsWith('{') && valStr.endsWith('}') && (valStr.includes('estimateId') || valStr.includes('spec'))) {
+        rawJsonStr = valStr;
+        break;
+      }
+    }
+
+    let fixedRow = new Array(24).fill('');
+
+    if (rawJsonStr) {
+      try {
+        const data = JSON.parse(rawJsonStr);
+        const spec = data.spec || {};
+        const calc = data.calculated || data.totals || {};
+        const dev = data.device || {};
+        const meta = data.meta || {};
+
+        let typeName = spec.typeName;
+        if (!typeName) {
+          if (spec.cageType === 'A_FRONT') typeName = 'Type A（前開き扉）';
+          else if (spec.cageType === 'A_FRAMED') typeName = 'Type A（枠囲い扉）';
+          else if (spec.cageType === 'A') typeName = 'Type A（全面扉）';
+          else typeName = 'Type C（前窓＋扉）';
+        }
+        const frameColorName = spec.frameColorDisplayName || (spec.frameColor === 'black' ? 'ブラック' : 'シルバー');
+        const panelsText = spec.panelsSummary || '標準仕様';
+        const optText = spec.optionsSummary || 'なし';
+        const price = calc.priceWithMarkup || 0;
+        const cost = calc.rawCost || 0;
+        const profit = price - cost;
+        const pageHistory = Array.isArray(meta.pageHistory) ? meta.pageHistory.join(' ➔ ') : (meta.pageHistory || '');
+
+        fixedRow = [
+          row[0] || (data.timestamp ? Utilities.formatDate(new Date(data.timestamp), 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss') : ''), // A: 日時
+          data.estimateId || row[1] || '',                  // B: 見積ID
+          data.visitorId || '',                             // C: 端末ID
+          data.sessionId || '',                             // D: セッションID
+          data.seq || row[4] || 1,                          // E: 試算回数
+          dev.type || 'Windows',                            // F: デバイス
+          dev.browser || 'Browser',                         // G: ブラウザ
+          dev.screen || '1920x1080',                        // H: 画面サイズ
+          typeName,                                         // I: ケージ種類
+          frameColorName,                                   // J: フレーム色
+          spec.W || row[10] || '',                          // K: 幅W
+          spec.D || row[11] || '',                          // L: 奥行D
+          spec.H || row[12] || '',                          // M: 高さH
+          panelsText,                                       // N: パネル構成
+          optText,                                          // O: 選択オプション
+          price,                                            // P: 提示価格(円)
+          Number((calc.weight || 0).toFixed(1)),            // Q: 概算重量(kg)
+          cost,                                             // R: 内部原価(円)
+          profit,                                           // S: 想定粗利(円)
+          meta.elapsedSec || row[5] || 0,                   // T: 検討時間(秒)
+          meta.referrer || 'Direct',                        // U: 流入元
+          pageHistory,                                      // V: 回遊ページ動線
+          meta.diffNote || row[6] || '',                    // W: 直前からの変更点
+          rawJsonStr                                        // X: 生データ(JSON)
+        ];
+      } catch (err) {
+        Logger.log('JSONパース失敗 (行 ' + rowNum + '): ' + err);
+      }
+    }
+
+    // JSONがなかった場合のフォールバック（ズレていた値を手動マッピングで正規化）
+    if (!fixedRow[1]) {
+      fixedRow[0] = row[0]; // A: 日時
+      fixedRow[1] = row[1]; // B: 見積ID
+      fixedRow[2] = '';     // C: 端末ID
+      fixedRow[3] = '';     // D: セッションID
+      fixedRow[4] = row[4] || 1; // E: 試算回数
+      fixedRow[5] = 'Windows';   // F: デバイス
+      fixedRow[6] = 'Browser';   // G: ブラウザ
+      fixedRow[7] = '1920x1080'; // H: 画面サイズ
+      fixedRow[8] = row[8] || (colH === 'C' ? 'Type C（前窓＋扉）' : 'Type A（全面扉）'); // I: ケージ種類
+      fixedRow[9] = row[9] || 'シルバー'; // J: フレーム色
+      fixedRow[10] = row[10] || ''; // K: 幅W
+      fixedRow[11] = row[11] || ''; // L: 奥行D
+      fixedRow[12] = row[12] || ''; // M: 高さH
+      fixedRow[13] = row[13] || '標準仕様'; // N: パネル構成
+      fixedRow[14] = row[14] || 'なし';     // O: 選択オプション
+      fixedRow[15] = row[15] || 0;          // P: 提示価格
+      fixedRow[16] = row[16] || 0;          // Q: 概算重量
+      fixedRow[17] = row[17] || 0;          // R: 内部原価
+      fixedRow[18] = row[18] || 0;          // S: 想定粗利
+      fixedRow[19] = row[5] || 0;           // T: 検討時間(秒) ← F列から移動
+      fixedRow[20] = 'Direct';              // U: 流入元
+      fixedRow[21] = '';                    // V: 回遊動線
+      fixedRow[22] = row[6] || '';          // W: 直前からの変更点 ← G列から移動
+      fixedRow[23] = '';                    // X: 生データ(JSON)
+    }
+
+    // 該当行の全24列（A〜X）を正規位置に一括上書き
+    sheet.getRange(rowNum, 1, 1, 24).setValues([fixedRow]);
+    fixCount++;
+    Logger.log('行 ' + rowNum + ' (' + fixedRow[1] + ') を正常な列配置に修復しました。');
+  }
+
+  SpreadsheetApp.flush();
+  Logger.log('=== 修復完了: 合計 ' + fixCount + ' 行を正常な列位置に修復しました ===');
+}
+
 

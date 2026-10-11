@@ -140,62 +140,14 @@ const gasEndpoint = Astro.props.endpointUrl || import.meta.env.PUBLIC_GAS_LOG_EN
         sessionStorage.setItem('cage_page_history', JSON.stringify(pageHistory));
       }
 
-      // 送信ペイロード
-      const payload = {
-        type: 'web_access',
-        visitorId: visitorId,
-        sessionId: sessionId,
-        referrer: initialReferrer,
-        referrerCategory: detectCategory(initialReferrer),
-        landingPage: landingPage,
-        pageHistory: pageHistory,
-        pageCount: pageHistory.length,
-        device: getDeviceInfo()
-      };
-
-      if (!gasEndpoint || !gasEndpoint.startsWith('http')) {
-        console.warn('[WebLog] GASエンドポイントURLが設定されていません。');
-        return;
-      }
-
-      // ★本番デプロイ前チェック: ローカルでのデバッグログ送信を止める場合はここを true にします
-      const SKIP_LOG_ON_LOCALHOST = true; 
-
-      const hostname = window.location.hostname;
-      const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
-      if (isLocal) {
-        if (SKIP_LOG_ON_LOCALHOST) {
-          console.log('[WebLog] ローカル開発環境のため、GASへのログ送信をスキップしました。');
-          return;
-        }
-        console.log('[WebLog] (ローカル環境) GASへアクセスログを送信中:', payload);
-      }
-
-      // 非同期バックグラウンド送信（体感速度への影響ゼロ）
-      try {
-        fetch(gasEndpoint, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-          keepalive: true
-        }).then(() => {
-          if (isLocal) {
-            console.log('[WebLog] GASへアクセスログの送信完了 (セッション:', sessionId, ')');
-          }
-        }).catch((err) => {
-          console.warn('[WebLog] 送信エラー:', err);
-        });
-      } catch (err) {
-        console.warn('[WebLog] fetchエラー:', err);
-      }
+      // ※「Web履歴」シートは「Web閲覧履歴」に統合されたため、web_accessの送信は停止します。
 
       // ページ閲覧ログ（離脱時1行追記方式）の開始
-      initPageViewTracker(visitorId);
+      initPageViewTracker(visitorId, initialReferrer, landingPage);
     }
 
     // 7. ページ閲覧ログ（方式A: 離脱時1行追記方式）のトラッカー
-    function initPageViewTracker(visitorId) {
+    function initPageViewTracker(visitorId, initialReferrer, landingPage) {
       let startTime = Date.now();
       let hasSent = false;
 
@@ -226,8 +178,10 @@ const gasEndpoint = Astro.props.endpointUrl || import.meta.env.PUBLIC_GAS_LOG_EN
         const durationSeconds = Math.max(0, Math.round((Date.now() - startTime) / 1000));
         const pagePath = window.location.pathname || '/';
         const pageTitle = document.title || '';
-        const referrer = document.referrer || 'Direct';
+        const referrer = initialReferrer || document.referrer || 'Direct';
+        const referrerCategory = detectCategory(referrer);
         const deviceType = getDeviceTypeCategory();
+        const screen = `${window.innerWidth}x${window.innerHeight}`;
 
         const payload = {
           type: 'page_view',
@@ -235,7 +189,10 @@ const gasEndpoint = Astro.props.endpointUrl || import.meta.env.PUBLIC_GAS_LOG_EN
           path: pagePath,
           title: pageTitle,
           duration: durationSeconds,
+          referrerCategory: referrerCategory,
           referrer: referrer,
+          landingPage: landingPage || pagePath,
+          screen: screen,
           deviceType: deviceType
         };
 
