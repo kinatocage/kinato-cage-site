@@ -15,11 +15,28 @@
 function doGet(e) {
   try {
     const params = (e && e.parameter) || {};
+    const action = params.action;
+
+    // 1. 端末ID指定によるデータ削除アクション
+    if (action === 'delete_visitor') {
+      const visitorId = params.visitorId;
+      if (!visitorId) {
+        return createJsonResponse({ status: 'error', message: 'visitorId が指定されていません。' });
+      }
+      return deleteVisitorData(visitorId);
+    }
+
+    // 2. 見積もりシートの列ズレ修復アクション
+    if (action === 'fix_estimate') {
+      const count = fixEstimateSheetData();
+      return createJsonResponse({ status: 'success', message: `列ズレを修復しました（修復件数: ${count}件）` });
+    }
+
     const estimateId = params.estimateId || params.id;
     if (!estimateId) {
       return createJsonResponse({
         status: 'error',
-        message: 'クエリパラメータ estimateId が指定されていません。例: ?estimateId=EST-20261005-XXXX'
+        message: 'クエリパラメータ estimateId が指定されていません。例: ?estimateId=EST-20261005-XXXX または ?action=delete_visitor&visitorId=usr_xxxx'
       });
     }
 
@@ -711,6 +728,87 @@ function fixEstimateSheetData() {
 
   SpreadsheetApp.flush();
   Logger.log('=== 修復完了: 合計 ' + fixCount + ' 行を正常な列位置に修復しました ===');
+  return fixCount;
+}
+
+/**
+ * =================================================================
+ * 【端末データ削除関数】指定した端末IDの全行を一括削除
+ * =================================================================
+ * 「見積もりシステム」「Web閲覧履歴」「AIチャット履歴」「Web履歴」シートから
+ * 指定された端末ID（開発用PCなど）の行を完全に削除します。
+ */
+function deleteVisitorData(visitorId) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const targetId = String(visitorId).trim();
+  const results = {};
+
+  const sheetConfigs = [
+    { name: '見積もりシステム', primaryCol: 3 }, // C列が端末ID
+    { name: 'Web閲覧履歴', primaryCol: 2 },      // B列が端末ID
+    { name: 'AIチャット履歴', primaryCol: 2 },    // B列が端末ID
+    { name: 'Web履歴', primaryCol: 3 },          // C列が端末ID
+    { name: 'エラーログ', primaryCol: 2 }         // B列が端末ID
+  ];
+
+  sheetConfigs.forEach(cfg => {
+    const sheet = ss.getSheetByName(cfg.name);
+    if (!sheet) return;
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      results[cfg.name] = 0;
+      return;
+    }
+
+    const lastCol = sheet.getLastColumn();
+    const range = sheet.getRange(2, 1, lastRow - 1, lastCol);
+    const values = range.getValues();
+    let deletedCount = 0;
+
+    // 下の行から上に向かってループ（行削除時のインデックスズレ防止）
+    for (let i = values.length - 1; i >= 0; i--) {
+      const row = values[i];
+      const rowNum = i + 2;
+
+      // プライマリ列に一致するか、または行のいずれかのセルに一致するか
+      let match = (String(row[cfg.primaryCol - 1] || '').trim() === targetId);
+      if (!match) {
+        for (let c = 0; c < row.length; c++) {
+          if (String(row[c] || '').trim() === targetId) {
+            match = true;
+            break;
+          }
+        }
+      }
+
+      if (match) {
+        sheet.deleteRow(rowNum);
+        deletedCount++;
+      }
+    }
+
+    results[cfg.name] = deletedCount;
+  });
+
+  SpreadsheetApp.flush();
+  Logger.log('=== 削除完了: 端末ID「' + targetId + '」===');
+  Logger.log(JSON.stringify(results));
+
+  return createJsonResponse({
+    status: 'success',
+    action: 'visitor_deleted',
+    visitorId: targetId,
+    deleted: results
+  });
+}
+
+/**
+ * 開発用PC（usr_ezzx19）を1クリックで削除するGASエディタ用実行関数
+ */
+function deleteTargetVisitor() {
+  const result = deleteVisitorData('usr_ezzx19');
+  Logger.log(result.getContent());
 }
 
 
