@@ -5311,3 +5311,118 @@ checkInitialStateFromStorageOrUrl();
     console.warn('[Log] sendSimAccessLog エラー:', err);
   }
 })();
+
+// シミュレーター閲覧ログ（方式A: 離脱時1行追記方式）のトラッカー
+(function initSimPageViewTracker() {
+  const endpoint = materialsConfig?.system?.gasLogEndpointUrl;
+  if (!endpoint || typeof endpoint !== 'string' || !endpoint.startsWith('http')) return;
+
+  let startTime = Date.now();
+  let hasSent = false;
+
+  function getDeviceTypeCategory() {
+    const ua = navigator.userAgent;
+    let type = 'Desktop';
+    if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) {
+      type = 'Tablet';
+    } else if (/Mobile|iP(hone|od)|Android|BlackBerry|IEMobile|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/i.test(ua)) {
+      type = 'Mobile';
+    }
+
+    let os = '';
+    if (/iPhone/i.test(ua)) os = 'iPhone';
+    else if (/iPad/i.test(ua)) os = 'iPad';
+    else if (/Android/i.test(ua)) os = 'Android';
+    else if (/Mac/i.test(ua)) os = 'Mac';
+    else if (/Win/i.test(ua)) os = 'Windows';
+    else if (/Linux/i.test(ua)) os = 'Linux';
+
+    return os ? `${type} (${os})` : type;
+  }
+
+  function sendPageViewLog() {
+    if (hasSent) return;
+
+    const durationSeconds = Math.max(0, Math.round((Date.now() - startTime) / 1000));
+    const visitorId = getOrCreateVisitorId();
+    const pagePath = window.location.pathname || '/sim';
+    const pageTitle = document.title || '3D見積もりシミュレーター';
+    const referrer = document.referrer || 'Direct';
+    const deviceType = getDeviceTypeCategory();
+
+    const payload = {
+      type: 'page_view',
+      visitorId: visitorId,
+      path: pagePath,
+      title: pageTitle,
+      duration: durationSeconds,
+      referrer: referrer,
+      deviceType: deviceType
+    };
+
+    const isLocal = isLocalDevelopmentEnvironment();
+    const urlParams = new URLSearchParams(window.location.search);
+    const forceDebug = urlParams.get('debug_log') === 'true' || urlParams.get('test_log') === 'true';
+
+    const SKIP_LOG_LOCAL = true;
+    if (isLocal && !forceDebug && SKIP_LOG_LOCAL) {
+      console.log('[SimPageViewLog] ローカル開発環境のため送信をスキップしました (テスト時はURLに ?debug_log=true を付与):', payload);
+      hasSent = true;
+      return;
+    }
+
+    if (isLocal) {
+      console.log('[SimPageViewLog] (テスト送信) GASへページ閲覧ログを送信:', payload);
+    }
+
+    const payloadStr = JSON.stringify(payload);
+    let beaconSent = false;
+
+    // 1. sendBeacon を最優先
+    if (navigator.sendBeacon) {
+      try {
+        const blob = new Blob([payloadStr], { type: 'text/plain;charset=UTF-8' });
+        beaconSent = navigator.sendBeacon(endpoint, blob);
+      } catch (e) {
+        beaconSent = false;
+      }
+    }
+
+    // 2. fetch (keepalive: true) にフォールバック
+    if (!beaconSent && typeof fetch === 'function') {
+      try {
+        fetch(endpoint, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: payloadStr,
+          keepalive: true
+        }).catch(() => {});
+      } catch (e) {}
+    }
+
+    hasSent = true;
+  }
+
+  // イベントリスナー登録
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') {
+      sendPageViewLog();
+    } else if (document.visibilityState === 'visible' && hasSent) {
+      hasSent = false;
+      startTime = Date.now();
+    }
+  });
+
+  window.addEventListener('pagehide', function () {
+    sendPageViewLog();
+  });
+
+  window.addEventListener('pageshow', function (e) {
+    if (e.persisted) {
+      hasSent = false;
+      startTime = Date.now();
+    }
+  });
+})();
+

@@ -114,7 +114,10 @@ function doPost(e) {
     const logType = data.type || (data.estimateId ? 'estimate' : 'web_access');
 
     let result;
-    if (logType === 'web_access' || logType === 'web_history') {
+    if (logType === 'page_view' || logType === 'page_stay') {
+      // 0. Web閲覧履歴ログ（離脱時1行追記方式）の処理
+      result = handlePageViewLog(ss, data, contents);
+    } else if (logType === 'web_access' || logType === 'web_history') {
       // 1. Web訪問・流入元・回遊動線ログの処理
       result = handleWebHistoryLog(ss, data, contents);
     } else if (logType === 'calc_error' || logType === 'error') {
@@ -135,6 +138,69 @@ function doPost(e) {
       lock.releaseLock();
     } catch (e) {}
   }
+}
+
+/**
+ * Web閲覧履歴ログの保存（方式A: 離脱時1行追記方式）
+ * 1回のページ閲覧につき必ず「1行のみ」を末尾に追記します。
+ */
+function handlePageViewLog(ss, data, rawJson) {
+  let sheet = ss.getSheetByName('Web閲覧履歴');
+  if (!sheet) {
+    sheet = ss.insertSheet('Web閲覧履歴');
+    setupPageViewHeader(sheet);
+  }
+
+  const now = new Date();
+  // 記録日時: YYYY-MM-DD HH:mm:ss
+  const formattedDate = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy-MM-dd HH:mm:ss');
+
+  const visitorId = data.visitorId || data.deviceId || '';
+  const pagePath = data.path || data.pathname || '/';
+  const pageTitle = data.title || '';
+  const duration = (typeof data.duration === 'number' && !isNaN(data.duration))
+    ? Math.max(0, Math.round(data.duration))
+    : (parseInt(data.duration, 10) || 0);
+  const referrer = data.referrer || 'Direct';
+  const deviceType = data.deviceType || (data.device ? (data.device.type || data.device) : '不明');
+
+  // 1行追記
+  sheet.appendRow([
+    formattedDate, // 1. 記録日時
+    visitorId,     // 2. 端末ID
+    pagePath,      // 3. ページパス
+    pageTitle,     // 4. ページタイトル
+    duration,      // 5. 滞在時間（秒数）
+    referrer,      // 6. 流入元
+    deviceType     // 7. デバイス種別
+  ]);
+
+  return createJsonResponse({
+    status: 'success',
+    action: 'page_view_appended',
+    row: sheet.getLastRow()
+  });
+}
+
+/**
+ * Web閲覧履歴シートのヘッダー初期設定
+ */
+function setupPageViewHeader(sheet) {
+  const headers = [
+    '記録日時',
+    '端末ID',
+    'ページパス',
+    'ページタイトル',
+    '滞在時間（秒）',
+    '流入元',
+    'デバイス種別'
+  ];
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  sheet.getRange(1, 1, 1, headers.length)
+    .setFontWeight('bold')
+    .setBackground('#d1fae5') // 上品なペールエメラルドグリーン
+    .setHorizontalAlignment('center');
+  sheet.setFrozenRows(1);
 }
 
 /**

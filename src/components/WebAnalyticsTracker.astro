@@ -189,6 +189,128 @@ const gasEndpoint = Astro.props.endpointUrl || import.meta.env.PUBLIC_GAS_LOG_EN
       } catch (err) {
         console.warn('[WebLog] fetchエラー:', err);
       }
+
+      // ページ閲覧ログ（離脱時1行追記方式）の開始
+      initPageViewTracker(visitorId);
+    }
+
+    // 7. ページ閲覧ログ（方式A: 離脱時1行追記方式）のトラッカー
+    function initPageViewTracker(visitorId) {
+      let startTime = Date.now();
+      let hasSent = false;
+
+      // デバイス種別（Mobile / Tablet / Desktop など判別可能な値）の取得
+      function getDeviceTypeCategory() {
+        const ua = navigator.userAgent;
+        let type = 'Desktop';
+        if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) {
+          type = 'Tablet';
+        } else if (/Mobile|iP(hone|od)|Android|BlackBerry|IEMobile|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/i.test(ua)) {
+          type = 'Mobile';
+        }
+
+        let os = '';
+        if (/iPhone/i.test(ua)) os = 'iPhone';
+        else if (/iPad/i.test(ua)) os = 'iPad';
+        else if (/Android/i.test(ua)) os = 'Android';
+        else if (/Mac/i.test(ua)) os = 'Mac';
+        else if (/Win/i.test(ua)) os = 'Windows';
+        else if (/Linux/i.test(ua)) os = 'Linux';
+
+        return os ? `${type} (${os})` : type;
+      }
+
+      function sendPageViewLog() {
+        if (hasSent) return;
+
+        const durationSeconds = Math.max(0, Math.round((Date.now() - startTime) / 1000));
+        const pagePath = window.location.pathname || '/';
+        const pageTitle = document.title || '';
+        const referrer = document.referrer || 'Direct';
+        const deviceType = getDeviceTypeCategory();
+
+        const payload = {
+          type: 'page_view',
+          visitorId: visitorId,
+          path: pagePath,
+          title: pageTitle,
+          duration: durationSeconds,
+          referrer: referrer,
+          deviceType: deviceType
+        };
+
+        if (!gasEndpoint || !gasEndpoint.startsWith('http')) return;
+
+        const hostname = window.location.hostname;
+        const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+        const urlParams = new URLSearchParams(window.location.search);
+        const forceDebug = urlParams.get('debug_log') === 'true' || urlParams.get('test_log') === 'true';
+
+        // ローカル環境での送信制御（本番環境では自動送信、ローカルではスキップ）
+        const SKIP_LOG_ON_LOCALHOST = true;
+        if (isLocal && !forceDebug && SKIP_LOG_ON_LOCALHOST) {
+          console.log('[PageViewLog] ローカル開発環境のため送信をスキップしました (テスト時はURLに ?debug_log=true を付与):', payload);
+          hasSent = true;
+          return;
+        }
+
+        if (isLocal) {
+          console.log('[PageViewLog] (テスト送信) GASへページ閲覧ログを送信:', payload);
+        }
+
+        const payloadStr = JSON.stringify(payload);
+        let beaconSent = false;
+
+        // 1. navigator.sendBeacon を最優先で使用（ブラウザ終了・ページ離脱時でも通信保証）
+        if (navigator.sendBeacon) {
+          try {
+            const blob = new Blob([payloadStr], { type: 'text/plain;charset=UTF-8' });
+            beaconSent = navigator.sendBeacon(gasEndpoint, blob);
+          } catch (e) {
+            beaconSent = false;
+          }
+        }
+
+        // 2. sendBeacon が未対応または失敗した場合は fetch (keepalive: true) にフォールバック
+        if (!beaconSent && typeof fetch === 'function') {
+          try {
+            fetch(gasEndpoint, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: { 'Content-Type': 'application/json' },
+              body: payloadStr,
+              keepalive: true
+            }).catch(function () {});
+          } catch (e) {}
+        }
+
+        hasSent = true;
+      }
+
+      // イベントリスナー登録
+      // 1. バックグラウンド移動・タブ切り替え・画面非表示
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden') {
+          sendPageViewLog();
+        } else if (document.visibilityState === 'visible' && hasSent) {
+          // タブに戻ってきた場合、新しい閲覧区間としてタイマーとフラグを再開
+          hasSent = false;
+          startTime = Date.now();
+        }
+      });
+
+      // 2. ページ離脱・タブ閉じ・画面遷移
+      window.addEventListener('pagehide', function () {
+        sendPageViewLog();
+      });
+
+      // 3. bfcache（ブラウザ戻る/進む）で復元された場合のリセット
+      window.addEventListener('pageshow', function (e) {
+        if (e.persisted) {
+          hasSent = false;
+          startTime = Date.now();
+        }
+      });
     }
 
     // ページのDOM準備完了時に実行
