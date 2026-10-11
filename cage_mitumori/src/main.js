@@ -5004,6 +5004,39 @@ function checkInitialStateFromStorageOrUrl() {
         }
       }
 
+      // 【自動救済ロジック】コピペ時のタイポ・文字欠落（例: stimateId 等）があっても、EST- 見積IDが含まれていれば自動救済
+      if (!targetId) {
+        for (const [key, val] of urlParams.entries()) {
+          const valUpper = (val || '').trim().toUpperCase();
+          if (valUpper.startsWith('EST-') || valUpper.includes('EST-20')) {
+            const match = valUpper.match(/EST-\d{8}-[A-Z0-9]+/i) || valUpper.match(/EST-[A-Z0-9-]+/i);
+            if (match) {
+              targetId = match[0];
+              console.log(`[Sim] タイポ・欠落パラメータ（${key}）から見積ID「${targetId}」を自動救済検出しました。`);
+              break;
+            }
+          }
+          const keyUpper = key.trim().toUpperCase();
+          if (keyUpper.startsWith('EST-') || keyUpper.includes('EST-20')) {
+            const match = keyUpper.match(/EST-\d{8}-[A-Z0-9]+/i) || keyUpper.match(/EST-[A-Z0-9-]+/i);
+            if (match) {
+              targetId = match[0];
+              console.log(`[Sim] パラメータキーから見積ID「${targetId}」を自動救済検出しました。`);
+              break;
+            }
+          }
+        }
+
+        // さらにURL全体（search/hash）から EST-XXXX を救済
+        if (!targetId && window.location.href) {
+          const rawMatch = window.location.href.match(/EST-\d{8}-[A-Z0-9]+/i);
+          if (rawMatch) {
+            targetId = rawMatch[0];
+            console.log(`[Sim] URL文字列全体から見積ID「${targetId}」を自動救済検出しました。`);
+          }
+        }
+      }
+
       if (targetId) {
         const cleanTargetId = targetId.toUpperCase();
         if (inputRestoreEstimateId) inputRestoreEstimateId.value = cleanTargetId;
