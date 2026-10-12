@@ -172,6 +172,15 @@ const toggleFrontWide3x = document.getElementById('toggle-front-wide-3x');
 const cardFrontWide3x = document.getElementById('card-front-wide-3x');
 const frontWide3xSub = document.getElementById('front-wide-3x-sub');
 
+// 上下幅広フレーム オプション（下側・上側）
+const toggleWideBottom = document.getElementById('toggle-wide-bottom');
+const cardWideBottom = document.getElementById('card-wide-bottom');
+const wideBottomSub = document.getElementById('wide-bottom-sub');
+
+const toggleWideTop = document.getElementById('toggle-wide-top');
+const cardWideTop = document.getElementById('card-wide-top');
+const wideTopSub = document.getElementById('wide-top-sub');
+
 // モレ対策ゴムパッキン
 const toggleRubberPacking = document.getElementById('toggle-rubber-packing');
 const cardRubberPacking = document.getElementById('card-rubber-packing');
@@ -275,6 +284,8 @@ const state = {
   hasRubberPacking: false,     // モレ対策ゴムパッキン (側面・背面 隙間モレ抑制)
   hasFloorHeaterSupport: false,// 床下パネルヒータ支え板 (t2.0外張りアクリル板＋プラダン4mm)
   hasRoomDivider: false,       // ２室分け（後付け仕切り板・Type A/C両対応）
+  hasBottomWideFrame: false,   // 下側幅広フレーム（高さ40mm・外周: Type A専用）
+  hasTopWideFrame: false,      // 上側幅広フレーム（高さ40mm・外周: Type A専用）
   ledType: 'none',             // 'none' | 'usb' | 'high_cri_white' | 'red' | 'white_and_red' | 'rgbw'
   ledPower: true,              // LED点灯状態 (true | false)
   ledBrightness: 1.0,          // LED調光 (0.1 ~ 1.0)
@@ -573,6 +584,61 @@ function updateFrontWideFrameAvailability() {
       cardFrontWide3x.classList.remove('active');
       cardFrontWide3x.classList.remove('disabled');
       frontWide3xSub.textContent = desc3x;
+    }
+  }
+  updateOuterWideFrameAvailability();
+}
+
+/**
+ * 上下幅広フレーム（外周2040化）の利用可能性制御
+ * - Type A (通常スライド扉) 専用オプション
+ * - Type A、Type A枠囲い (A_FRAMED)、Type C、Type C枠囲い (C_FRAMED) で選択可能
+ * - 前開き (A_FRONT) は選択不可 (disabled)
+ * - 下側OFF時は上側選択不可（disabled）＆強制OFF
+ */
+function updateOuterWideFrameAvailability() {
+  const isSupported = (state.cageType === 'A' || state.cageType === 'A_FRAMED' || state.cageType === 'C' || state.cageType === 'C_FRAMED');
+
+  if (toggleWideBottom && cardWideBottom) {
+    if (!isSupported) {
+      toggleWideBottom.checked = false;
+      toggleWideBottom.disabled = true;
+      cardWideBottom.classList.remove('active');
+      cardWideBottom.classList.add('disabled');
+      state.hasBottomWideFrame = false;
+      if (wideBottomSub) wideBottomSub.textContent = '※前開き扉は構造上選択不可';
+    } else {
+      toggleWideBottom.disabled = false;
+      cardWideBottom.classList.remove('disabled');
+      toggleWideBottom.checked = !!state.hasBottomWideFrame;
+      cardWideBottom.classList.toggle('active', !!state.hasBottomWideFrame);
+      if (wideBottomSub) wideBottomSub.textContent = '床の左右奥行・奥側を高さ40mmフレームに変更し高剛性化';
+    }
+  }
+
+  if (toggleWideTop && cardWideTop) {
+    if (!isSupported) {
+      toggleWideTop.checked = false;
+      toggleWideTop.disabled = true;
+      cardWideTop.classList.remove('active');
+      cardWideTop.classList.add('disabled');
+      state.hasTopWideFrame = false;
+      if (wideTopSub) wideTopSub.textContent = '※前開き扉は構造上選択不可';
+    } else if (!state.hasBottomWideFrame) {
+      // 下側がOFFの場合: 上側は選択不可（disabled）＆強制OFF
+      toggleWideTop.checked = false;
+      toggleWideTop.disabled = true;
+      cardWideTop.classList.remove('active');
+      cardWideTop.classList.add('disabled');
+      state.hasTopWideFrame = false;
+      if (wideTopSub) wideTopSub.textContent = '※下側幅広フレーム選択時に選択可能（上下両方ONで柱も2040化）';
+    } else {
+      // 下側がONの場合: 上側は選択可能
+      toggleWideTop.disabled = false;
+      cardWideTop.classList.remove('disabled');
+      toggleWideTop.checked = !!state.hasTopWideFrame;
+      cardWideTop.classList.toggle('active', !!state.hasTopWideFrame);
+      if (wideTopSub) wideTopSub.textContent = '天面の左右奥行・前後を高さ40mmフレームに変更（上下両方ONで柱も奥行40mm化）';
     }
   }
 }
@@ -1696,6 +1762,8 @@ function calculateGrandTotals() {
   const isTypeAFront = state.cageType === 'A_FRONT';
   const isTypeAFramed = (state.cageType === 'A_FRAMED' || state.cageType === 'C_FRAMED');
   const isFloorHeaterSupport = !!state.hasFloorHeaterSupport;
+  const isWideBottom = !!state.hasBottomWideFrame;
+  const isWideTop = !!state.hasTopWideFrame;
 
   // 1. オプション加工工賃（資材費とは別で単純に販売価格へ加算）
   const splitFloorLabor = isFloorSplit ? (laborConfig.splitFloor?.price ?? 500) : 0;
@@ -1709,8 +1777,10 @@ function calculateGrandTotals() {
   const frontOpenDoorLabor = isTypeAFront ? (laborConfig.frontOpenDoor?.price ?? 3000) : 0;
   const frontFramedDoorLabor = isTypeAFramed ? (laborConfig.frontFramedDoor?.price ?? 5000) : 0;
   const floorHeaterSupportLabor = isFloorHeaterSupport ? (laborConfig.floorHeaterSupport?.price ?? 1000) : 0;
+  const wideBottomLabor = isWideBottom ? (laborConfig.wideBottom?.price ?? 2000) : 0;
+  const wideTopLabor = isWideTop ? (laborConfig.wideTop?.price ?? 2000) : 0;
 
-  const totalLaborFee = splitFloorLabor + splitTopLabor + typeCLabor + splitSideLabor + frontWide3xLabor + perchLabor + rubberPackingLabor + roomDividerLabor + frontOpenDoorLabor + frontFramedDoorLabor + floorHeaterSupportLabor;
+  const totalLaborFee = splitFloorLabor + splitTopLabor + typeCLabor + splitSideLabor + frontWide3xLabor + perchLabor + rubberPackingLabor + roomDividerLabor + frontOpenDoorLabor + frontFramedDoorLabor + floorHeaterSupportLabor + wideBottomLabor + wideTopLabor;
 
   // 2. 特定オプション部材（販売価格加算額および内部原価）
   const casterPrice = isCaster ? (itemConfig.caster?.price ?? 1500) : 0;
@@ -2425,6 +2495,31 @@ toggleFrontWide3x.addEventListener('change', (e) => {
   }
   syncUpdate();
 });
+
+// 下側幅広フレーム（高さ40mm・外周）のトグル
+if (toggleWideBottom) {
+  toggleWideBottom.addEventListener('change', (e) => {
+    state.hasBottomWideFrame = e.target.checked;
+    if (!state.hasBottomWideFrame) {
+      state.hasTopWideFrame = false;
+    }
+    updateOuterWideFrameAvailability();
+    syncUpdate();
+  });
+}
+
+// 上側幅広フレーム（高さ40mm・外周）のトグル
+if (toggleWideTop) {
+  toggleWideTop.addEventListener('change', (e) => {
+    state.hasTopWideFrame = e.target.checked;
+    if (e.target.checked) {
+      cardWideTop?.classList.add('active');
+    } else {
+      cardWideTop?.classList.remove('active');
+    }
+    syncUpdate();
+  });
+}
 
 // モレ対策ゴムパッキンのトグル
 toggleRubberPacking.addEventListener('change', (e) => {
@@ -3174,9 +3269,137 @@ function initCreaturePresets() {
 }
 
 /**
+ * 全オプションおよび選択状態をクリーンな初期値（まっさらな状態）へリセット
+ * - 過去ログ（古い仕様）やプリセット読み込み時に直前の選択状態が残留するのを完全に防ぐ
+ */
+function resetAllOptionsAndUI() {
+  // 1. 各種オプション状態のリセット
+  state.footType = 'rubber';
+  state.frontWideFrame = '2x';
+  state.hasFloorReinforcement = false;
+  state.floorSplitCount = 2;
+  state.hasBackReinforcement = false;
+  state.backSplitCount = 2;
+  state.hasTopReinforcement = false;
+  state.hasDoorAntiFlex = false;
+  state.hasSideVentCover = false;
+  state.hasPerch = false;
+  state.hasRubberPacking = false;
+  state.hasFloorHeaterSupport = false;
+  state.hasRoomDivider = false;
+  state.hasBottomWideFrame = false;
+  state.hasTopWideFrame = false;
+  state.hasSideReinforcement = false;
+  state.sideOpeningH = 120;
+  state.ledType = 'none';
+  state.ledPower = true;
+  state.ledBrightness = 1.0;
+  state.ledColorMode = 'all';
+  state.ledRgbColor = '#ffffff';
+
+  // パネル構成の初期値リセット
+  state.panelConfig = {
+    front: 'acrylic',
+    floor: 'acrylic',
+    back: 'acrylic',
+    side: 'acrylic',
+    sideUpper: 'punching',
+    sideLower: 'acrylic',
+    top: 'punching',
+    topLeft: 'punching',
+    topRight: 'punching',
+    partition: 'black_matte'
+  };
+
+  // 2. UIコンポーネント（DOM要素）のリセット
+  if (toggleCaster) toggleCaster.checked = false;
+  if (cardCaster) cardCaster.classList.remove('active');
+
+  if (toggleFloorReinforce) toggleFloorReinforce.checked = false;
+  if (cardFloorReinforce) cardFloorReinforce.classList.remove('active');
+  if (selectFloorSplit) {
+    selectFloorSplit.value = '2';
+    selectFloorSplit.disabled = true;
+  }
+
+  if (toggleBackReinforce) toggleBackReinforce.checked = false;
+  if (cardBackReinforce) cardBackReinforce.classList.remove('active');
+  if (selectBackSplit) {
+    selectBackSplit.value = '2';
+    selectBackSplit.disabled = true;
+  }
+
+  if (toggleTopReinforce) {
+    toggleTopReinforce.checked = false;
+    toggleTopReinforce.disabled = false;
+  }
+  if (cardTopReinforce) {
+    cardTopReinforce.classList.remove('active', 'disabled', 'required-locked');
+  }
+
+  if (toggleDoorAntiFlex) toggleDoorAntiFlex.checked = false;
+  if (cardDoorAntiFlex) cardDoorAntiFlex.classList.remove('active');
+
+  if (toggleSideVentCover) toggleSideVentCover.checked = false;
+  if (cardSideVentCover) cardSideVentCover.classList.remove('active');
+
+  if (togglePerch) {
+    togglePerch.checked = false;
+    togglePerch.disabled = false;
+  }
+  if (cardPerch) cardPerch.classList.remove('active', 'disabled');
+
+  if (toggleRubberPacking) toggleRubberPacking.checked = false;
+  if (cardRubberPacking) cardRubberPacking.classList.remove('active');
+
+  if (toggleFloorHeaterSupport) toggleFloorHeaterSupport.checked = false;
+  if (cardFloorHeaterSupport) cardFloorHeaterSupport.classList.remove('active');
+
+  if (toggleRoomDivider) toggleRoomDivider.checked = false;
+  if (cardRoomDivider) cardRoomDivider.classList.remove('active');
+  if (rowPanelPartition) rowPanelPartition.classList.add('hidden');
+
+  if (toggleWideBottom) toggleWideBottom.checked = false;
+  if (cardWideBottom) cardWideBottom.classList.remove('active');
+
+  if (toggleWideTop) toggleWideTop.checked = false;
+  if (cardWideTop) cardWideTop.classList.remove('active');
+
+  if (toggleSideReinforce) toggleSideReinforce.checked = false;
+  if (cardSideReinforce) cardSideReinforce.classList.remove('active');
+  if (boxSideH) boxSideH.classList.add('disabled');
+  if (rowPanelSide) rowPanelSide.classList.remove('hidden');
+  if (rowPanelSideSplit) rowPanelSideSplit.classList.add('hidden');
+
+  if (selectLedType) selectLedType.value = 'none';
+  if (cardLedOption) cardLedOption.classList.remove('active');
+  updateLedUI();
+
+  // パネル素材セレクトUIのリセット
+  if (selectPanelFloor) selectPanelFloor.value = 'acrylic';
+  if (selectPanelBack) selectPanelBack.value = 'acrylic';
+  if (selectPanelSide) selectPanelSide.value = 'acrylic';
+  if (selectPanelSideUpper) selectPanelSideUpper.value = 'punching';
+  if (selectPanelSideLower) selectPanelSideLower.value = 'acrylic';
+  if (selectPanelTop) selectPanelTop.value = 'punching';
+  if (selectPanelTopLeft) selectPanelTopLeft.value = 'punching';
+  if (selectPanelTopRight) selectPanelTopRight.value = 'punching';
+  if (selectPanelPartition) selectPanelPartition.value = 'black_matte';
+
+  // プリセットカードの選択状態解除
+  if (creaturePresetGrid) {
+    const allCards = creaturePresetGrid.querySelectorAll('.creature-card');
+    allCards.forEach(c => c.classList.remove('active'));
+  }
+}
+
+/**
  * 生体プリセットを適用（サイズだけでなく、フレーム色・全オプション・パネル素材を完全連動）
  */
 function applyCreaturePreset(preset) {
+  // 直前のオプション選択が残留しないよう、まず全オプションおよびUIをまっさらにリセット
+  resetAllOptionsAndUI();
+
   // 1. 基本寸法設定
   state.W = preset.W;
   state.D = preset.D;
@@ -3365,6 +3588,9 @@ function applyCreaturePreset(preset) {
 function applyFullCageSpec(targetSpec) {
   if (!targetSpec || typeof targetSpec !== 'object') return false;
 
+  // 重要：直前の選択状態が残留しないよう、まず全オプションおよびUIをまっさらにリセット
+  resetAllOptionsAndUI();
+
   // 1. 基本寸法設定
   if (Number.isFinite(targetSpec.W)) {
     state.W = Number(targetSpec.W);
@@ -3434,108 +3660,96 @@ function applyFullCageSpec(targetSpec) {
   }
 
   // 6. 脚仕様 (キャスター / ゴム脚)
-  if (targetSpec.footType && (targetSpec.footType === 'caster' || targetSpec.footType === 'rubber')) {
-    state.footType = targetSpec.footType;
-    if (toggleCaster) toggleCaster.checked = state.footType === 'caster';
-    if (cardCaster) cardCaster.classList.toggle('active', state.footType === 'caster');
-  }
+  state.footType = (targetSpec.footType === 'caster') ? 'caster' : 'rubber';
+  if (toggleCaster) toggleCaster.checked = (state.footType === 'caster');
+  if (cardCaster) cardCaster.classList.toggle('active', state.footType === 'caster');
 
   // 7. 正面幅広フレーム (Type A)
-  if (state.cageType === 'A' && targetSpec.frontWideFrame) {
-    state.frontWideFrame = targetSpec.frontWideFrame;
-    lastTypeAFrontWideFrame = targetSpec.frontWideFrame;
-  } else if (state.cageType !== 'A') {
+  if (state.cageType === 'A') {
+    state.frontWideFrame = targetSpec.frontWideFrame || '2x';
+    lastTypeAFrontWideFrame = state.frontWideFrame;
+  } else {
     state.frontWideFrame = 'none';
   }
 
   // 8. 側面補強フレーム & 側面上部開口高さ
-  if (typeof targetSpec.hasSideReinforcement === 'boolean') {
-    state.hasSideReinforcement = targetSpec.hasSideReinforcement;
-    if (toggleSideReinforce) toggleSideReinforce.checked = state.hasSideReinforcement;
-    if (cardSideReinforce) cardSideReinforce.classList.toggle('active', state.hasSideReinforcement);
-    if (boxSideH) boxSideH.classList.toggle('disabled', !state.hasSideReinforcement);
-    const minSideH = 50;
-    const maxSideH = Math.max(minSideH, state.H - 110);
-    if (inputSideH) {
-      inputSideH.min = minSideH;
-      inputSideH.max = maxSideH;
-    }
-    if (targetSpec.sideOpeningH != null) {
-      state.sideOpeningH = Math.max(minSideH, Math.min(maxSideH, Number(targetSpec.sideOpeningH)));
-      if (inputSideH) inputSideH.value = state.sideOpeningH;
-    }
+  state.hasSideReinforcement = !!targetSpec.hasSideReinforcement;
+  if (toggleSideReinforce) toggleSideReinforce.checked = state.hasSideReinforcement;
+  if (cardSideReinforce) cardSideReinforce.classList.toggle('active', state.hasSideReinforcement);
+  if (boxSideH) boxSideH.classList.toggle('disabled', !state.hasSideReinforcement);
+  const minSideH = 50;
+  const maxSideH = Math.max(minSideH, state.H - 110);
+  if (inputSideH) {
+    inputSideH.min = minSideH;
+    inputSideH.max = maxSideH;
   }
-
-  // 側面パネル選択行の表示切り替え
+  state.sideOpeningH = targetSpec.sideOpeningH != null
+    ? Math.max(minSideH, Math.min(maxSideH, Number(targetSpec.sideOpeningH)))
+    : 120;
+  if (inputSideH) inputSideH.value = state.sideOpeningH;
   if (rowPanelSide && rowPanelSideSplit) {
     rowPanelSide.classList.toggle('hidden', state.hasSideReinforcement);
     rowPanelSideSplit.classList.toggle('hidden', !state.hasSideReinforcement);
   }
 
   // 9. 扉たわみ防止レール
-  if (typeof targetSpec.hasDoorAntiFlex === 'boolean') {
-    state.hasDoorAntiFlex = targetSpec.hasDoorAntiFlex;
-    if (toggleDoorAntiFlex) toggleDoorAntiFlex.checked = state.hasDoorAntiFlex;
-    if (cardDoorAntiFlex) cardDoorAntiFlex.classList.toggle('active', state.hasDoorAntiFlex);
-  }
+  state.hasDoorAntiFlex = !!targetSpec.hasDoorAntiFlex;
+  if (toggleDoorAntiFlex) toggleDoorAntiFlex.checked = state.hasDoorAntiFlex;
+  if (cardDoorAntiFlex) cardDoorAntiFlex.classList.toggle('active', state.hasDoorAntiFlex);
 
   // 10. 側面換気量調整板
-  if (typeof targetSpec.hasSideVentCover === 'boolean') {
-    state.hasSideVentCover = targetSpec.hasSideVentCover;
-    if (toggleSideVentCover) toggleSideVentCover.checked = state.hasSideVentCover;
-    if (cardSideVentCover) cardSideVentCover.classList.toggle('active', state.hasSideVentCover);
-  }
+  state.hasSideVentCover = !!targetSpec.hasSideVentCover;
+  if (toggleSideVentCover) toggleSideVentCover.checked = state.hasSideVentCover;
+  if (cardSideVentCover) cardSideVentCover.classList.toggle('active', state.hasSideVentCover);
 
   // 11. 止まり木
-  if (typeof targetSpec.hasPerch === 'boolean') {
-    state.hasPerch = targetSpec.hasPerch;
-    if (togglePerch) togglePerch.checked = state.hasPerch;
-    if (cardPerch) cardPerch.classList.toggle('active', state.hasPerch);
-  }
+  state.hasPerch = !!targetSpec.hasPerch;
+  if (togglePerch) togglePerch.checked = state.hasPerch;
+  if (cardPerch) cardPerch.classList.toggle('active', state.hasPerch);
 
   // 12. モレ対策ゴムパッキン
-  if (typeof targetSpec.hasRubberPacking === 'boolean') {
-    state.hasRubberPacking = targetSpec.hasRubberPacking;
-    if (toggleRubberPacking) toggleRubberPacking.checked = state.hasRubberPacking;
-    if (cardRubberPacking) cardRubberPacking.classList.toggle('active', state.hasRubberPacking);
-  }
+  state.hasRubberPacking = !!targetSpec.hasRubberPacking;
+  if (toggleRubberPacking) toggleRubberPacking.checked = state.hasRubberPacking;
+  if (cardRubberPacking) cardRubberPacking.classList.toggle('active', state.hasRubberPacking);
 
   // 13. 床下パネルヒータ支え板
-  if (typeof targetSpec.hasFloorHeaterSupport === 'boolean') {
-    state.hasFloorHeaterSupport = targetSpec.hasFloorHeaterSupport;
-    if (toggleFloorHeaterSupport) toggleFloorHeaterSupport.checked = state.hasFloorHeaterSupport;
-    if (cardFloorHeaterSupport) cardFloorHeaterSupport.classList.toggle('active', state.hasFloorHeaterSupport);
-  }
+  state.hasFloorHeaterSupport = !!targetSpec.hasFloorHeaterSupport;
+  if (toggleFloorHeaterSupport) toggleFloorHeaterSupport.checked = state.hasFloorHeaterSupport;
+  if (cardFloorHeaterSupport) cardFloorHeaterSupport.classList.toggle('active', state.hasFloorHeaterSupport);
 
-  // 14. 床面補強フレーム
-  if (targetSpec.floorSplitCount != null) {
-    state.floorSplitCount = Number(targetSpec.floorSplitCount);
-    if (selectFloorSplit) selectFloorSplit.value = String(state.floorSplitCount);
-  }
+  // 14. 下側・上側幅広フレーム（高さ40mm・外周）
+  state.hasBottomWideFrame = !!targetSpec.hasBottomWideFrame;
+  state.hasTopWideFrame = state.hasBottomWideFrame && !!targetSpec.hasTopWideFrame;
+  if (toggleWideBottom) toggleWideBottom.checked = state.hasBottomWideFrame;
+  if (cardWideBottom) cardWideBottom.classList.toggle('active', state.hasBottomWideFrame);
+  if (toggleWideTop) toggleWideTop.checked = state.hasTopWideFrame;
+  if (cardWideTop) cardWideTop.classList.toggle('active', state.hasTopWideFrame);
+
+  // 15. 床面補強フレーム
+  state.floorSplitCount = (targetSpec.floorSplitCount != null) ? Number(targetSpec.floorSplitCount) : 2;
+  if (selectFloorSplit) selectFloorSplit.value = String(state.floorSplitCount);
   if (typeof targetSpec.hasFloorReinforcement === 'boolean') {
     state.hasFloorReinforcement = targetSpec.hasFloorReinforcement;
-    if (toggleFloorReinforce) toggleFloorReinforce.checked = state.hasFloorReinforcement;
-    if (cardFloorReinforce) cardFloorReinforce.classList.toggle('active', state.hasFloorReinforcement);
   } else {
     updateFloorReinforceByArea();
   }
+  if (toggleFloorReinforce) toggleFloorReinforce.checked = state.hasFloorReinforcement;
+  if (cardFloorReinforce) cardFloorReinforce.classList.toggle('active', state.hasFloorReinforcement);
   if (selectFloorSplit) selectFloorSplit.disabled = !state.hasFloorReinforcement;
 
-  // 14-2. 背面補強フレーム
-  if (targetSpec.backSplitCount != null) {
-    state.backSplitCount = Number(targetSpec.backSplitCount);
-    if (selectBackSplit) selectBackSplit.value = String(state.backSplitCount);
-  }
+  // 16. 背面補強フレーム
+  state.backSplitCount = (targetSpec.backSplitCount != null) ? Number(targetSpec.backSplitCount) : 2;
+  if (selectBackSplit) selectBackSplit.value = String(state.backSplitCount);
   if (typeof targetSpec.hasBackReinforcement === 'boolean') {
     state.hasBackReinforcement = targetSpec.hasBackReinforcement;
-    if (toggleBackReinforce) toggleBackReinforce.checked = state.hasBackReinforcement;
-    if (cardBackReinforce) cardBackReinforce.classList.toggle('active', state.hasBackReinforcement);
   } else {
     updateBackReinforce();
   }
+  if (toggleBackReinforce) toggleBackReinforce.checked = state.hasBackReinforcement;
+  if (cardBackReinforce) cardBackReinforce.classList.toggle('active', state.hasBackReinforcement);
   if (selectBackSplit) selectBackSplit.disabled = !state.hasBackReinforcement;
 
-  // 15. 天板中央補強フレーム
+  // 17. 天板中央補強フレーム
   if (state.W > 940) {
     if (toggleTopReinforce) {
       toggleTopReinforce.checked = true;
@@ -3563,57 +3777,56 @@ function applyFullCageSpec(targetSpec) {
     rowPanelTopSplit.classList.toggle('hidden', !isTopSplit);
   }
 
-  // 16. ２室分け（仕切り板）
-  if (typeof targetSpec.hasRoomDivider === 'boolean') {
-    state.hasRoomDivider = targetSpec.hasRoomDivider;
-    if (toggleRoomDivider) toggleRoomDivider.checked = state.hasRoomDivider;
-    if (cardRoomDivider) cardRoomDivider.classList.toggle('active', state.hasRoomDivider);
-    if (rowPanelPartition) rowPanelPartition.classList.toggle('hidden', !state.hasRoomDivider);
-    if (state.hasRoomDivider && togglePerch) {
-      state.hasPerch = false;
-      togglePerch.checked = false;
-      togglePerch.disabled = true;
-      if (cardPerch) cardPerch.classList.add('disabled');
-    }
+  // 18. ２室分け（仕切り板）
+  state.hasRoomDivider = !!targetSpec.hasRoomDivider;
+  if (toggleRoomDivider) toggleRoomDivider.checked = state.hasRoomDivider;
+  if (cardRoomDivider) cardRoomDivider.classList.toggle('active', state.hasRoomDivider);
+  if (rowPanelPartition) rowPanelPartition.classList.toggle('hidden', !state.hasRoomDivider);
+  if (state.hasRoomDivider && togglePerch) {
+    state.hasPerch = false;
+    togglePerch.checked = false;
+    togglePerch.disabled = true;
+    if (cardPerch) cardPerch.classList.add('disabled');
   }
 
-  // 17. 特注LED照明オプション
-  if (targetSpec.ledType) {
-    state.ledType = targetSpec.ledType;
-    if (selectLedType) selectLedType.value = state.ledType;
-    if (typeof targetSpec.ledPower === 'boolean') state.ledPower = targetSpec.ledPower;
-    if (typeof targetSpec.ledBrightness === 'number') state.ledBrightness = targetSpec.ledBrightness;
-    if (targetSpec.ledColorMode) state.ledColorMode = targetSpec.ledColorMode;
-    if (targetSpec.ledRgbColor) state.ledRgbColor = targetSpec.ledRgbColor;
-    updateLedUI();
-  }
+  // 19. 特注LED照明オプション
+  state.ledType = targetSpec.ledType || 'none';
+  if (selectLedType) selectLedType.value = state.ledType;
+  if (typeof targetSpec.ledPower === 'boolean') state.ledPower = targetSpec.ledPower;
+  if (typeof targetSpec.ledBrightness === 'number') state.ledBrightness = targetSpec.ledBrightness;
+  if (targetSpec.ledColorMode) state.ledColorMode = targetSpec.ledColorMode;
+  if (targetSpec.ledRgbColor) state.ledRgbColor = targetSpec.ledRgbColor;
+  if (cardLedOption) cardLedOption.classList.toggle('active', state.ledType !== 'none');
+  updateLedUI();
 
-  // 18. パネル素材設定 (panelConfig)
+  // 20. パネル素材設定 (panelConfig)
   if (targetSpec.panelConfig && typeof targetSpec.panelConfig === 'object') {
     state.panelConfig = {
       ...state.panelConfig,
       ...targetSpec.panelConfig
     };
-    if (selectPanelFloor && state.panelConfig.floor) selectPanelFloor.value = state.panelConfig.floor;
-    if (selectPanelBack && state.panelConfig.back) selectPanelBack.value = state.panelConfig.back;
-    if (selectPanelSide && state.panelConfig.side) selectPanelSide.value = state.panelConfig.side;
-    if (selectPanelSideUpper && state.panelConfig.sideUpper) selectPanelSideUpper.value = state.panelConfig.sideUpper;
-    if (selectPanelSideLower && state.panelConfig.sideLower) selectPanelSideLower.value = state.panelConfig.sideLower;
-    if (selectPanelTop && state.panelConfig.top) selectPanelTop.value = state.panelConfig.top;
-    if (selectPanelTopLeft && state.panelConfig.topLeft) selectPanelTopLeft.value = state.panelConfig.topLeft;
-    if (selectPanelTopRight && state.panelConfig.topRight) selectPanelTopRight.value = state.panelConfig.topRight;
-    if (selectPanelPartition && state.panelConfig.partition) selectPanelPartition.value = state.panelConfig.partition;
   }
+  if (selectPanelFloor && state.panelConfig.floor) selectPanelFloor.value = state.panelConfig.floor;
+  if (selectPanelBack && state.panelConfig.back) selectPanelBack.value = state.panelConfig.back;
+  if (selectPanelSide && state.panelConfig.side) selectPanelSide.value = state.panelConfig.side;
+  if (selectPanelSideUpper && state.panelConfig.sideUpper) selectPanelSideUpper.value = state.panelConfig.sideUpper;
+  if (selectPanelSideLower && state.panelConfig.sideLower) selectPanelSideLower.value = state.panelConfig.sideLower;
+  if (selectPanelTop && state.panelConfig.top) selectPanelTop.value = state.panelConfig.top;
+  if (selectPanelTopLeft && state.panelConfig.topLeft) selectPanelTopLeft.value = state.panelConfig.topLeft;
+  if (selectPanelTopRight && state.panelConfig.topRight) selectPanelTopRight.value = state.panelConfig.topRight;
+  if (selectPanelPartition && state.panelConfig.partition) selectPanelPartition.value = state.panelConfig.partition;
 
-  // 19. プリセットカードのアクティブ解除
+  // 21. プリセットカードのアクティブ解除
   if (creaturePresetGrid) {
     const allCards = creaturePresetGrid.querySelectorAll('.creature-card');
     allCards.forEach(c => c.classList.remove('active'));
   }
 
-  // 20. 各種状態・3Dビュー・最新積算を同期
+  // 22. 各種排他・利用可能性状態および3Dビュー・積算の同期
   updateFrontWideFrameAvailability();
+  updateOuterWideFrameAvailability();
   updateSideVentCoverAvailability();
+  updateRubberPackingAvailability();
   syncUpdate();
   viewer.setViewPreset('iso', state);
 
@@ -3886,6 +4099,12 @@ function finalizeEstimateCalculation(totals) {
     if (state.hasRoomDivider !== lastEstimatedState.hasRoomDivider) {
       diffs.push(state.hasRoomDivider ? '2室分け追加' : '2室分け解除');
     }
+    if (state.hasBottomWideFrame !== lastEstimatedState.hasBottomWideFrame) {
+      diffs.push(state.hasBottomWideFrame ? '下側幅広外周追加' : '下側幅広外周解除');
+    }
+    if (state.hasTopWideFrame !== lastEstimatedState.hasTopWideFrame) {
+      diffs.push(state.hasTopWideFrame ? '上側幅広外周追加' : '上側幅広外周解除');
+    }
     if (state.hasSideReinforcement && state.sideOpeningH !== lastEstimatedState.sideOpeningH) {
       diffs.push(`側上部開口:${lastEstimatedState.sideOpeningH}→${state.sideOpeningH}`);
     }
@@ -4111,6 +4330,12 @@ function getSelectedOptionsList() {
     } else if (state.frontWideFrame === '3x') {
       options.push('正面下側幅広フレーム3倍幅 (60mm)');
     }
+  }
+  if (state.hasBottomWideFrame) {
+    options.push('下側幅広フレーム（高さ40mm・外周）');
+  }
+  if (state.hasTopWideFrame) {
+    options.push('上側幅広フレーム（高さ40mm・外周）');
   }
 
   // 2. Type C前窓固定仕様
@@ -5078,6 +5303,8 @@ function checkInitialStateFromStorageOrUrl() {
       if (urlParams.has('topReinf')) incomingState.hasTopReinforcement = urlParams.get('topReinf') === '1' || urlParams.get('topReinf') === 'true';
       if (urlParams.has('frontWide')) incomingState.frontWideFrame = urlParams.get('frontWide');
       if (urlParams.has('floorHeater')) incomingState.hasFloorHeaterSupport = urlParams.get('floorHeater') === '1' || urlParams.get('floorHeater') === 'true';
+      if (urlParams.has('wideBottom')) incomingState.hasBottomWideFrame = urlParams.get('wideBottom') === '1' || urlParams.get('wideBottom') === 'true';
+      if (urlParams.has('wideTop')) incomingState.hasTopWideFrame = urlParams.get('wideTop') === '1' || urlParams.get('wideTop') === 'true';
 
       // アドレスバーから引数を消去（お客さんに見えないようにする）
       if (window.history && window.history.replaceState) {
@@ -5210,10 +5437,18 @@ function checkInitialStateFromStorageOrUrl() {
       state.frontWideFrame = incomingState.frontWideFrame;
       lastTypeAFrontWideFrame = incomingState.frontWideFrame;
     }
+    state.hasBottomWideFrame = !!incomingState.hasBottomWideFrame;
+    state.hasTopWideFrame = state.hasBottomWideFrame && !!incomingState.hasTopWideFrame;
+    if (toggleWideBottom) toggleWideBottom.checked = state.hasBottomWideFrame;
+    if (cardWideBottom) cardWideBottom.classList.toggle('active', state.hasBottomWideFrame);
+    if (toggleWideTop) toggleWideTop.checked = state.hasTopWideFrame;
+    if (cardWideTop) cardWideTop.classList.toggle('active', state.hasTopWideFrame);
 
     // 各種状態・3Dビュー・見積もりを同期
     updateFrontWideFrameAvailability();
+    updateOuterWideFrameAvailability();
     updateSideVentCoverAvailability();
+    updateRubberPackingAvailability();
     syncUpdate();
     viewer.setViewPreset('iso', state);
 
