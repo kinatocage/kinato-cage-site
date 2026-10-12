@@ -2152,11 +2152,11 @@ export class CageModel {
           this.addThumbScrew(W / 2 + ventCoverT, pos.y, pos.z, 1);
         }
 
-        this.recordPart('側面換気量調整板 (透明アクリル 1.5mm)', `${ventCoverH} x ${ventCoverD} mm`, 2, '左右側面上部 外張り (φ6mm穴加工4箇所/枚・保温換気調整)', 'panel', {
+        this.recordPart('側面換気量調整板 (透明アクリル 1.5mm)', `${ventCoverD} x ${ventCoverH} mm`, 2, '左右側面上部 外張り (φ6mm穴加工4箇所/枚・保温換気調整)', 'panel', {
           panelCode: 'acrylic_extrusion_1_5',
           partCode: 'acrylic_extrusion_1_5',
-          widthMm: ventCoverH,
-          heightMm: ventCoverD,
+          widthMm: ventCoverD,
+          heightMm: ventCoverH,
           unitType: 'm2'
         });
         const screwColorName = frameColor === 'black' ? 'ブラック' : 'ホワイト';
@@ -2241,11 +2241,11 @@ export class CageModel {
         }
 
         // BOM記録: 換気量調整板 4枚 (左右各2枚)
-        this.recordPart('側面換気量調整板 (透明アクリル 1.5mm)', `${ventCoverH} x ${ventCoverD} mm`, 4, '左右側面外張り (上下各2枚・φ6mm穴加工4箇所/枚・保温換気調整)', 'panel', {
+        this.recordPart('側面換気量調整板 (透明アクリル 1.5mm)', `${ventCoverD} x ${ventCoverH} mm`, 4, '左右側面外張り (上下各2枚・φ6mm穴加工4箇所/枚・保温換気調整)', 'panel', {
           panelCode: 'acrylic_extrusion_1_5',
           partCode: 'acrylic_extrusion_1_5',
-          widthMm: ventCoverH,
-          heightMm: ventCoverD,
+          widthMm: ventCoverD,
+          heightMm: ventCoverH,
           unitType: 'm2'
         });
 

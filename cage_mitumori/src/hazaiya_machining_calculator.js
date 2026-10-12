@@ -284,13 +284,21 @@ export function calculateHazaiyaPanelOrderList(parts, state) {
     // 4. 側面換気量調整板 - 加工あり
     // ---------------------------------------------------------------
     if (name.includes('側面換気量調整板') || name.includes('換気量調整板')) {
+      let ventW = wMm;
+      let ventH = hMm;
+      // 横（奥行き方向・長手）が縦（高さ方向・短手）より小さくなっている場合は確実にスワップして正規化
+      if (ventW < ventH) {
+        const tmp = ventW;
+        ventW = ventH;
+        ventH = tmp;
+      }
       resultList.push({
         key: 'side_vent_cover',
         title: name,
         materialName: matInfo.materialName,
         hazaiyaUrl: matInfo.hazaiyaUrl,
-        widthMm: wMm,
-        heightMm: hMm,
+        widthMm: ventW,
+        heightMm: ventH,
         thicknessMm: 1.5,
         quantity: part.count || 2,
         needsMachining: true,
