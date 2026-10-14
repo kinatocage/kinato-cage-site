@@ -3666,8 +3666,9 @@ function applyCreaturePreset(preset) {
 /**
  * 保存されたケージ仕様オブジェクト（spec）を全UIおよび3Dシミュレーターへ完全同期・復元
  * @param {Object} targetSpec
+ * @param {Object} [options={}]
  */
-function applyFullCageSpec(targetSpec) {
+function applyFullCageSpec(targetSpec, options = {}) {
   if (!targetSpec || typeof targetSpec !== 'object') return false;
 
   // 重要：直前の選択状態が残留しないよう、まず全オプションおよびUIをまっさらにリセット
@@ -3912,8 +3913,24 @@ function applyFullCageSpec(targetSpec) {
   syncUpdate();
   viewer.setViewPreset('iso', state);
 
-  // 重要：ユーザー様の設計方針に従い、再現後の価格・重量は「その時点の最新価格」で再計算して表示
-  if (typeof runStructuralAndCostSimulation === 'function') {
+  // 再現後の価格・重量の表示
+  // options.isRestore の場合（URLやIDからの仕様再現時）は、5〜10秒の待機や新規ID採番・モーダル表示を伴う runStructuralAndCostSimulation ではなく、
+  // 即座に最新価格・重量を集計して画面HUDに即時反映する
+  if (options && options.isRestore) {
+    const totals = calculateGrandTotals();
+    if (hudCostTotal) {
+      hudCostTotal.textContent = `¥${totals.priceWithMarkup.toLocaleString()}`;
+      hudCostTotal.classList.add('value-appear');
+    }
+    if (hudWeightTotal) {
+      hudWeightTotal.textContent = `${totals.weight.toFixed(1)} kg`;
+      hudWeightTotal.classList.add('value-appear');
+    }
+    if (costHudResult) {
+      costHudResult.classList.remove('hidden');
+    }
+    isEstimateCalculated = true;
+  } else if (typeof runStructuralAndCostSimulation === 'function') {
     runStructuralAndCostSimulation();
   }
 
@@ -3923,8 +3940,9 @@ function applyFullCageSpec(targetSpec) {
 /**
  * 見積りIDから仕様を検索・復元実行
  * @param {string} targetEstimateId
+ * @param {Object} [options={}] { isUrlAccess?: boolean }
  */
-async function restoreEstimateById(targetEstimateId) {
+async function restoreEstimateById(targetEstimateId, options = {}) {
   if (!targetEstimateId || typeof targetEstimateId !== 'string') {
     setRestoreStatusMessage('error', '見積りIDを入力してください。');
     return;
@@ -4014,11 +4032,37 @@ async function restoreEstimateById(targetEstimateId) {
       } else {
         setRestoreStatusMessage('error', `❌ 見積ID「${cleanId}」が見つかりませんでした。入力内容をお確かめください。`);
       }
+
+      // 仕様が未検出の場合でも、URLからの閲覧であればお客様の端末ID（visitorId）取得のためログを送信
+      if (options && options.isUrlAccess) {
+        const visitorId = getOrCreateVisitorId();
+        const sessionId = getOrCreateSessionId();
+        const failLogData = {
+          estimateId: cleanId,
+          timestamp: new Date().toISOString(),
+          visitorId,
+          sessionId,
+          seq: 1,
+          spec: { ...state },
+          totals: calculateGrandTotals(),
+          diffNote: '見積りID_URLからの閲覧(仕様未検出)',
+          elapsedSec: 0
+        };
+        maybeSendEstimateLog(failLogData);
+      }
       return;
     }
 
-    // 仕様の完全適用
-    applyFullCageSpec(foundSpec);
+    // 仕様の完全適用（復元フラグを渡し、不要な待機や勝手なモーダルオープン・ID上書きを抑止して即時HUD反映）
+    applyFullCageSpec(foundSpec, { isRestore: true });
+
+    // 見積もりIDの保持 & 差分計算用の直前状態を同期
+    currentEstimateId = cleanId;
+    lastEstimatedState = JSON.parse(JSON.stringify(state));
+    isEstimateCalculated = true;
+
+    // 現在の最新集計を取得
+    const totals = calculateGrandTotals();
 
     // 開発検証ログ（過去記録時の価格・重量と、現在計算後の価格・重量の比較）
     if (foundMeta) {
@@ -4029,6 +4073,26 @@ async function restoreEstimateById(targetEstimateId) {
 
     setRestoreStatusMessage('success', `✅ 見積ID「${cleanId}」のケージ仕様・全オプションを完全再現しました！`);
     showNoticeToast(`✅ 見積ID: ${cleanId} の仕様を完全に読み込みました！`, 4500);
+
+    // ★ お客様に送ったURLからの見積りシミュレーター再現（閲覧）時、スプレッドシートへ1行ログを記録
+    // （直前からの変更点列に「見積りID_URLからの閲覧」として残し、お客様の端末ID/visitorIdを取得）
+    if (options && options.isUrlAccess) {
+      const visitorId = getOrCreateVisitorId();
+      const sessionId = getOrCreateSessionId();
+      const restoreLogData = {
+        estimateId: cleanId,
+        timestamp: new Date().toISOString(),
+        visitorId,
+        sessionId,
+        seq: 1,
+        spec: { ...state },
+        totals: totals,
+        diffNote: '見積りID_URLからの閲覧',
+        elapsedSec: 0
+      };
+      maybeSendEstimateLog(restoreLogData);
+      console.log(`[Log] お客様URL再現アクセスログをスプレッドシートへ送信: ID=${cleanId}, VisitorId=${visitorId}`);
+    }
 
   } catch (err) {
     console.error('[Restore] 復元処理エラー:', err);
@@ -5152,10 +5216,13 @@ function isLocalDevelopmentEnvironment() {
 // 4. Googleスプレッドシート ログ収集（開発計画2用）
 // =================================================================
 async function maybeSendEstimateLog(estimateData) {
-  // ローカル開発環境の判定
-  if (isLocalDevelopmentEnvironment()) {
+  // ローカル開発環境の判定（URLに test_log=true がある場合はテスト送信を許可）
+  const isTestLog = typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('test_log') === 'true';
+
+  if (isLocalDevelopmentEnvironment() && !isTestLog) {
     if (SKIP_LOG_ON_LOCALHOST) {
-      console.log('[Log] ローカル開発環境のため、Googleスプレッドシートへの見積もりログ保存を自動スキップしました。');
+      console.log('[Log] ローカル開発環境のため、Googleスプレッドシートへの見積もりログ保存を自動スキップしました。（?test_log=true でテスト送信可能）');
       return;
     }
   }
@@ -5357,7 +5424,7 @@ function checkInitialStateFromStorageOrUrl() {
       if (targetId) {
         const cleanTargetId = targetId.toUpperCase();
         if (inputRestoreEstimateId) inputRestoreEstimateId.value = cleanTargetId;
-        restoreEstimateById(cleanTargetId);
+        restoreEstimateById(cleanTargetId, { isUrlAccess: true });
         // お客様がリロードや共有（URLコピー）をしても再現できるよう、正規化した ?estimateId=EST-XXXX をURLに保持
         if (window.history && window.history.replaceState) {
           const canonicalUrl = `${window.location.pathname}?estimateId=${encodeURIComponent(cleanTargetId)}`;
