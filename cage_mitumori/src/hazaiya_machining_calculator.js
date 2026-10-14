@@ -1,14 +1,23 @@
 /**
  * hazaiya_machining_calculator.js
- * はざいや様向け パネル一括発注リスト（全パネル網羅・加工指示統合版）自動算出モジュール
+ * はざいや様向け パネル一括発注リスト（全パネル網羅・加工指示統合版）＆ ミスミ金網自動連携モジュール
  * 
  * 基準定義:
  * - A辺=左辺, B辺=上辺, C辺=右辺, D辺=下辺
  * - 角A=左上, 角B=右上, 角C=左下, 角D=右下
  * 
  * 二重発注防止のため、加工が必要なパネル（正面扉、換気板、支え板等）と
- * 加工が不要なパネル（底板、側板、背板、天板等）を1つの統合発注リストとして出力します。
+ * 加工が不要なパネル（底板、側板、背板、天板等）をはざいや様向けリストとしてまとめ、
+ * 仕入れ先が異なる金網（ミスミ様）は別セクションとして発注URL・数量・発注金額を出力します。
  */
+
+import { materialsConfig } from '../cost_materials_config.js';
+import { getFenpCost } from '../fenp_price_config.js';
+import { getPvcPunchingCost } from '../pvc_punching_price_config.js';
+import { getAcrylicExtrusionCost } from '../acrylic_extrusion_price_config.js';
+import { getAcrylicBlackMatteCost } from '../acrylic_black_matte_price_config.js';
+import { getAcrylicSmokeGrayCost } from '../acrylic_smoke_gray_price_config.js';
+import { getAcrylicCastCost, getAcrylicCastRawBoardCost } from '../acrylic_cast_price_config.js';
 
 /**
  * パネル素材コードから、はざいや様の発注URLおよび正式素材名称を取得
@@ -16,6 +25,20 @@
 export function getHazaiyaMaterialInfo(panelCode, partName = '') {
   const code = panelCode || '';
   const name = partName || '';
+
+  // 金網（ミスミ仕入れ・別手配）
+  if (code.startsWith('wire_mesh_') || name.includes('金網')) {
+    const pMatch = code.match(/wire_mesh_(\d+)/) || name.match(/金網\s*(\d+)mm/);
+    const pitch = pMatch ? parseInt(pMatch[1], 10) : 25;
+    return {
+      materialName: `金網 ${pitch}mmピッチ (黒粉体塗装 / 線径φ3.2, SS400)`,
+      hazaiyaUrl: '',
+      thicknessMm: 3.2,
+      isHazaiyaOrder: false,
+      isWireMesh: true,
+      pitch: pitch
+    };
+  }
 
   if (code === 'acrylic_cast_3_0' || name.includes('キャスト')) {
     return {
@@ -85,7 +108,7 @@ export function getHazaiyaMaterialInfo(panelCode, partName = '') {
   if (code === 'polyca_4_0' || name.includes('中空ポリカ')) {
     return {
       materialName: 'ツインカーボ（中空ポリカーボネート） 4.0mm',
-      hazaiyaUrl: 'https://www.hazaiya.co.jp/estimate/board/3303', // 代替
+      hazaiyaUrl: 'https://www.hazaiya.co.jp/estimate/board/3303',
       thicknessMm: 4.0,
       isHazaiyaOrder: true
     };
@@ -100,18 +123,121 @@ export function getHazaiyaMaterialInfo(panelCode, partName = '') {
 }
 
 /**
+ * 金網（ミスミ仕入れ）の型番・発注URL・寸法・数量・金額情報を抽出
+ */
+export function getWireMeshMisumiInfo(part) {
+  const code = part.panelCode || part.partCode || '';
+  const name = part.name || '';
+  let pitch = 25;
+  const pMatch = code.match(/wire_mesh_(\d+)/) || name.match(/金網\s*(\d+)mm/);
+  if (pMatch) {
+    pitch = parseInt(pMatch[1], 10);
+  }
+
+  let wMm = part.widthMm;
+  let hMm = part.heightMm;
+  if ((!wMm || !hMm) && part.size) {
+    const match = part.size.match(/([\d.]+)\s*[x×]\s*([\d.]+)/);
+    if (match) {
+      wMm = parseFloat(match[1]);
+      hMm = parseFloat(match[2]);
+    }
+  }
+  wMm = Math.round(wMm || 0);
+  hMm = Math.round(hMm || 0);
+
+  let modelNumber = '';
+  const modelMatch = name.match(/FENP\d+-A\d+-B\d+/);
+  if (modelMatch) {
+    modelNumber = modelMatch[0];
+  } else {
+    modelNumber = `FENP${pitch}-A${wMm}-B${hMm}`;
+  }
+
+  const misumiUrl = `https://jp.misumi-ec.com/vona2/result/?Keyword=${modelNumber}`;
+  const cost = getFenpCost(pitch, wMm, hMm) || 0;
+  const count = part.count || 1;
+  const totalCost = cost * count;
+
+  return {
+    pitch,
+    widthMm: wMm,
+    heightMm: hMm,
+    modelNumber,
+    misumiUrl,
+    quantity: count,
+    cost,
+    totalCost
+  };
+}
+
+/**
+ * パネル部材の原価を計算（はざいや加工費込）
+ */
+function calculatePanelCost(part, wMm, hMm) {
+  const code = part.panelCode || part.partCode || '';
+  const config = materialsConfig?.panels?.[code] || {};
+  const areaM2 = (wMm / 1000) * (hMm / 1000);
+  let singleCost = 0;
+
+  if (code.startsWith('wire_mesh_') || (part.name && part.name.includes('金網'))) {
+    const pMatch = code.match(/wire_mesh_(\d+)/) || (part.name && part.name.match(/金網\s*(\d+)mm/));
+    const pitch = pMatch ? parseInt(pMatch[1], 10) : 25;
+    const fenpCost = getFenpCost(pitch, wMm, hMm);
+    singleCost = fenpCost != null ? fenpCost : Math.round((config.pricePerM2 || 25627) * areaM2);
+  } else if (code === 'acrylic_extrusion_2_0') {
+    singleCost = getAcrylicExtrusionCost(2.0, wMm, hMm) || Math.round((config.pricePerM2 || 4000) * areaM2);
+  } else if (code === 'acrylic_extrusion_3_0') {
+    singleCost = getAcrylicExtrusionCost(3.0, wMm, hMm) || Math.round((config.pricePerM2 || 5000) * areaM2);
+  } else if (code === 'acrylic_extrusion_1_5') {
+    singleCost = getAcrylicExtrusionCost(1.5, wMm, hMm) || Math.round((config.pricePerM2 || 3500) * areaM2);
+  } else if (code === 'acrylic_black_matte_3_0') {
+    singleCost = getAcrylicBlackMatteCost(wMm, hMm) || Math.round((config.pricePerM2 || 6000) * areaM2);
+  } else if (code === 'acrylic_smoke_gray_3_0') {
+    singleCost = getAcrylicSmokeGrayCost(wMm, hMm) || Math.round((config.pricePerM2 || 6500) * areaM2);
+  } else if (code === 'acrylic_cast_3_0') {
+    const isDoor = part.name && part.name.includes('扉');
+    singleCost = isDoor ? (getAcrylicCastCost(wMm, hMm) || 3800) : (getAcrylicCastRawBoardCost(wMm, hMm) || 2800);
+  } else if (code === 'pvc_punching_3_0') {
+    singleCost = getPvcPunchingCost(wMm, hMm) || Math.round((config.pricePerM2 || 12000) * areaM2);
+  } else {
+    singleCost = Math.round((config.pricePerM2 || 5000) * areaM2);
+  }
+
+  // 加工費加算
+  if (part.name && part.name.includes('換気量調整板')) {
+    const holeUnit = materialsConfig?.options?.items?.sideVentCover?.holeCostPerPiece ?? 94;
+    const holesPerPanel = materialsConfig?.options?.items?.sideVentCover?.holesPerPanel ?? 4;
+    singleCost += (holesPerPanel * holeUnit);
+  }
+  if (part.name && part.name.includes('床下パネルヒータ支え板')) {
+    const fhConfig = materialsConfig?.options?.items?.floorHeaterSupport || {};
+    const holeUnit = fhConfig.holeCostPerPiece ?? 112;
+    const diagUnit = fhConfig.diagonalCutCost ?? 239;
+    const cornerUnit = fhConfig.cornerCutCost ?? 587;
+    const is2Panel = part.count === 2 || (part.note && part.note.includes('2枚'));
+    if (is2Panel) {
+      singleCost += (7 * holeUnit) + (2 * diagUnit) + (1 * cornerUnit);
+    } else {
+      singleCost += (10 * holeUnit) + (4 * diagUnit);
+    }
+  }
+
+  const count = part.count || 1;
+  const totalCost = singleCost * count;
+  return { singleCost, totalCost };
+}
+
+/**
  * ケージ部材リストおよび設定状態から、はざいや発注用の全パネル統合リストを算出
- * （加工が必要なパネルには加工寸法・座標、加工不要なパネルには直線カットのみを付与）
+ * （金網はミスミ仕入れのため分離し、wireMeshListとして保持）
  * @param {Array} parts BOM部材リスト
  * @param {Object} state ケージ設定パラメータ
- * @returns {Array<Object>} 全パネル発注オブジェクトの配列
+ * @returns {Array<Object>} 全パネル発注オブジェクトの配列（拡張プロパティ付）
  */
-export function calculateHazaiyaPanelOrderList(parts, state) {
+export function calculateHazaiyaPanelOrderList(parts, state = {}) {
   if (!parts || !Array.isArray(parts)) return [];
 
-  const W = Number(state.W || 540);
-  const D = Number(state.D || 400);
-  const H = Number(state.H || 400);
   const cageType = state.cageType || 'A';
   const hasDoorAntiFlex = !!state.hasDoorAntiFlex;
   const frontWideFrame = state.frontWideFrame || '2x';
@@ -120,6 +246,10 @@ export function calculateHazaiyaPanelOrderList(parts, state) {
   // パネルカテゴリの部材のみを抽出
   const panelParts = parts.filter(p => p.category === 'panel');
   const resultList = [];
+  const wireMeshList = [];
+
+  let hazaiyaCostSum = 0;
+  let misumiCostSum = 0;
 
   for (const part of panelParts) {
     const name = part.name || '';
@@ -138,12 +268,45 @@ export function calculateHazaiyaPanelOrderList(parts, state) {
     wMm = Math.round((wMm || 0) * 10) / 10;
     hMm = Math.round((hMm || 0) * 10) / 10;
 
+    // 金額の算出
+    const { singleCost, totalCost } = calculatePanelCost(part, wMm, hMm);
+
+    // ---------------------------------------------------------------
+    // 0. 金網（ミスミ仕入れ・別手配）
+    // ---------------------------------------------------------------
+    if (matInfo.isWireMesh || (part.panelCode && part.panelCode.startsWith('wire_mesh_')) || name.includes('金網')) {
+      const meshInfo = getWireMeshMisumiInfo(part);
+      misumiCostSum += (meshInfo.totalCost || totalCost);
+      wireMeshList.push({
+        key: `wire_mesh_${wireMeshList.length}`,
+        title: `金網 ${meshInfo.pitch}mmピッチ（黒粉体塗装）`,
+        materialName: matInfo.materialName,
+        modelNumber: meshInfo.modelNumber,
+        misumiUrl: meshInfo.misumiUrl,
+        widthMm: meshInfo.widthMm,
+        heightMm: meshInfo.heightMm,
+        pitch: meshInfo.pitch,
+        quantity: meshInfo.quantity,
+        cost: meshInfo.cost,
+        totalCost: meshInfo.totalCost,
+        isWireMesh: true,
+        notes: 'ミスミ様手配品 (線径φ3.2, SS400ポリエチレン樹脂粉体黒塗装)'
+      });
+      continue;
+    }
+
+    // はざいや対象品の原価加算（プラダン市販品を除く）
+    if (matInfo.isHazaiyaOrder) {
+      hazaiyaCostSum += totalCost;
+    }
+
     // ---------------------------------------------------------------
     // 1. 正面扉（スライド扉） - 加工あり
     // ---------------------------------------------------------------
-    if ((cageType === 'A' || cageType === 'C') && (name.includes('スライド扉') || (name.includes('扉') && !name.includes('前開き')))) {
+    if ((cageType === 'A' || cageType === 'C' || cageType === 'A_FRAMED' || cageType === 'C_FRAMED') &&
+        (name.includes('スライド扉') || (name.includes('扉') && !name.includes('前開き')))) {
       const halfH = Math.round((hMm / 2) * 10) / 10;
-      const isCast = state.frontDoorMaterial === 'cast';
+      const isCast = state.frontDoorMaterial === 'cast' || name.includes('キャスト');
 
       resultList.push({
         key: 'front_slide_doors',
@@ -157,6 +320,8 @@ export function calculateHazaiyaPanelOrderList(parts, state) {
         heightMm: hMm,
         thicknessMm: 3.0,
         quantity: part.count || 2,
+        cost: singleCost,
+        totalCost: totalCost,
         needsMachining: true,
         edgeFinishing: 'ABCD全4辺「磨き仕上げ」',
         holes: [
@@ -201,117 +366,119 @@ export function calculateHazaiyaPanelOrderList(parts, state) {
         hazaiyaUrl: matInfo.hazaiyaUrl,
         widthMm: wMm,
         heightMm: hMm,
-        thicknessMm: 3.0,
-        quantity: 1,
+        thicknessMm: matInfo.thicknessMm,
+        quantity: part.count || 1,
+        cost: singleCost,
+        totalCost: totalCost,
         needsMachining: true,
         edgeFinishing: 'ABCD全4辺「磨き仕上げ」',
-        corners: [
-          { desc: '4隅角丸', spec: '角A, 角B, 角C, 角D すべて R10 (10.0mm角丸)' }
-        ],
-        notches: [
-          {
-            desc: isRightHinge ? 'A辺(左・打掛受側) 切欠き2箇所' : 'C辺(右・打掛受側) 切欠き2箇所',
-            spec: `下側(D辺より${lowerFeatureY}mm中心) & 上側(D辺より${upperFeatureY}mm中心): 各 幅19.0mm x 高さ52.0mm`
-          }
-        ],
         holes: [
+          // ヒンジ側 (2箇所)
           {
-            desc: 'TH-31蝶番固定用穴 (4箇所)',
-            base: `${isRightHinge ? 'C辺(右)' : 'A辺(左)'}端より11.25mm / 各ヒンジ中心より dy=-8.5mm, +17.0mm`,
-            diameterMm: 3.5,
-            taperMm: 0
+            desc: 'ヒンジ上側固定穴 (M4皿ビス用)',
+            corner: isRightHinge ? 'B' : 'A',
+            x: 10.0,
+            y: upperFeatureY,
+            base: `${isRightHinge ? 'C辺(右)' : 'A辺(左)'}より10.0mm / D辺(下)より${upperFeatureY}mm`,
+            diameterMm: 4.5,
+            taperMm: 1.5
           },
           {
-            desc: 'C-1249-4打掛固定用穴 (4箇所)',
-            base: `${isRightHinge ? 'A辺(左)' : 'C辺(右)'}端より9.7mm / 各打掛中心より dy=-15.0mm, +15.0mm`,
-            diameterMm: 3.5,
-            taperMm: 0
+            desc: 'ヒンジ下側固定穴 (M4皿ビス用)',
+            corner: isRightHinge ? 'D' : 'C',
+            x: 10.0,
+            y: lowerFeatureY,
+            base: `${isRightHinge ? 'C辺(右)' : 'A辺(左)'}より10.0mm / D辺(下)より${lowerFeatureY}mm`,
+            diameterMm: 4.5,
+            taperMm: 1.5
+          },
+          // ロック受座側 (2箇所)
+          {
+            desc: '打掛受座上側穴 (M4皿ビス用)',
+            corner: isRightHinge ? 'A' : 'B',
+            x: 10.0,
+            y: upperFeatureY,
+            base: `${isRightHinge ? 'A辺(左)' : 'C辺(右)'}より10.0mm / D辺(下)より${upperFeatureY}mm`,
+            diameterMm: 4.5,
+            taperMm: 1.5
+          },
+          {
+            desc: '打掛受座下側穴 (M4皿ビス用)',
+            corner: isRightHinge ? 'C' : 'D',
+            x: 10.0,
+            y: lowerFeatureY,
+            base: `${isRightHinge ? 'A辺(左)' : 'C辺(右)'}より10.0mm / D辺(下)より${lowerFeatureY}mm`,
+            diameterMm: 4.5,
+            taperMm: 1.5
           }
         ],
-        notes: '【★加工あり】4隅R10角丸 / 切欠き2箇所 / 蝶番・打掛固定穴計8箇所'
+        corners: [],
+        notches: [],
+        notes: `【★加工あり】前開き扉用 φ4.5皿穴4箇所加工 (${isRightHinge ? '右側' : '左側'}ヒンジ)`
       });
       continue;
     }
 
     // ---------------------------------------------------------------
-    // 3. 前開き扉スペーサー座板（ヒンジ座板・ロック受座板） - 加工あり
+    // 3. 側面換気量調整板 - 加工あり
     // ---------------------------------------------------------------
-    if (name.includes('ヒンジ座板')) {
-      resultList.push({
-        key: 'hinge_spacer',
-        title: name,
-        materialName: matInfo.materialName,
-        hazaiyaUrl: matInfo.hazaiyaUrl,
-        widthMm: wMm || 16.0,
-        heightMm: hMm || 52.0,
-        thicknessMm: 3.0,
-        quantity: part.count || 2,
-        needsMachining: true,
-        edgeFinishing: '仕上げなし（ノコカット）',
-        holes: [
-          { desc: '蝶番フレーム固定穴', base: '幅中心(8mm) / 上下中心より dy=-17.0mm, +8.5mm', diameterMm: 3.5, taperMm: 0 }
-        ],
-        corners: [],
-        notches: [],
-        notes: '【★加工あり】前開き扉蝶番フレーム取付スペーサー（フレーム溝固定用・2枚）'
-      });
-      continue;
-    }
+    if (name.includes('換気量調整板')) {
+      const holeOffsetA = 12.0;
+      const holeOffsetC = Math.round((wMm - 12.0) * 10) / 10;
+      const holeOffsetTop = 15.0;
+      const holeOffsetBottom = Math.round((hMm - 15.0) * 10) / 10;
 
-    if (name.includes('ロック受座板')) {
       resultList.push({
-        key: 'lock_spacer',
+        key: `side_vent_cover_${resultList.length}`,
         title: name,
         materialName: matInfo.materialName,
         hazaiyaUrl: matInfo.hazaiyaUrl,
-        widthMm: wMm || 16.0,
-        heightMm: hMm || 48.0,
-        thicknessMm: 3.0,
+        widthMm: wMm,
+        heightMm: hMm,
+        thicknessMm: matInfo.thicknessMm,
         quantity: part.count || 2,
+        cost: singleCost,
+        totalCost: totalCost,
         needsMachining: true,
         edgeFinishing: '仕上げなし（ノコカット）',
         holes: [
-          { desc: '打掛受具フレーム固定穴', base: '幅中心(8mm) / 上下中心より dy=-15.0mm, +15.0mm', diameterMm: 3.5, taperMm: 0 }
+          { desc: '固定穴 左上', corner: 'A', x: holeOffsetA, y: holeOffsetTop, diameterMm: 6.0, taperMm: 0, base: `A辺(左)より${holeOffsetA}mm / B辺(上)より${holeOffsetTop}mm` },
+          { desc: '固定穴 右上', corner: 'B', x: 12.0, y: holeOffsetTop, diameterMm: 6.0, taperMm: 0, base: `C辺(右)より12.0mm / B辺(上)より${holeOffsetTop}mm` },
+          { desc: '固定穴 左下', corner: 'C', x: holeOffsetA, y: 15.0, diameterMm: 6.0, taperMm: 0, base: `A辺(左)より${holeOffsetA}mm / D辺(下)より15.0mm` },
+          { desc: '固定穴 右下', corner: 'D', x: 12.0, y: 15.0, diameterMm: 6.0, taperMm: 0, base: `C辺(右)より12.0mm / D辺(下)より15.0mm` },
         ],
         corners: [],
         notches: [],
-        notes: '【★加工あり】前開き扉打掛受具フレーム取付スペーサー（フレーム溝固定用・2枚）'
+        notes: '【★加工あり】化粧つまみネジ固定用 φ6.0mm丸穴4箇所加工'
       });
       continue;
     }
 
     // ---------------------------------------------------------------
-    // 4. 側面換気量調整板 - 加工あり
+    // 4. 前開き扉ヒンジ座板・ロック受座板 - 加工あり
     // ---------------------------------------------------------------
-    if (name.includes('側面換気量調整板') || name.includes('換気量調整板')) {
-      let ventW = wMm;
-      let ventH = hMm;
-      // 横（奥行き方向・長手）が縦（高さ方向・短手）より小さくなっている場合は確実にスワップして正規化
-      if (ventW < ventH) {
-        const tmp = ventW;
-        ventW = ventH;
-        ventH = tmp;
-      }
+    if (name.includes('ヒンジ座板') || name.includes('ロック受座板')) {
+      const isHinge = name.includes('ヒンジ');
       resultList.push({
-        key: 'side_vent_cover',
+        key: isHinge ? 'hinge_spacer' : 'lock_spacer',
         title: name,
         materialName: matInfo.materialName,
         hazaiyaUrl: matInfo.hazaiyaUrl,
-        widthMm: ventW,
-        heightMm: ventH,
-        thicknessMm: 1.5,
-        quantity: part.count || 2,
+        widthMm: wMm,
+        heightMm: hMm,
+        thicknessMm: matInfo.thicknessMm,
+        quantity: part.count || 1,
+        cost: singleCost,
+        totalCost: totalCost,
         needsMachining: true,
-        edgeFinishing: '仕上げなし（ノコカット）',
+        edgeFinishing: '全周カンナ・仕上げ',
         holes: [
-          { desc: '角A側', base: 'A辺(左)より9.0mm / B辺(上)より40.0mm', diameterMm: 6.0, taperMm: 0 },
-          { desc: '角B側', base: 'C辺(右)より9.0mm / B辺(上)より40.0mm', diameterMm: 6.0, taperMm: 0 },
-          { desc: '角C側', base: 'A辺(左)より9.0mm / D辺(下)より40.0mm', diameterMm: 6.0, taperMm: 0 },
-          { desc: '角D側', base: 'C辺(右)より9.0mm / D辺(下)より40.0mm', diameterMm: 6.0, taperMm: 0 },
+          { desc: 'フレーム固定穴 上', corner: 'A', x: 10.0, y: 15.0, diameterMm: 4.5, taperMm: 0, base: '上端より15mm / 中心線' },
+          { desc: 'フレーム固定穴 下', corner: 'C', x: 10.0, y: 15.0, diameterMm: 4.5, taperMm: 0, base: '下端より15mm / 中心線' }
         ],
         corners: [],
         notches: [],
-        notes: `【★加工あり】1枚あたりφ6.0mm丸穴4箇所 (計${(part.count || 2) * 4}穴) / No.1化粧つまみネジ固定用`
+        notes: '【★加工あり】前開き扉用アクリルスペーサー座板（φ4.5mm穴2箇所）'
       });
       continue;
     }
@@ -320,73 +487,68 @@ export function calculateHazaiyaPanelOrderList(parts, state) {
     // 5. 床下パネルヒータ支え板 - 加工あり
     // ---------------------------------------------------------------
     if (name.includes('床下パネルヒータ支え板') && !name.includes('プラダン')) {
-      const is2Panel = part.count === 2 || (part.note && part.note.includes('2枚'));
+      const is2Panel = (part.count === 2 || (part.note && part.note.includes('2枚')));
 
       if (is2Panel) {
-        const notchLength = Math.max(10, hMm - 180);
         resultList.push({
-          key: 'floor_heater_support_2',
-          title: `${name}（2枚構成・床補強あり）`,
+          key: 'floor_heater_support_2p',
+          title: `${name}（2枚構成・左右対称配置）`,
           materialName: matInfo.materialName,
           hazaiyaUrl: matInfo.hazaiyaUrl,
           widthMm: wMm,
           heightMm: hMm,
-          thicknessMm: 2.0,
+          thicknessMm: matInfo.thicknessMm,
           quantity: 2,
+          cost: singleCost,
+          totalCost: totalCost,
           needsMachining: true,
           edgeFinishing: '仕上げなし（ノコカット）',
           corners: [
-            { desc: '外側角A(左上)斜めカット', corner: 'A', type: 'bevel', sizeX: 80.0, sizeY: 80.0, spec: '80.0 x 80.0 mm 斜めカット' },
-            { desc: '外側角C(左下)斜めカット', corner: 'C', type: 'bevel', sizeX: 80.0, sizeY: 80.0, spec: '80.0 x 80.0 mm 斜めカット' },
+            { desc: '外側奥角A', corner: 'A', spec: '80 x 80 mm 斜めカット', sizeX: 80, sizeY: 80 },
+            { desc: '外側手前角C', corner: 'C', spec: '80 x 80 mm 斜めカット', sizeX: 80, sizeY: 80 }
           ],
           notches: [
-            { desc: '角D(右下)配線逃がし切欠き', corner: 'D', type: 'corner_notch', sizeX: 20.0, sizeY: notchLength, spec: `幅20.0mm x 長さ${notchLength.toFixed(1)}mm 角落とし` }
+            { desc: '中央支柱逃げ切欠き', base: '中央側辺の中央部', spec: '幅40mm x 深さ20mm', sizeX: 40, sizeY: 20 }
           ],
           holes: [
             { desc: '角A斜め脇 奥', corner: 'A', x: 90.0, y: 9.0, diameterMm: 6.0, taperMm: 0, base: 'B辺(上)より9.0mm / A辺(左)より90.0mm' },
-            { desc: '角A斜め脇 左', corner: 'A', x: 9.0, y: 90.0, diameterMm: 6.0, taperMm: 0, base: 'A辺(左)より9.0mm / B辺(上)より90.0mm' },
+            { desc: '角A斜め脇 外側', corner: 'A', x: 9.0, y: 90.0, diameterMm: 6.0, taperMm: 0, base: 'A辺(左)より9.0mm / B辺(上)より90.0mm' },
             { desc: '角C斜め脇 手前', corner: 'C', x: 90.0, y: 9.0, diameterMm: 6.0, taperMm: 0, base: 'D辺(下)より9.0mm / A辺(左)より90.0mm' },
-            { desc: '角C斜め脇 左', corner: 'C', x: 9.0, y: 90.0, diameterMm: 6.0, taperMm: 0, base: 'A辺(左)より9.0mm / D辺(下)より90.0mm' },
-            { desc: '中央フレーム溝部', corner: 'B', x: 9.0, y: 90.0, diameterMm: 6.0, taperMm: 0, base: 'C辺(右)より9.0mm / B辺(上)より90.0mm' },
-            { desc: '奥フレーム固定', corner: 'B', x: 80.0, y: 9.0, diameterMm: 6.0, taperMm: 0, base: 'B辺(上)より9.0mm / C辺(右)より80.0mm' },
-            { desc: '手前フレーム固定', corner: 'D', x: 80.0, y: 9.0, diameterMm: 6.0, taperMm: 0, base: 'D辺(下)より9.0mm / C辺(右)より80.0mm' },
+            { desc: '角C斜め脇 外側', corner: 'C', x: 9.0, y: 90.0, diameterMm: 6.0, taperMm: 0, base: 'A辺(左)より9.0mm / D辺(下)より90.0mm' },
+            { desc: '中央辺 奥側固定', corner: 'B', x: 9.0, y: 40.0, diameterMm: 6.0, taperMm: 0, base: 'C辺(右)より9.0mm / B辺(上)より40.0mm' },
+            { desc: '中央辺 手前側固定', corner: 'D', x: 9.0, y: 40.0, diameterMm: 6.0, taperMm: 0, base: 'C辺(右)より9.0mm / D辺(下)より40.0mm' },
+            { desc: '外側辺 中央固定', corner: 'A', x: 9.0, y: Math.round(hMm / 2), diameterMm: 6.0, taperMm: 0, base: `A辺(左)より9.0mm / 中央(高さ${Math.round(hMm / 2)}mm)` },
           ],
-          notes: '【★加工あり】2枚互い違い(180度反転)配置。1枚あたりφ6.0mm丸穴7箇所・斜めカット2箇所・切欠き1箇所'
+          notes: '【★加工あり】2隅80x80mm斜めカット / 中央切欠き40x20mm / φ6.0mm丸穴7箇所'
         });
       } else {
-        const halfW = Math.round(wMm / 2 * 10) / 10;
         resultList.push({
-          key: 'floor_heater_support_1',
-          title: `${name}（1枚構成・通常床面）`,
+          key: 'floor_heater_support_1p',
+          title: `${name}（1枚全面構成）`,
           materialName: matInfo.materialName,
           hazaiyaUrl: matInfo.hazaiyaUrl,
           widthMm: wMm,
           heightMm: hMm,
-          thicknessMm: 2.0,
+          thicknessMm: matInfo.thicknessMm,
           quantity: 1,
+          cost: singleCost,
+          totalCost: totalCost,
           needsMachining: true,
           edgeFinishing: '仕上げなし（ノコカット）',
           corners: [
-            { desc: '角A(左上)斜めカット', corner: 'A', type: 'bevel', sizeX: 80.0, sizeY: 80.0, spec: '80.0 x 80.0 mm 斜めカット' },
-            { desc: '角B(右上)斜めカット', corner: 'B', type: 'bevel', sizeX: 80.0, sizeY: 80.0, spec: '80.0 x 80.0 mm 斜めカット' },
-            { desc: '角C(左下)斜めカット', corner: 'C', type: 'bevel', sizeX: 80.0, sizeY: 80.0, spec: '80.0 x 80.0 mm 斜めカット' },
-            { desc: '角D(右下)斜めカット', corner: 'D', type: 'bevel', sizeX: 80.0, sizeY: 80.0, spec: '80.0 x 80.0 mm 斜めカット' },
+            { desc: '左奥角A', corner: 'A', spec: '80 x 80 mm 斜めカット', sizeX: 80, sizeY: 80 },
+            { desc: '右奥角B', corner: 'B', spec: '80 x 80 mm 斜めカット', sizeX: 80, sizeY: 80 },
+            { desc: '左手前角C', corner: 'C', spec: '80 x 80 mm 斜めカット', sizeX: 80, sizeY: 80 },
+            { desc: '右手前角D', corner: 'D', spec: '80 x 80 mm 斜めカット', sizeX: 80, sizeY: 80 }
           ],
           notches: [],
           holes: [
-            // 奥・手前の長辺中央 (X = W/2, Y = 9mm)
-            { desc: '奥フレーム長辺中央', corner: 'A', x: halfW, y: 9.0, diameterMm: 6.0, taperMm: 0, base: `B辺(上)より9.0mm / 角A(左)より${halfW}mm (中央)` },
-            { desc: '手前フレーム長辺中央', corner: 'C', x: halfW, y: 9.0, diameterMm: 6.0, taperMm: 0, base: `D辺(下)より9.0mm / 角C(左)より${halfW}mm (中央)` },
-            // 角A斜め脇 (2箇所)
             { desc: '角A斜め脇 奥', corner: 'A', x: 90.0, y: 9.0, diameterMm: 6.0, taperMm: 0, base: 'B辺(上)より9.0mm / A辺(左)より90.0mm' },
             { desc: '角A斜め脇 左', corner: 'A', x: 9.0, y: 90.0, diameterMm: 6.0, taperMm: 0, base: 'A辺(左)より9.0mm / B辺(上)より90.0mm' },
-            // 角B斜め脇 (2箇所)
             { desc: '角B斜め脇 奥', corner: 'B', x: 90.0, y: 9.0, diameterMm: 6.0, taperMm: 0, base: 'B辺(上)より9.0mm / C辺(右)より90.0mm' },
             { desc: '角B斜め脇 右', corner: 'B', x: 9.0, y: 90.0, diameterMm: 6.0, taperMm: 0, base: 'C辺(右)より9.0mm / B辺(上)より90.0mm' },
-            // 角C斜め脇 (2箇所)
             { desc: '角C斜め脇 手前', corner: 'C', x: 90.0, y: 9.0, diameterMm: 6.0, taperMm: 0, base: 'D辺(下)より9.0mm / A辺(左)より90.0mm' },
             { desc: '角C斜め脇 左', corner: 'C', x: 9.0, y: 90.0, diameterMm: 6.0, taperMm: 0, base: 'A辺(左)より9.0mm / D辺(下)より90.0mm' },
-            // 角D斜め脇 (2箇所)
             { desc: '角D斜め脇 手前', corner: 'D', x: 90.0, y: 9.0, diameterMm: 6.0, taperMm: 0, base: 'D辺(下)より9.0mm / C辺(右)より90.0mm' },
             { desc: '角D斜め脇 右', corner: 'D', x: 9.0, y: 90.0, diameterMm: 6.0, taperMm: 0, base: 'C辺(右)より9.0mm / D辺(下)より90.0mm' },
           ],
@@ -397,7 +559,7 @@ export function calculateHazaiyaPanelOrderList(parts, state) {
     }
 
     // ---------------------------------------------------------------
-    // 6. 加工が不要な一般パネル（底板、側板、背板、天板、プラダン等） - 切断のみ
+    // 6. 加工が不要な一般パネル（底板、側板、背板、前窓、天板、プラダン等） - 切断のみ
     // ---------------------------------------------------------------
     resultList.push({
       key: `standard_panel_${resultList.length}`,
@@ -408,6 +570,8 @@ export function calculateHazaiyaPanelOrderList(parts, state) {
       heightMm: hMm,
       thicknessMm: matInfo.thicknessMm,
       quantity: part.count || 1,
+      cost: singleCost,
+      totalCost: totalCost,
       needsMachining: false,
       edgeFinishing: '仕上げなし（ノコカット）',
       holes: [],
@@ -417,37 +581,54 @@ export function calculateHazaiyaPanelOrderList(parts, state) {
     });
   }
 
+  // 配列に発注金額合計および金網リストプロパティを付与（後方互換性100%維持）
+  resultList.hazaiyaTotalCost = hazaiyaCostSum;
+  resultList.misumiTotalCost = misumiCostSum;
+  resultList.wireMeshList = wireMeshList;
+  resultList.hazaiyaList = [...resultList];
+
   return resultList;
 }
 
 /**
- * はざいや様向け全パネル発注リストをクリップボードコピー用の日本語テキストに変換
+ * はざいや様向け全パネル発注リストおよびミスミ金網発注情報をクリップボードコピー用の日本語テキストに変換
  * @param {Array<Object>} panelList calculateHazaiyaPanelOrderList の戻り値
  * @param {Object} state ケージ設定パラメータ
+ * @param {Object} options オプション設定（合計金額の指定など）
  * @returns {string} フォーマット済みテキスト
  */
-export function formatHazaiyaPanelOrderClipboardText(panelList, state = {}) {
-  if (!panelList || panelList.length === 0) {
-    return '【はざいや発注リスト】対象のパネル部材はありません。';
+export function formatHazaiyaPanelOrderClipboardText(panelList, state = {}, options = {}) {
+  if (!panelList || (panelList.length === 0 && (!panelList.wireMeshList || panelList.wireMeshList.length === 0))) {
+    return '【パネル発注リスト】対象のパネル部材はありません。';
   }
 
+  const hazaiyaList = (panelList.hazaiyaList) ? panelList.hazaiyaList : panelList.filter(p => !p.isWireMesh);
+  const wireMeshList = (panelList.wireMeshList) ? panelList.wireMeshList : (options.wireMeshList || []);
+
+  const hazaiyaTotalCost = options.hazaiyaTotalCost != null ? options.hazaiyaTotalCost : panelList.hazaiyaTotalCost;
+  const misumiTotalCost = options.misumiTotalCost != null ? options.misumiTotalCost : panelList.misumiTotalCost;
+
   const lines = [];
-  const totalQuantity = panelList.reduce((acc, p) => acc + (p.quantity || 1), 0);
-  const machiningCount = panelList.filter(p => p.needsMachining).length;
+
+  // -----------------------------------------------------------------
+  // 1. はざいや様向け パネル発注リスト
+  // -----------------------------------------------------------------
+  const totalHazaiyaQty = hazaiyaList.reduce((acc, p) => acc + (p.quantity || 1), 0);
+  const machiningCount = hazaiyaList.filter(p => p.needsMachining).length;
 
   lines.push('================================================================');
-  lines.push('【アクリルショップ はざいや様向け パネル一括発注リスト（全パネル網羅版）】');
+  lines.push('【アクリルショップ はざいや様向け パネル一括発注リスト】');
   if (state.W && state.D && state.H) {
     lines.push(`対象ケージ: W${state.W} x D${state.D} x H${state.H} mm (Type ${state.cageType || 'A'})`);
   }
-  lines.push(`発注品目数: ${panelList.length} 品目 (合計枚数: ${totalQuantity} 枚 / うち加工あり: ${machiningCount} 品目)`);
+  lines.push(`発注品目数: ${hazaiyaList.length} 品目 (合計枚数: ${totalHazaiyaQty} 枚 / うち加工あり: ${machiningCount} 品目)`);
   lines.push('※ 2重発注防止のため、本リストを上から順に1回だけカートへ追加してください。');
   lines.push('※ 基準: A辺=左辺, B辺=上辺, C辺=右辺, D辺=下辺 / 角A=左上, 角B=右上, 角C=左下, 角D=右下');
   lines.push('================================================================\n');
 
-  panelList.forEach((item, idx) => {
+  hazaiyaList.forEach((item, idx) => {
     const statusTag = item.needsMachining ? '【★加工あり】' : '【切断のみ (加工なし)】';
-    lines.push(`■ [${idx + 1}/${panelList.length}] ${item.title}  ${statusTag}`);
+    lines.push(`■ [${idx + 1}/${hazaiyaList.length}] ${item.title}  ${statusTag}`);
     lines.push(`・素材: ${item.materialName}`);
     lines.push(`・発注URL: ${item.hazaiyaUrl}`);
     lines.push(`・仕上がり寸法: ヨコ ${item.widthMm} mm x タテ ${item.heightMm} mm (厚み ${item.thicknessMm} mm)`);
@@ -485,6 +666,52 @@ export function formatHazaiyaPanelOrderClipboardText(panelList, state = {}) {
     }
     lines.push('----------------------------------------------------------------\n');
   });
+
+  // -----------------------------------------------------------------
+  // 2. はざいや発注金額（合計）
+  // -----------------------------------------------------------------
+  lines.push('================================================================');
+  lines.push('【はざいや発注金額（合計）】');
+  if (hazaiyaTotalCost != null) {
+    lines.push(`¥${hazaiyaTotalCost.toLocaleString()}（税込・加工費込）`);
+  } else {
+    lines.push('※シミュレーター画面のパネル小計をご参照ください。');
+  }
+  lines.push('================================================================\n');
+
+  // -----------------------------------------------------------------
+  // 3. ミスミ金網発注リスト（金網部材がある場合）
+  // -----------------------------------------------------------------
+  if (wireMeshList && wireMeshList.length > 0) {
+    const totalMeshQty = wireMeshList.reduce((acc, p) => acc + (p.quantity || 1), 0);
+    lines.push('================================================================');
+    lines.push('【ミスミ様向け 天面金網発注リスト（別仕入れ先）】');
+    lines.push('※ 金網は仕入れ先が異なるため、ミスミ様へ別途手配してください。');
+    lines.push('※ 金網の数量はURLに含まれませんので、必ず発注数量をご確認ください。');
+    lines.push(`発注品目数: ${wireMeshList.length} 品目 (合計枚数: ${totalMeshQty} 枚)`);
+    lines.push('================================================================\n');
+
+    wireMeshList.forEach((mesh, idx) => {
+      lines.push(`■ [${idx + 1}/${wireMeshList.length}] ${mesh.title}`);
+      lines.push(`・型番: ${mesh.modelNumber}`);
+      lines.push(`・発注URL: ${mesh.misumiUrl}`);
+      lines.push(`・寸法: ヨコ ${mesh.widthMm} mm x タテ ${mesh.heightMm} mm (線径φ3.2, SS400黒塗装)`);
+      lines.push(`・発注数量: ${mesh.quantity} 枚`);
+      if (mesh.totalCost != null) {
+        lines.push(`・概算原価: ¥${mesh.totalCost.toLocaleString()}（税込）`);
+      }
+      lines.push('----------------------------------------------------------------\n');
+    });
+
+    lines.push('================================================================');
+    lines.push('【ミスミ発注金額（金網合計）】');
+    if (misumiTotalCost != null) {
+      lines.push(`¥${misumiTotalCost.toLocaleString()}（税込）`);
+    } else {
+      lines.push('※シミュレーター画面の金網小計をご参照ください。');
+    }
+    lines.push('================================================================\n');
+  }
 
   return lines.join('\n');
 }

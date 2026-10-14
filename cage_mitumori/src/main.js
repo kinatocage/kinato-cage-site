@@ -8,7 +8,7 @@ import { getAcrylicExtrusionCost } from '../acrylic_extrusion_price_config.js';
 import { getAcrylicBlackMatteCost } from '../acrylic_black_matte_price_config.js';
 import { getAcrylicSmokeGrayCost } from '../acrylic_smoke_gray_price_config.js';
 import { getAcrylicCastCost, getAcrylicCastRawBoardCost, getAcrylicDoorProcessingCost } from '../acrylic_cast_price_config.js';
-import { calculateHazaiyaPanelOrderList, formatHazaiyaPanelOrderClipboardText } from './hazaiya_machining_calculator.js';
+import { getHazaiyaMaterialInfo, calculateHazaiyaPanelOrderList, formatHazaiyaPanelOrderClipboardText } from './hazaiya_machining_calculator.js';
 
 // DOM要素の取得
 const container = document.getElementById('canvas-container');
@@ -761,10 +761,14 @@ function getMaterialConfig(partCode) {
 
 /**
  * パネル部材の並び順スコアを算出
- * 指定順: 正面扉 -> TypeC前窓 -> 床面 -> 側面 -> 背面 -> 天面 -> 換気量調整板 -> 床下パネルヒータ支え板 -> プラダン -> その他
+ * 指定順: 正面扉 -> TypeC前窓 -> 床面 -> 側面 -> 背面 -> 天面 -> 換気量調整板 -> 床下パネルヒータ支え板 -> プラダン -> その他 -> 金網（仕入れ先が異なるため最後）
  */
 function getPanelSortScore(part) {
   const name = part.name || '';
+  const code = part.panelCode || part.partCode || '';
+  const isWireMesh = (code && code.startsWith('wire_mesh_')) || name.includes('金網');
+  if (isWireMesh) return 99; // 金網は仕入れ先（ミスミ）が異なるため一番最後に表示
+
   if (name.includes('前窓')) return 2; // TypeCの時は前窓
   if (name.includes('扉')) return 1;   // 正面扉
   if (name.includes('底板') || (name.includes('床面') && !name.includes('支え板') && !name.includes('プラダン'))) return 3; // 床面
@@ -773,7 +777,7 @@ function getPanelSortScore(part) {
     return 4; // 側面
   }
   if (name.includes('背板') || name.includes('背面')) return 5; // 背面
-  if (name.includes('天板') || name.includes('天面') || name.includes('金網')) return 6; // 天面
+  if (name.includes('天板') || name.includes('天面')) return 6; // 天面（アクリル・パンチング等）
   if (name.includes('換気量調整板')) return 7; // 換気量調整板
   if (name.includes('床下パネルヒータ支え板')) return 8; // 床下パネルヒータ支え板
   if (name.includes('プラダン')) return 9; // プラダン
@@ -1314,6 +1318,7 @@ function updateBOMTable() {
       totalPanelCost += totalCost;
       totalPanelWeight += totalWeight;
 
+      const isWireMesh = (part.panelCode && part.panelCode.startsWith('wire_mesh_')) || (part.name && part.name.includes('金網'));
       const isFramedDoor = (part.note && part.note.includes('枠囲い')) || (part.name && part.name.includes('枠囲い'));
       const isMachiningPanel = (part.name && (
         (part.name.includes('扉') && !isFramedDoor) ||
@@ -1323,7 +1328,9 @@ function updateBOMTable() {
         (part.name.includes('床下パネルヒータ支え板') && !part.name.includes('プラダン'))
       ));
 
-      const statusBadge = isMachiningPanel
+      const statusBadge = isWireMesh
+        ? '<span style="display: inline-block; background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.45); border-radius: 3px; padding: 1px 5px; font-size: 0.65rem; margin-right: 4px; font-weight: bold;">ミスミ手配</span>'
+        : isMachiningPanel
         ? '<span style="display: inline-block; background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.45); border-radius: 3px; padding: 1px 5px; font-size: 0.65rem; margin-right: 4px; font-weight: bold;">★加工あり</span>'
         : '<span style="display: inline-block; background: rgba(56, 189, 248, 0.1); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 3px; padding: 1px 5px; font-size: 0.65rem; margin-right: 4px;">切断のみ</span>';
 
@@ -1396,19 +1403,37 @@ function updateBOMTable() {
     }
   }
 
-  // 4. はざいや外注加工指示プレビューの動的更新（全パネル統合版）
+  // 4. はざいや外注加工指示プレビューの動的更新（全パネル統合版 ＆ ミスミ金網連携）
   const hazaiyaPreviewBody = document.getElementById('bom-hazaiya-preview-body');
   const hazaiyaPartsBadge = document.getElementById('hazaiya-parts-badge');
   if (hazaiyaPreviewBody) {
     const hazaiyaPanelList = calculateHazaiyaPanelOrderList(parts, state);
-    const totalQty = hazaiyaPanelList.reduce((acc, p) => acc + (p.quantity || 1), 0);
+    const wireMeshList = hazaiyaPanelList.wireMeshList || [];
+    const totalHazaiyaQty = hazaiyaPanelList.reduce((acc, p) => acc + (p.quantity || 1), 0);
     const machiningCount = hazaiyaPanelList.filter(p => p.needsMachining).length;
 
-    if (hazaiyaPartsBadge) {
-      hazaiyaPartsBadge.textContent = `${hazaiyaPanelList.length}品目 (${totalQty}枚 / 加工あり${machiningCount}点)`;
+    // BOMテーブルで計算した原価合計を使用
+    let hazaiyaTotalCost = 0;
+    let misumiTotalCost = 0;
+    for (const p of panelParts) {
+      const { totalCost } = getPanelCostAndWeight(p);
+      const isWireMesh = (p.panelCode && p.panelCode.startsWith('wire_mesh_')) || (p.name && p.name.includes('金網'));
+      if (isWireMesh) {
+        misumiTotalCost += totalCost;
+      } else {
+        const matInfo = getHazaiyaMaterialInfo(p.panelCode || p.partCode, p.name);
+        if (matInfo.isHazaiyaOrder) {
+          hazaiyaTotalCost += totalCost;
+        }
+      }
     }
 
-    if (hazaiyaPanelList.length === 0) {
+    if (hazaiyaPartsBadge) {
+      const meshText = wireMeshList.length > 0 ? ` ＋ 金網${wireMeshList.length}点(ミスミ)` : '';
+      hazaiyaPartsBadge.textContent = `${hazaiyaPanelList.length}品目 (${totalHazaiyaQty}枚 / 加工あり${machiningCount}点)${meshText}`;
+    }
+
+    if (hazaiyaPanelList.length === 0 && wireMeshList.length === 0) {
       hazaiyaPreviewBody.innerHTML = '<p style="color: #94a3b8; font-style: italic; margin: 4px 0;">※対象のパネル部材はありません。</p>';
     } else {
       let previewHtml = '';
@@ -1447,6 +1472,45 @@ function updateBOMTable() {
 
         previewHtml += '</div>';
       });
+
+      // はざいや発注金額枠
+      previewHtml += `
+        <div style="background: rgba(245, 158, 11, 0.1); border: 1px dashed rgba(245, 158, 11, 0.4); border-radius: 4px; padding: 6px 10px; margin: 6px 0; display: flex; justify-content: space-between; align-items: center;">
+          <strong style="color: #fbbf24; font-size: 0.72rem;">■ はざいや発注金額合計（税込・加工費込）</strong>
+          <span style="font-family: monospace; font-size: 0.85rem; font-weight: bold; color: #fbbf24;">¥${hazaiyaTotalCost.toLocaleString()}</span>
+        </div>
+      `;
+
+      // 金網（ミスミ仕入れ）枠
+      if (wireMeshList.length > 0) {
+        previewHtml += `
+          <div style="margin-top: 10px; padding-top: 6px; border-top: 1px solid rgba(168, 85, 247, 0.3);">
+            <div style="color: #c084fc; font-weight: bold; font-size: 0.72rem; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+              <span>🌐</span><span>ミスミ様向け 天面金網発注情報（別仕入れ先）</span>
+            </div>
+        `;
+        wireMeshList.forEach((mesh, mIdx) => {
+          previewHtml += `
+            <div style="background: rgba(88, 28, 135, 0.2); border: 1px solid rgba(168, 85, 247, 0.35); border-radius: 4px; padding: 6px 10px; margin-bottom: 4px;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px;">
+                <span style="color: #f3e8ff; font-weight: bold;">[${mIdx + 1}/${wireMeshList.length}] ${mesh.title}</span>
+                <span style="font-family: monospace; font-size: 0.72rem; color: #c084fc;">型番: ${mesh.modelNumber} × ${mesh.quantity}枚</span>
+              </div>
+              <div style="font-size: 0.67rem; color: #94a3b8; margin-top: 2px;">
+                URL: <a href="${mesh.misumiUrl}" target="_blank" style="color: #38bdf8; text-decoration: underline; word-break: break-all;">${mesh.misumiUrl}</a>
+              </div>
+            </div>
+          `;
+        });
+        previewHtml += `
+            <div style="background: rgba(168, 85, 247, 0.1); border: 1px dashed rgba(168, 85, 247, 0.4); border-radius: 4px; padding: 6px 10px; margin-top: 4px; display: flex; justify-content: space-between; align-items: center;">
+              <strong style="color: #c084fc; font-size: 0.72rem;">■ ミスミ金網発注金額合計（税込）</strong>
+              <span style="font-family: monospace; font-size: 0.85rem; font-weight: bold; color: #c084fc;">¥${misumiTotalCost.toLocaleString()}</span>
+            </div>
+          </div>
+        `;
+      }
+
       hazaiyaPreviewBody.innerHTML = previewHtml;
     }
   }
@@ -1559,7 +1623,7 @@ function setupDebugBOMIfRequested() {
               <span class="bom-copy-btn-text">はざいや発注リスト一括コピー</span>
             </button>
           </div>
-          <span class="bom-section-sub" style="font-size: 0.7rem; color: #94a3b8;">※正面扉→前窓→床面→側面→背面→天面→調整板→支え板→プラダン</span>
+          <span class="bom-section-sub" style="font-size: 0.7rem; color: #94a3b8;">※正面扉→前窓→床面→側面→背面→天面→調整板→支え板→プラダン→金網（末尾）</span>
         </div>
         <table class="bom-table panel-bom-table">
           <thead>
@@ -1665,8 +1729,26 @@ function setupDebugBOMIfRequested() {
       copyHazaiyaBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const parts = viewer ? viewer.getPartsSummary() : [];
+        let hazaiyaSum = 0;
+        let misumiSum = 0;
+        const panelParts = parts.filter(p => p.category === 'panel');
+        for (const p of panelParts) {
+          const { totalCost } = getPanelCostAndWeight(p);
+          const isWireMesh = (p.panelCode && p.panelCode.startsWith('wire_mesh_')) || (p.name && p.name.includes('金網'));
+          if (isWireMesh) {
+            misumiSum += totalCost;
+          } else {
+            const matInfo = getHazaiyaMaterialInfo(p.panelCode || p.partCode, p.name);
+            if (matInfo.isHazaiyaOrder) {
+              hazaiyaSum += totalCost;
+            }
+          }
+        }
         const panelList = calculateHazaiyaPanelOrderList(parts, state);
-        const text = formatHazaiyaPanelOrderClipboardText(panelList, state);
+        const text = formatHazaiyaPanelOrderClipboardText(panelList, state, {
+          hazaiyaTotalCost: hazaiyaSum,
+          misumiTotalCost: misumiSum
+        });
         if (!text) return;
         try {
           await copyTextToClipboard(text);

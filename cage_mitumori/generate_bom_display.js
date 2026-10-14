@@ -37,6 +37,10 @@ const materials = new MaterialFactory();
 
 function getPanelSortScore(part) {
   const name = part.name || '';
+  const code = part.panelCode || part.partCode || '';
+  const isWireMesh = (code && code.startsWith('wire_mesh_')) || name.includes('金網');
+  if (isWireMesh) return 99; // 金網は仕入れ先（ミスミ）が異なるため一番最後に表示
+
   if (name.includes('前窓')) return 2;
   if (name.includes('扉')) return 1;
   if (name.includes('底板') || (name.includes('床面') && !name.includes('支え板') && !name.includes('プラダン'))) return 3;
@@ -45,7 +49,7 @@ function getPanelSortScore(part) {
     return 4;
   }
   if (name.includes('背板') || name.includes('背面')) return 5;
-  if (name.includes('天板') || name.includes('天面') || name.includes('金網')) return 6;
+  if (name.includes('天板') || name.includes('天面')) return 6;
   if (name.includes('換気量調整板')) return 7;
   if (name.includes('床下パネルヒータ支え板')) return 8;
   if (name.includes('プラダン')) return 9;
