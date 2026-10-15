@@ -1281,62 +1281,232 @@ const galleryImages = [
 
   /* ===== 新着製作事例 ページネーション ===== */
   .works-pagination {
+    margin-top: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  /* 現在地ステータスインジケーター */
+  .works-pagination :global(.works-pagination-status) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #FFF5F7;
+    border: 1.5px solid rgba(244, 167, 185, 0.4);
+    padding: 0.4rem 1.1rem;
+    border-radius: var(--radius-full);
+    font-size: 0.88rem;
+    color: var(--color-text);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  }
+
+  .works-pagination :global(.status-badge) {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--color-accent);
+    color: white;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+  }
+
+  .works-pagination :global(.status-numbers) {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    color: var(--color-text-dark, #2b2b2b);
+  }
+
+  .works-pagination :global(.status-numbers strong) {
+    color: var(--color-accent-dark, #e0486b);
+    font-size: 1.05rem;
+    font-weight: 800;
+  }
+
+  .works-pagination :global(.status-total) {
+    color: var(--color-text-light);
+    font-size: 0.8rem;
+  }
+
+  /* コントロール全体（前へ・次へ・数字） */
+  .works-pagination :global(.works-pagination-controls) {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 0.4rem;
-    margin-top: 2.5rem;
+    gap: 0.75rem;
+    width: 100%;
+    max-width: 600px;
     flex-wrap: wrap;
   }
 
-  .pagination-btn {
+  /* 数字ボタンリスト */
+  .works-pagination :global(.pagination-numbers-list) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* 前へ / 次へ ナビゲーションボタン */
+  .works-pagination :global(.pagination-nav-btn) {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 2.4rem;
-    height: 2.4rem;
-    padding: 0 0.6rem;
+    gap: 0.35rem;
+    min-height: 44px; /* タッチ推奨ターゲット44px以上 */
+    padding: 0 1.1rem;
+    border-radius: var(--radius-full);
+    font-size: 0.92rem;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .works-pagination :global(.pagination-nav-btn.prev-btn) {
+    background: white;
+    border-color: var(--color-border);
+    color: var(--color-text);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  }
+
+  .works-pagination :global(.pagination-nav-btn.prev-btn:hover:not(:disabled)) {
+    background: var(--color-pink-light);
+    border-color: var(--color-accent);
+    color: var(--color-accent-dark, #e0486b);
+    transform: translateY(-2px);
+  }
+
+  /* 次へボタンは特に主要アクションとして目立たせる */
+  .works-pagination :global(.pagination-nav-btn.next-btn) {
+    background: linear-gradient(135deg, var(--color-accent), var(--color-accent-warm));
+    color: white;
+    box-shadow: 0 4px 12px rgba(244, 167, 185, 0.45);
+    border: 2px solid transparent;
+  }
+
+  .works-pagination :global(.pagination-nav-btn.next-btn:hover:not(:disabled)) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(244, 167, 185, 0.55);
+    filter: brightness(1.05);
+  }
+
+  .works-pagination :global(.pagination-nav-btn:active:not(:disabled)) {
+    transform: translateY(1px);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .works-pagination :global(.pagination-nav-btn:disabled) {
+    opacity: 0.55;
+    cursor: not-allowed;
+    background: #F3F4F6 !important;
+    border-color: #E5E7EB !important;
+    color: #9CA3AF !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  .works-pagination :global(.nav-icon) {
+    font-size: 1.25rem;
+    line-height: 1;
+    font-weight: 800;
+  }
+
+  /* ページ番号ボタン（44px角で誤タップ防止） */
+  .works-pagination :global(.pagination-num-btn) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    height: 44px;
+    padding: 0 0.5rem;
     border-radius: var(--radius-full);
     border: 2px solid var(--color-border);
     background: white;
     color: var(--color-text);
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-family: var(--font-heading);
     font-weight: 600;
     cursor: pointer;
-    transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease, transform 0.2s ease;
-    line-height: 1;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    -webkit-tap-highlight-color: transparent;
   }
 
-  .pagination-btn:hover:not(:disabled) {
+  .works-pagination :global(.pagination-num-btn:hover:not(.active)) {
     border-color: var(--color-accent);
     background: var(--color-pink-light);
+    color: var(--color-accent-dark, #e0486b);
     transform: translateY(-2px);
   }
 
-  .pagination-btn.active {
-    border-color: var(--color-accent);
-    background: linear-gradient(135deg, var(--color-accent), var(--color-accent-warm));
+  /* アクティブな現在ページ番号（一目でわかる強調表示） */
+  .works-pagination :global(.pagination-num-btn.active) {
+    border-color: #E24A6F;
+    background: linear-gradient(135deg, #F06A85 0%, #F58D6E 100%);
     color: white;
-    box-shadow: 0 4px 12px rgba(244, 167, 185, 0.4);
+    font-weight: 800;
+    box-shadow: 0 4px 14px rgba(240, 106, 133, 0.45);
+    transform: scale(1.08);
+    position: relative;
+    cursor: default;
   }
 
-  .pagination-btn:disabled {
-    opacity: 0.35;
-    cursor: not-allowed;
-  }
-
-  .pagination-ellipsis {
+  .works-pagination :global(.pagination-ellipsis) {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 2rem;
-    height: 2.4rem;
-    font-size: 1rem;
+    min-width: 28px;
+    height: 44px;
+    font-size: 1.1rem;
     color: var(--color-text-light);
     letter-spacing: 0.05em;
     font-weight: 700;
     user-select: none;
+  }
+
+  /* スマホ表示最適化 (768px以下) */
+  @media (max-width: 768px) {
+    .works-pagination {
+      margin-top: 2rem;
+      padding-bottom: 2.5rem; /* チャットフローティングボタンとの被りを防止 */
+      gap: 0.85rem;
+    }
+
+    /* 前へ・次へボタンをスマホでは左右2分割で押しやすく配置 */
+    .works-pagination :global(.works-pagination-controls) {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      width: 100%;
+      padding: 0 0.5rem;
+    }
+
+    .works-pagination :global(.pagination-nav-btn) {
+      width: 100%;
+      min-height: 48px; /* スマホで押しやすい48px */
+      font-size: 0.95rem;
+    }
+
+    /* 数字ボタンは前へ・次への下段にゆったりセンタリング配置 */
+    .works-pagination :global(.pagination-numbers-list) {
+      grid-column: 1 / -1;
+      order: 2;
+      margin-top: 0.5rem;
+      gap: 0.6rem; /* リンク間距離をしっかり確保し誤タップを防止 */
+    }
+
+    .works-pagination :global(.pagination-num-btn) {
+      min-width: 42px;
+      height: 42px;
+      font-size: 0.92rem;
+    }
   }
 
   /* グリッドのフェードインアニメーション */
@@ -1486,10 +1656,25 @@ const galleryImages = [
       return pages;
     }
 
+    /** 製作事例セクションの先頭へスムーズにスクロール */
+    function scrollToWorksSection() {
+      const section = document.getElementById('recent-works-grid') || document.getElementById('works');
+      if (section) {
+        const headerOffset = 90;
+        const elementPosition = section.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+      }
+    }
+
     /** 指定ページのカードとページネーションを描画する */
-    function renderPage(page) {
+    function renderPage(page, shouldScroll = false) {
       currentPage = page;
       const start = (page - 1) * PER_PAGE;
+      const end = Math.min(page * PER_PAGE, works.length);
       const pageWorks = works.slice(start, start + PER_PAGE);
 
       // カードを再描画（アニメーションリセット）
@@ -1500,28 +1685,74 @@ const galleryImages = [
 
       // ページネーションを再描画
       const pageList = buildPageList(page, totalPages);
-      const btnPrev = `<button class="pagination-btn" id="pgn-prev" aria-label="前のページ" ${page === 1 ? 'disabled' : ''}>‹</button>`;
-      const btnNext = `<button class="pagination-btn" id="pgn-next" aria-label="次のページ" ${page === totalPages ? 'disabled' : ''}>›</button>`;
+
+      // 現在地ステータス表示
+      const statusHTML = `
+        <div class="works-pagination-status" aria-live="polite">
+          <span class="status-badge">PAGE</span>
+          <span class="status-numbers"><strong>${page}</strong> / ${totalPages} ページ</span>
+          <span class="status-total">（全${works.length}件中 ${start + 1}〜${end}件）</span>
+        </div>
+      `;
+
+      // 前へ・次へボタン（誤タップを防ぐゆったりサイズ＆明快な日本語）
+      const btnPrev = `
+        <button class="pagination-nav-btn prev-btn" id="pgn-prev" aria-label="前の事例を見る" ${page === 1 ? 'disabled' : ''}>
+          <span class="nav-icon" aria-hidden="true">‹</span>
+          <span>前の事例</span>
+        </button>
+      `;
+      const btnNext = `
+        <button class="pagination-nav-btn next-btn" id="pgn-next" aria-label="次の事例を見る" ${page === totalPages ? 'disabled' : ''}>
+          <span>次の事例</span>
+          <span class="nav-icon" aria-hidden="true">›</span>
+        </button>
+      `;
+
+      // ページ番号ボタン（44px以上のタッチターゲット確保）
       const pageButtons = pageList.map(p => {
         if (p === '...') return `<span class="pagination-ellipsis" aria-hidden="true">…</span>`;
-        return `<button class="pagination-btn${p === page ? ' active' : ''}" data-page="${p}" aria-label="${p}ページ目" aria-current="${p === page ? 'page' : 'false'}">${p}</button>`;
+        const isActive = p === page;
+        return `<button class="pagination-num-btn${isActive ? ' active' : ''}" data-page="${p}" aria-label="${p}ページ目へ" aria-current="${isActive ? 'page' : 'false'}">${p}</button>`;
       }).join('');
 
-      paginationEl.innerHTML = btnPrev + pageButtons + btnNext;
+      paginationEl.innerHTML = `
+        ${statusHTML}
+        <div class="works-pagination-controls">
+          ${btnPrev}
+          <div class="pagination-numbers-list" role="navigation" aria-label="ページ番号リスト">
+            ${pageButtons}
+          </div>
+          ${btnNext}
+        </div>
+      `;
 
-      // 前へ・次へ
-      document.getElementById('pgn-prev')?.addEventListener('click', () => renderPage(currentPage - 1));
-      document.getElementById('pgn-next')?.addEventListener('click', () => renderPage(currentPage + 1));
+      // 前へ・次へのイベント
+      document.getElementById('pgn-prev')?.addEventListener('click', () => {
+        if (currentPage > 1) {
+          renderPage(currentPage - 1, true);
+        }
+      });
+      document.getElementById('pgn-next')?.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+          renderPage(currentPage + 1, true);
+        }
+      });
 
-      // 各ページ番号ボタン
-      paginationEl.querySelectorAll('.pagination-btn[data-page]').forEach(btn => {
+      // 各ページ番号ボタンのイベント
+      paginationEl.querySelectorAll('.pagination-num-btn[data-page]').forEach(btn => {
         btn.addEventListener('click', () => {
           const target = parseInt(btn.getAttribute('data-page') || '1', 10);
-          renderPage(target);
-          // セクション先頭にスムーズスクロール
-          gridEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          if (target !== currentPage) {
+            renderPage(target, true);
+          }
         });
       });
+
+      // ユーザー操作によるページ変更時のみ上部にスムーズスクロール
+      if (shouldScroll) {
+        scrollToWorksSection();
+      }
     }
 
     // 初期描画（JSが制御を引き継ぐ）
