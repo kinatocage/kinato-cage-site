@@ -125,6 +125,20 @@ function doPost(e) {
 
     const contents = e.postData.contents;
     const data = JSON.parse(contents);
+
+    // 🛠️ 管理・仕様書作成アクセス（usr_admin_dev / isDev / bot等）の完全除外ガード
+    const vid = String(data.visitorId || '');
+    if (
+      vid === 'usr_admin_dev' ||
+      vid.indexOf('admin') !== -1 ||
+      vid.indexOf('bot') !== -1 ||
+      data.isDev === true ||
+      data.bot === 1 ||
+      data.bot === '1'
+    ) {
+      return createJsonResponse({ status: 'ignored', message: 'Admin/Bot access ignored from sheets' });
+    }
+
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
     // ログ種別の判定

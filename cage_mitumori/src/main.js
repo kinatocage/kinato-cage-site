@@ -1927,7 +1927,7 @@ function resetEstimateDisplay() {
       btnCalcEstimate.classList.remove('is-calculating');
       const titleSpan = btnCalcEstimate.querySelector('.calc-btn-title');
       if (titleSpan) {
-        titleSpan.textContent = '見積もりと重量計算（β版）';
+        titleSpan.textContent = '見積もりと重量計算';
       }
     }
   }
@@ -2034,7 +2034,7 @@ async function runStructuralAndCostSimulation() {
         btnCalcEstimate.classList.remove('is-calculating');
         const titleSpan = btnCalcEstimate.querySelector('.calc-btn-title');
         if (titleSpan) {
-          titleSpan.textContent = '見積もりと重量計算（β版）';
+          titleSpan.textContent = '見積もりと重量計算';
         }
       }
     }
@@ -3295,7 +3295,7 @@ if (inputSideH) {
 syncUpdate();
 viewer.setViewPreset('iso', state);
 
-// 「見積もりと重量計算（β版）」ボタンクリックで構造シミュレーション・部材積算を実行
+// 「見積もりと重量計算」ボタンクリックで構造シミュレーション・部材積算を実行
 if (btnCalcEstimate) {
   btnCalcEstimate.addEventListener('click', () => {
     runStructuralAndCostSimulation();
@@ -4611,7 +4611,6 @@ ${optLines}
 ・概算総重量: 約 ${totals.weight.toFixed(1)} kg
 ・お見積り合計金額: ¥${totals.priceWithMarkup.toLocaleString()}（税込・送料別）
 ※URLを控えることで、この仕様にてロードされます。
-※まだβ版なので誤差（最大±5%程度）が出ております。詳細はDMよりお問い合わせください。
 ※公式サイト: https://kinato-cage-site.pages.dev/`;
 }
 
@@ -5029,17 +5028,11 @@ async function exportEstimateCardImage() {
     ctx.font = 'bold 64px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillText(`¥${currentEstimateData.totals.priceWithMarkup.toLocaleString()}`, priceBoxX + 35, priceBoxY + 180);
 
-    // β版価格誤差に関する注意書き
-    ctx.fillStyle = '#fcd34d';
-    ctx.font = '600 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText('※まだβ版なので誤差（最大±5%程度）が出ております。', priceBoxX + 35, priceBoxY + 220);
-    ctx.fillText('　詳細はDMよりお問い合わせください。', priceBoxX + 35, priceBoxY + 244);
-
     // 控えに関する注意書き
     ctx.fillStyle = '#94a3b8';
     ctx.font = '500 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText('※本画像はお見積もりシミュレーション結果の控えです。', priceBoxX + 35, priceBoxY + 282);
-    ctx.fillText('　お問い合わせ・ご注文の際にお手元にご準備ください。', priceBoxX + 35, priceBoxY + 306);
+    ctx.fillText('※本画像はお見積もりシミュレーション結果の控えです。', priceBoxX + 35, priceBoxY + 230);
+    ctx.fillText('　ご注文・お問い合わせの際にお手元にご準備ください。', priceBoxX + 35, priceBoxY + 254);
 
     // 右カラム：公式キャラクターの配置
     if (hasRightColumn && charImg) {
@@ -5212,11 +5205,69 @@ function isLocalDevelopmentEnvironment() {
          port === '4173';
 }
 
+/**
+ * 🛠️ 開発・仕様書作成自動化ツール等（管理者/Bot）アクセスの判定
+ * 本番URL（https://kinato-cage-site.pages.dev/sim/ 等）であっても、
+ * 引数（?isDev=true, &bot=1 等）や事前設定された visitorId（usr_admin_dev 等）を検知し、
+ * スプレッドシート（GAS）へのログ保存を100%遮断・除外します。
+ * @returns {boolean}
+ */
+function isDevOrBotAccess() {
+  try {
+    if (typeof window === 'undefined') return false;
+
+    // 1. URLパラメータのチェック (?isDev=true, &bot=1, ?dev=1, ?admin=true など)
+    if (window.location.search) {
+      const p = new URLSearchParams(window.location.search);
+      const isDevParam = (p.get('isDev') || '').toLowerCase();
+      const botParam = (p.get('bot') || '').toLowerCase();
+      const devParam = (p.get('dev') || '').toLowerCase();
+      const adminParam = (p.get('admin') || '').toLowerCase();
+
+      if (
+        isDevParam === 'true' || isDevParam === '1' ||
+        botParam === '1' || botParam === 'true' ||
+        devParam === '1' || devParam === 'true' ||
+        adminParam === '1' || adminParam === 'true'
+      ) {
+        // 同一セッション内での後続リロード・画面遷移時も漏れなく検知できるよう保持
+        try { sessionStorage.setItem('cage_is_dev_mode', 'true'); } catch (e) {}
+        return true;
+      }
+    }
+
+    // 2. セッションストレージ内のフラグチェック
+    try {
+      if (sessionStorage.getItem('cage_is_dev_mode') === 'true') {
+        return true;
+      }
+    } catch (e) {}
+
+    // 3. ツール側で localStorage に注入された管理者/Bot用の visitorId チェック
+    // （別システムPlaywrightが事前に設定した usr_admin_dev 等を完全検知）
+    try {
+      const vid = localStorage.getItem('cage_visitor_id');
+      if (vid && (vid === 'usr_admin_dev' || vid.startsWith('usr_admin') || vid.startsWith('usr_bot') || vid.startsWith('usr_dev'))) {
+        return true;
+      }
+    } catch (e) {}
+  } catch (e) {
+    console.warn('[Log] isDevOrBotAccess 判定エラー:', e);
+  }
+  return false;
+}
+
 // =================================================================
 // 4. Googleスプレッドシート ログ収集（開発計画2用）
 // =================================================================
 async function maybeSendEstimateLog(estimateData) {
-  // ローカル開発環境の判定（URLに test_log=true がある場合はテスト送信を許可）
+  // 1. 開発・仕様書作成ツール（管理者/Bot）アクセス時のスプレッドシート送信完全遮断
+  if (isDevOrBotAccess()) {
+    console.log('[Log] 🛠️ 管理・仕様書作成アクセスのため、スプレッドシートへの見積もりログ送信をスキップしました (isDev/bot/usr_admin_dev):', estimateData.estimateId);
+    return;
+  }
+
+  // 2. ローカル開発環境の判定（URLに test_log=true がある場合はテスト送信を許可）
   const isTestLog = typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).get('test_log') === 'true';
 
@@ -5314,6 +5365,9 @@ async function maybeSendEstimateLog(estimateData) {
  * 管理者が即座に気付けるようにエラー情報をGAS（スプレッドシート）へ自動送信します。
  */
 function sendSimulationErrorLog(error) {
+  // 開発・仕様書作成ツール（管理者/Bot）アクセス時は送信しない
+  if (isDevOrBotAccess()) return;
+
   try {
     const endpoint = materialsConfig?.system?.gasLogEndpointUrl;
     if (!endpoint || typeof endpoint !== 'string' || !endpoint.startsWith('http')) return;
@@ -5357,6 +5411,33 @@ setupDebugBOMIfRequested();
 // =================================================================
 function checkInitialStateFromStorageOrUrl() {
   try {
+    // 開発・仕様書作成アクセス判定を先行実行してフラグをセッション保持
+    const isDev = isDevOrBotAccess();
+
+    // アドレスバーから管理用・開発用パラメータ（isDev, bot, admin, dev 等）を完全に除去
+    // （店主様がアドレスバーからURLをコピーしてお客様に案内しても引数が絶対に混入しないように保護）
+    if (typeof window !== 'undefined' && window.location.search && window.history && window.history.replaceState) {
+      try {
+        const currentParams = new URLSearchParams(window.location.search);
+        const devParamKeys = ['isdev', 'bot', 'dev', 'admin', 'test_log', 'debug_log'];
+        let hasDevParam = false;
+        for (const key of Array.from(currentParams.keys())) {
+          if (devParamKeys.includes(key.toLowerCase())) {
+            currentParams.delete(key);
+            hasDevParam = true;
+          }
+        }
+        if (hasDevParam) {
+          const remainingQuery = currentParams.toString();
+          const cleanUrl = remainingQuery ? `${window.location.pathname}?${remainingQuery}` : window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
+          console.log('[Sim] アドレスバーから管理用引数を消去しクリーン化しました:', cleanUrl);
+        }
+      } catch (e) {
+        console.warn('[Sim] アドレスバークリーンアップエラー:', e);
+      }
+    }
+
     let incomingState = null;
 
     // 1. sessionStorage からの引き継ぎチェック（引数がURLに一切出ない推奨方式）
@@ -5738,6 +5819,12 @@ checkInitialStateFromStorageOrUrl();
       screen: screen,
       deviceType: deviceType
     };
+
+    if (isDevOrBotAccess()) {
+      console.log('[SimPageViewLog] 🛠️ 管理・仕様書作成アクセスのため送信をスキップしました (isDev/bot/usr_admin_dev)');
+      hasSent = true;
+      return;
+    }
 
     const isLocal = isLocalDevelopmentEnvironment();
     const urlParams = new URLSearchParams(window.location.search);

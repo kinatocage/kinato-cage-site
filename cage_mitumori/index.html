@@ -48,7 +48,7 @@
           <div class="cost-hud-body hidden" id="cost-hud-result">
             <div class="cost-hud-metrics">
               <div class="cost-hud-item">
-                <span class="cost-hud-label">β版機能：概算価格（税込・送料別）</span>
+                <span class="cost-hud-label">お見積もり価格（税込・送料別）</span>
                 <span class="cost-hud-value cost-highlight" id="hud-cost-total">¥0</span>
               </div>
               <div class="cost-hud-divider"></div>
@@ -56,9 +56,6 @@
                 <span class="cost-hud-label">重量（計算値）</span>
                 <span class="cost-hud-value" id="hud-weight-total">0.0 kg</span>
               </div>
-            </div>
-            <div class="cost-hud-beta-notice">
-              ※まだβ版なので誤差（最大±5%程度）が出ております。詳細はDMよりお問い合わせください。
             </div>
             <!-- 見積もり詳細＆画像保存モーダルを開くボタン（価格・重量の真下にワイド配置） -->
             <button class="btn-open-estimate-modal" id="btn-open-estimate-modal" title="お見積もり結果の詳細確認・画像保存・仕様コピー">
@@ -825,7 +822,7 @@
       <div class="sidebar-footer">
         <button class="action-btn secondary btn-cost-calc" id="btn-calc-estimate" title="見積もりと重量を計算">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="16" y1="14" x2="16" y2="18"></line><path d="M16 10h.01"></path><path d="M12 10h.01"></path><path d="M8 10h.01"></path><path d="M12 14h.01"></path><path d="M8 14h.01"></path><path d="M12 18h.01"></path><path d="M8 18h.01"></path></svg>
-          <span class="calc-btn-title">見積もりと重量計算（β版）</span>
+          <span class="calc-btn-title">見積もりと重量計算</span>
         </button>
 
         <button class="action-btn primary" id="btn-reset-specs">
@@ -862,9 +859,6 @@
           <div class="modal-weight-row">
             <span class="modal-weight-label">概算重量:</span>
             <span class="modal-weight-val" id="modal-weight-total">0.0 kg</span>
-          </div>
-          <div class="modal-beta-notice">
-            ※まだβ版なので誤差（最大±5%程度）が出ております。詳細はDMよりお問い合わせください。
           </div>
         </div>
 

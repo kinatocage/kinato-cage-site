@@ -198,6 +198,44 @@ const gasEndpoint = Astro.props.endpointUrl || import.meta.env.PUBLIC_GAS_LOG_EN
 
         if (!gasEndpoint || !gasEndpoint.startsWith('http')) return;
 
+        // 管理・仕様書作成自動化ツール等（管理者/Bot）アクセスの判定
+        function isDevOrBotAccess() {
+          try {
+            if (window.location.search) {
+              const p = new URLSearchParams(window.location.search);
+              const isDevParam = (p.get('isDev') || '').toLowerCase();
+              const botParam = (p.get('bot') || '').toLowerCase();
+              const devParam = (p.get('dev') || '').toLowerCase();
+              const adminParam = (p.get('admin') || '').toLowerCase();
+              if (
+                isDevParam === 'true' || isDevParam === '1' ||
+                botParam === '1' || botParam === 'true' ||
+                devParam === '1' || devParam === 'true' ||
+                adminParam === '1' || adminParam === 'true'
+              ) {
+                try { sessionStorage.setItem('cage_is_dev_mode', 'true'); } catch (e) {}
+                return true;
+              }
+            }
+            try {
+              if (sessionStorage.getItem('cage_is_dev_mode') === 'true') return true;
+            } catch (e) {}
+            try {
+              const vid = localStorage.getItem('cage_visitor_id');
+              if (vid && (vid === 'usr_admin_dev' || vid.startsWith('usr_admin') || vid.startsWith('usr_bot') || vid.startsWith('usr_dev'))) {
+                return true;
+              }
+            } catch (e) {}
+          } catch (e) {}
+          return false;
+        }
+
+        if (isDevOrBotAccess()) {
+          console.log('[PageViewLog] 🛠️ 管理・仕様書作成アクセスのため送信をスキップしました (isDev/bot/usr_admin_dev)');
+          hasSent = true;
+          return;
+        }
+
         const hostname = window.location.hostname;
         const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
         const urlParams = new URLSearchParams(window.location.search);
