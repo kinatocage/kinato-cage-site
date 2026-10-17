@@ -81,6 +81,10 @@ export class CageModel {
     this.ledGroup.name = 'LED';
     this.root.add(this.ledGroup);
 
+    this.sugarGliderGroup = new THREE.Group();
+    this.sugarGliderGroup.name = 'SugarGlider';
+    this.root.add(this.sugarGliderGroup);
+
     // 現在のパラメータ
     this.params = {
       W: 750,
@@ -103,6 +107,12 @@ export class CageModel {
       hasRoomDivider: false,       // ２室分け（後付け仕切り板・Type A/C両対応）
       hasBottomWideFrame: false,   // 下側幅広フレーム（高さ40mm・外周: Type A専用）
       hasTopWideFrame: false,      // 上側幅広フレーム（高さ40mm・外周: Type A専用）
+      hasSgTable: false,           // フクモモ用テーブル
+      sgTableCount: 2,             // テーブル個数 (デフォルト: 2個)
+      hasSgWaterBracket: false,    // フクモモ用給水器ブラケット
+      sgWaterBracketCount: 1,      // 給水器ブラケット個数 (デフォルト: 1個)
+      hasSgHook: false,            // フクモモ用フック (4個/セット)
+      sgHookCount: 1,              // フックセット数 (デフォルト: 1セット)
       ledType: 'none',             // 'none' | 'usb' | 'high_cri_white' | 'red' | 'white_and_red' | 'rgbw'
       ledPower: true,              // LED点灯状態 (true | false)
       ledBrightness: 1.0,          // LED調光 (0.1 ~ 1.0)
@@ -694,6 +704,7 @@ export class CageModel {
     this.clearGroup(this.caulkingGroup);
     this.clearGroup(this.rubberPackingGroup);
     this.clearGroup(this.ledGroup);
+    this.clearGroup(this.sugarGliderGroup);
     this.disposeResources();
 
     // 寸法変更時は扉アニメーション状態をリセット（新しい寸法で即時配置）
@@ -1620,12 +1631,20 @@ export class CageModel {
       this.buildLed();
     }
 
+    // ==========================================
+    // 9. フクモモ向け装備品の構築 (テーブル・給水器ブラケット・フック)
+    // ==========================================
+    if (this.params.hasSgTable || this.params.hasSgWaterBracket || this.params.hasSgHook) {
+      this.buildSugarGliderEquipment();
+    }
+
     // 表示トグルの反映
     this.panelGroup.visible = showPanels;
     this.doorGroup.visible = showPanels;
     this.caulkingGroup.visible = showPanels;
     this.rubberPackingGroup.visible = showPanels;
     this.dividerGroup.visible = showPanels;
+    this.sugarGliderGroup.visible = showPanels;
     this.ledGroup.visible = true;
   }
 
@@ -4456,6 +4475,329 @@ export class CageModel {
     mesh.name = '止まり木・ECP-1530-6';
     this.perchGroup.add(mesh);
     return mesh;
+  }
+
+  /**
+   * フクモモ向け装備品の構築（テーブル・給水器ブラケット・フック）
+   */
+  buildSugarGliderEquipment() {
+    const { W, D, H, hasSgTable, sgTableCount, hasSgWaterBracket, sgWaterBracketCount, hasSgHook, sgHookCount, cageType, doorHingeSide } = this.params;
+
+    const acrylicMat = this.materials.acrylic;
+    const screwMat = this.materials.perchWhiteScrew || this.materials.handleMaterial;
+    const metalMat = this.materials.handleMaterial;
+    const washerMat = this.materials.endCapMaterial || this.materials.frameMaterial; // 黒ゴム座金用
+
+    // 左側面・右側面の内面基準位置（フレーム厚20mm、パネル溝深さ5mmで概ね ±(W/2 - 10)）
+    const leftPanelInnerX = -W / 2 + 10;
+    const rightPanelInnerX = W / 2 - 10;
+
+    // テーブルの配置リストを格納（給水器ブラケットのテーブル上配置にも参照）
+    const tablePlacements = [];
+
+    // ==========================================
+    // 1. フクモモ用テーブル (15cm角 直角曲げ・角R10)
+    //    - 段違い配置＆奥行き方向オフセットで広々とした動線を実現
+    //    - 化粧ネジはケージ外側から留める格好
+    // ==========================================
+    if (hasSgTable && sgTableCount > 0) {
+      const tableW = 150;      // ケージ内寸方向幅 (150mm)
+      const tableD = 150;      // 奥行き方向 (150mm)
+      const flangeH = 20;      // 立ち上がり曲げ (20mm)
+      const thickness = 3;     // アクリル板厚 (3mm)
+      const cornerR = 10;      // 角R10
+
+      const baseLowY = Math.max(35, Math.round(H * 0.28));
+      const stepPitch = Math.min(130, Math.max(85, (H - baseLowY - 100) / Math.max(1, sgTableCount - 1)));
+
+      for (let i = 0; i < sgTableCount; i++) {
+        // 0: 左・低・奥寄り(-38mm), 1: 右・段違い中・手前寄り(+38mm), 2: 左・高・手前寄り(+30mm), 3: 右・超高・奥寄り(-30mm)
+        const isLeft = (i % 2 === 0);
+        const targetY = baseLowY + i * stepPitch;
+        const targetZ = (i % 2 === 0) ? -38 : 38;
+        tablePlacements.push({ isLeft, y: targetY, z: targetZ });
+      }
+
+      for (let idx = 0; idx < tablePlacements.length; idx++) {
+        const { isLeft, y, z } = tablePlacements[idx];
+        const panelX = isLeft ? leftPanelInnerX : rightPanelInnerX;
+        const dirX = isLeft ? 1 : -1; // ケージ内側への向き (+1: 右へ突出, -1: 左へ突出)
+
+        // テーブル天板のShape（角R10）
+        const shape = new THREE.Shape();
+        shape.moveTo(0, -tableD / 2);
+        shape.lineTo(tableW - cornerR, -tableD / 2);
+        shape.quadraticCurveTo(tableW, -tableD / 2, tableW, -tableD / 2 + cornerR);
+        shape.lineTo(tableW, tableD / 2 - cornerR);
+        shape.quadraticCurveTo(tableW, tableD / 2, tableW - cornerR, tableD / 2);
+        shape.lineTo(0, tableD / 2);
+        shape.closePath();
+
+        const topGeom = new THREE.ExtrudeGeometry(shape, {
+          depth: thickness,
+          bevelEnabled: false
+        });
+        topGeom.rotateX(-Math.PI / 2);
+        if (!isLeft) {
+          topGeom.scale(-1, 1, 1);
+        }
+        topGeom.translate(panelX, y, z);
+        this.activeGeometries.push(topGeom);
+
+        const topMesh = new THREE.Mesh(topGeom, acrylicMat);
+        topMesh.name = `フクモモ用テーブル_${idx + 1}`;
+        this.sugarGliderGroup.add(topMesh);
+
+        // 垂直フランジ (立ち上がり 20mm)
+        const flangeGeom = new THREE.BoxGeometry(thickness, flangeH, tableD);
+        flangeGeom.translate(panelX + dirX * (thickness / 2), y + flangeH / 2, z);
+        this.activeGeometries.push(flangeGeom);
+
+        const flangeMesh = new THREE.Mesh(flangeGeom, acrylicMat);
+        flangeMesh.name = `フクモモ用テーブルフランジ_${idx + 1}`;
+        this.sugarGliderGroup.add(flangeMesh);
+
+        // M3化粧ネジ (2本・ケージ外側から留める格好)
+        const screwPositionsZ = [z - 45, z + 45];
+        for (const sZ of screwPositionsZ) {
+          // 1. 化粧ネジ頭 (ケージ外側)
+          const headGeom = new THREE.CylinderGeometry(4.2, 4.2, 3.0, 16);
+          headGeom.rotateZ(Math.PI / 2);
+          headGeom.translate(panelX - dirX * 2.0, y + flangeH / 2, sZ);
+          this.activeGeometries.push(headGeom);
+          const headMesh = new THREE.Mesh(headGeom, screwMat);
+          headMesh.name = `テーブル固定化粧ネジ頭(外側)`;
+          this.sugarGliderGroup.add(headMesh);
+
+          // 2. ネジ軸 (パネルとアクリルフランジを貫通)
+          const shankGeom = new THREE.CylinderGeometry(1.5, 1.5, 8.0, 12);
+          shankGeom.rotateZ(Math.PI / 2);
+          shankGeom.translate(panelX + dirX * 1.5, y + flangeH / 2, sZ);
+          this.activeGeometries.push(shankGeom);
+          const shankMesh = new THREE.Mesh(shankGeom, screwMat);
+          this.sugarGliderGroup.add(shankMesh);
+
+          // 3. 内側固定ナット
+          const nutGeom = new THREE.CylinderGeometry(3.2, 3.2, 2.2, 6);
+          nutGeom.rotateZ(Math.PI / 2);
+          nutGeom.translate(panelX + dirX * (thickness + 1.1), y + flangeH / 2, sZ);
+          this.activeGeometries.push(nutGeom);
+          const nutMesh = new THREE.Mesh(nutGeom, screwMat);
+          nutMesh.name = `テーブル固定ナット(内側)`;
+          this.sugarGliderGroup.add(nutMesh);
+        }
+      }
+
+      this.recordPart('SG-TABLE', 150, sgTableCount, 'フクモモ用テーブル', 'other');
+    }
+
+    // ==========================================
+    // 2. 給水器ブラケット (テーブルの上に配置・横向き内折れ曲げ)
+    //    - 化粧ネジはケージ外側から留める格好
+    // ==========================================
+    if (hasSgWaterBracket && sgWaterBracketCount > 0) {
+      const bHeight = 25;      // 高さ幅 25mm
+      const t = 3;             // 板厚 3mm
+      const earL = 20;         // パネル取付耳 20mm (内折れ)
+      const shelfD = 25;       // 壁面からの突出深さ 25mm
+      const frontL = 70;       // 正面板長さ 70mm (Z方向)
+
+      for (let i = 0; i < sgWaterBracketCount; i++) {
+        // テーブルの上に配置（テーブルがある場合、該当テーブルと同じ側面・Z位置、高さはテーブル直上+75mm）
+        let isLeft = (i % 2 === 0);
+        let zCenter = (i % 2 === 0) ? -38 : 38;
+        let yBase = Math.max(45, Math.round(H * 0.38));
+
+        if (tablePlacements.length > 0) {
+          const matchedTable = tablePlacements[i % tablePlacements.length];
+          isLeft = matchedTable.isLeft;
+          zCenter = matchedTable.z;
+          yBase = matchedTable.y + 75; // テーブル天板の直上（モモンガが乗って飲める理想の高さ）
+        }
+
+        const panelX = isLeft ? leftPanelInnerX : rightPanelInnerX;
+        const dirX = isLeft ? 1 : -1;
+
+        // 1. 正面板 (Z方向 70mm, 高さ 25mm, 中央にφ10mm穴)
+        const frontShape = new THREE.Shape();
+        frontShape.moveTo(-frontL / 2, -bHeight / 2);
+        frontShape.lineTo(frontL / 2, -bHeight / 2);
+        frontShape.lineTo(frontL / 2, bHeight / 2);
+        frontShape.lineTo(-frontL / 2, bHeight / 2);
+        frontShape.closePath();
+
+        // 中央にφ10mm穴
+        const holePath = new THREE.Path();
+        holePath.absarc(0, 0, 5, 0, Math.PI * 2, true);
+        frontShape.holes.push(holePath);
+
+        const frontGeom = new THREE.ExtrudeGeometry(frontShape, {
+          depth: t,
+          bevelEnabled: false
+        });
+        frontGeom.rotateY(Math.PI / 2);
+        if (!isLeft) frontGeom.scale(-1, 1, 1);
+        frontGeom.translate(panelX + dirX * (shelfD - t / 2), yBase, zCenter);
+        this.activeGeometries.push(frontGeom);
+        const frontMesh = new THREE.Mesh(frontGeom, acrylicMat);
+        frontMesh.name = `給水器ブラケット正面板_${i + 1}`;
+        this.sugarGliderGroup.add(frontMesh);
+
+        // 2. 奥側突出アーム (深さ 25mm, 高さ 25mm)
+        const backArmGeom = new THREE.BoxGeometry(shelfD, bHeight, t);
+        backArmGeom.translate(panelX + dirX * (shelfD / 2), yBase, zCenter - frontL / 2 + t / 2);
+        this.activeGeometries.push(backArmGeom);
+        const backArmMesh = new THREE.Mesh(backArmGeom, acrylicMat);
+        this.sugarGliderGroup.add(backArmMesh);
+
+        // 3. 手前側突出アーム (深さ 25mm, 高さ 25mm)
+        const frontArmGeom = new THREE.BoxGeometry(shelfD, bHeight, t);
+        frontArmGeom.translate(panelX + dirX * (shelfD / 2), yBase, zCenter + frontL / 2 - t / 2);
+        this.activeGeometries.push(frontArmGeom);
+        const frontArmMesh = new THREE.Mesh(frontArmGeom, acrylicMat);
+        this.sugarGliderGroup.add(frontArmMesh);
+
+        // 4. 奥側取付耳 (20mm・内折れ)
+        const backEarGeom = new THREE.BoxGeometry(t, bHeight, earL);
+        backEarGeom.translate(panelX + dirX * (t / 2), yBase, zCenter - frontL / 2 + earL / 2);
+        this.activeGeometries.push(backEarGeom);
+        const backEarMesh = new THREE.Mesh(backEarGeom, acrylicMat);
+        this.sugarGliderGroup.add(backEarMesh);
+
+        // 5. 手前側取付耳 (20mm・内折れ)
+        const frontEarGeom = new THREE.BoxGeometry(t, bHeight, earL);
+        frontEarGeom.translate(panelX + dirX * (t / 2), yBase, zCenter + frontL / 2 - earL / 2);
+        this.activeGeometries.push(frontEarGeom);
+        const frontEarMesh = new THREE.Mesh(frontEarGeom, acrylicMat);
+        this.sugarGliderGroup.add(frontEarMesh);
+
+        // M3化粧ネジ (ケージ外側から留める格好)
+        const screwPositionsZ = [
+          zCenter - frontL / 2 + earL / 2,
+          zCenter + frontL / 2 - earL / 2
+        ];
+        for (const sZ of screwPositionsZ) {
+          // 1. 化粧ネジ頭 (ケージ外側)
+          const sHeadGeom = new THREE.CylinderGeometry(4.2, 4.2, 3.0, 16);
+          sHeadGeom.rotateZ(Math.PI / 2);
+          sHeadGeom.translate(panelX - dirX * 2.0, yBase, sZ);
+          this.activeGeometries.push(sHeadGeom);
+          const sHeadMesh = new THREE.Mesh(sHeadGeom, screwMat);
+          sHeadMesh.name = `給水器ブラケット固定化粧ネジ頭(外側)`;
+          this.sugarGliderGroup.add(sHeadMesh);
+
+          // 2. ネジ軸 (パネルと耳を貫通)
+          const sShankGeom = new THREE.CylinderGeometry(1.5, 1.5, 8.0, 12);
+          sShankGeom.rotateZ(Math.PI / 2);
+          sShankGeom.translate(panelX + dirX * 1.5, yBase, sZ);
+          this.activeGeometries.push(sShankGeom);
+          const sShankMesh = new THREE.Mesh(sShankGeom, screwMat);
+          this.sugarGliderGroup.add(sShankMesh);
+
+          // 3. 内側固定ナット
+          const sNutGeom = new THREE.CylinderGeometry(3.2, 3.2, 2.2, 6);
+          sNutGeom.rotateZ(Math.PI / 2);
+          sNutGeom.translate(panelX + dirX * (t + 1.1), yBase, sZ);
+          this.activeGeometries.push(sNutGeom);
+          const sNutMesh = new THREE.Mesh(sNutGeom, screwMat);
+          sNutMesh.name = `給水器ブラケット固定ナット(内側)`;
+          this.sugarGliderGroup.add(sNutMesh);
+        }
+      }
+
+      this.recordPart('SG-WATER-BRACKET', 150, sgWaterBracketCount, 'フクモモ用給水器取付ブラケット', 'other');
+    }
+
+    // ==========================================
+    // 3. フクモモ用フック (洋灯吊金具・添付写真に完全準拠)
+    //    - ボルト軸の延長線から自然に首が曲がり、大きなC字円弧を描く形状（90度直角折れなし）
+    //    - パネル外側: 六角ナット＋平座金
+    //    - パネル内側: 黒ゴム座金＋ツバ座金
+    // ==========================================
+    if (hasSgHook && sgHookCount > 0) {
+      const totalHooks = sgHookCount * 4;
+      const hookBaseY = Math.max(40, H - 55);
+
+      for (let i = 0; i < totalHooks; i++) {
+        const isLeft = (i % 2 === 0);
+        const panelX = isLeft ? leftPanelInnerX : rightPanelInnerX;
+        const dirX = isLeft ? 1 : -1;
+
+        const pairIdx = Math.floor(i / 2);
+        const setLevel = Math.floor(pairIdx / 2);
+        const inSetIdx = pairIdx % 2;
+
+        const targetY = hookBaseY - setLevel * 35;
+        const targetZ = (inSetIdx === 0) ? 55 : -55;
+
+        // 1. ボルトネジ部 (M3・φ3mm、パネルを貫通して外側へ突き出し)
+        // 外側: panelX - dirX * 12 〜 内側: panelX + dirX * 3.5
+        const boltTotalL = 16.0;
+        const boltGeom = new THREE.CylinderGeometry(1.5, 1.5, boltTotalL, 12);
+        boltGeom.rotateZ(Math.PI / 2);
+        boltGeom.translate(panelX - dirX * 4.0, targetY, targetZ);
+        this.activeGeometries.push(boltGeom);
+        const boltMesh = new THREE.Mesh(boltGeom, metalMat);
+        this.sugarGliderGroup.add(boltMesh);
+
+        // 2. ケージ外側: 六角ナット (M3・幅5.5mm、厚み2.4mm)
+        const outerNutGeom = new THREE.CylinderGeometry(3.0, 3.0, 2.4, 6);
+        outerNutGeom.rotateZ(Math.PI / 2);
+        outerNutGeom.translate(panelX - dirX * 4.5, targetY, targetZ);
+        this.activeGeometries.push(outerNutGeom);
+        const outerNutMesh = new THREE.Mesh(outerNutGeom, metalMat);
+        outerNutMesh.name = `フック固定ナット(外側)`;
+        this.sugarGliderGroup.add(outerNutMesh);
+
+        // 3. ケージ外側: 平座金
+        const outerWasherGeom = new THREE.CylinderGeometry(3.8, 3.8, 1.0, 16);
+        outerWasherGeom.rotateZ(Math.PI / 2);
+        outerWasherGeom.translate(panelX - dirX * 2.0, targetY, targetZ);
+        this.activeGeometries.push(outerWasherGeom);
+        const outerWasherMesh = new THREE.Mesh(outerWasherGeom, metalMat);
+        this.sugarGliderGroup.add(outerWasherMesh);
+
+        // 4. ケージ内側: 黒ゴム座金 (φ7mm, 厚み1.5mm)
+        const rubberWasherGeom = new THREE.CylinderGeometry(3.8, 3.8, 1.5, 16);
+        rubberWasherGeom.rotateZ(Math.PI / 2);
+        rubberWasherGeom.translate(panelX + dirX * 1.0, targetY, targetZ);
+        this.activeGeometries.push(rubberWasherGeom);
+        const rubberWasherMesh = new THREE.Mesh(rubberWasherGeom, washerMat);
+        this.sugarGliderGroup.add(rubberWasherMesh);
+
+        // 5. ケージ内側: 金属ツバ座金 (φ8mm, 厚み1.2mm)
+        const collarGeom = new THREE.CylinderGeometry(4.2, 4.2, 1.2, 16);
+        collarGeom.rotateZ(Math.PI / 2);
+        collarGeom.translate(panelX + dirX * 2.5, targetY, targetZ);
+        this.activeGeometries.push(collarGeom);
+        const collarMesh = new THREE.Mesh(collarGeom, metalMat);
+        this.sugarGliderGroup.add(collarMesh);
+
+        // 6. フック金具本体（ツバ座金の先端 panelX + dirX * 3.1 から自然に連続）
+        // 軸方向(dirX)の延長線上から自然に下へ回り、上を向いて終わるC字円弧（180度反転で開口部が上向き）
+        const hookStartX = panelX + dirX * 3.1;
+        const curvePoints = [
+          new THREE.Vector3(hookStartX + dirX * 0.0, targetY - 0.0, targetZ),
+          new THREE.Vector3(hookStartX + dirX * 3.5, targetY - 0.2, targetZ),
+          new THREE.Vector3(hookStartX + dirX * 6.5, targetY - 3.2, targetZ),
+          new THREE.Vector3(hookStartX + dirX * 10.5, targetY - 8.5, targetZ),
+          new THREE.Vector3(hookStartX + dirX * 15.5, targetY - 7.5, targetZ),
+          new THREE.Vector3(hookStartX + dirX * 17.5, targetY - 0.5, targetZ),
+          new THREE.Vector3(hookStartX + dirX * 15.5, targetY + 6.5, targetZ),
+          new THREE.Vector3(hookStartX + dirX * 10.5, targetY + 8.5, targetZ),
+          new THREE.Vector3(hookStartX + dirX * 6.0, targetY + 6.0, targetZ)
+        ];
+        const hookCurve = new THREE.CatmullRomCurve3(curvePoints);
+        const hookTubeGeom = new THREE.TubeGeometry(hookCurve, 32, 1.35, 10, false);
+        this.activeGeometries.push(hookTubeGeom);
+
+        const hookTubeMesh = new THREE.Mesh(hookTubeGeom, metalMat);
+        hookTubeMesh.name = `フクモモ用洋灯吊フック_${i + 1}`;
+        this.sugarGliderGroup.add(hookTubeMesh);
+      }
+
+      this.recordPart('SG-HOOK-SET', 4, sgHookCount, 'フクモモ用フック (4個/組)', 'other');
+    }
   }
 
   /**

@@ -159,6 +159,19 @@ const cardSideVentCover = document.getElementById('card-side-vent-cover');
 const ventCoverBadge = document.getElementById('vent-cover-badge');
 const ventCoverSub = document.getElementById('vent-cover-sub');
 
+// フクモモ向け装備品（テーブル・給水器ブラケット・フック - 1枠コンパクト集約）
+const cardSgEquipment = document.getElementById('card-sg-equipment');
+const sgEquipmentBadge = document.getElementById('sg-equipment-badge');
+
+const toggleSgTable = document.getElementById('toggle-sg-table');
+const selectSgTableCount = document.getElementById('select-sg-table-count');
+
+const toggleSgWaterBracket = document.getElementById('toggle-sg-water-bracket');
+const selectSgWaterBracketCount = document.getElementById('select-sg-water-bracket-count');
+
+const toggleSgHook = document.getElementById('toggle-sg-hook');
+const selectSgHookCount = document.getElementById('select-sg-hook-count');
+
 // 止まり木（天板吊り下げ式）
 const togglePerch = document.getElementById('toggle-perch');
 const cardPerch = document.getElementById('card-perch');
@@ -286,6 +299,12 @@ const state = {
   hasRoomDivider: false,       // ２室分け（後付け仕切り板・Type A/C両対応）
   hasBottomWideFrame: false,   // 下側幅広フレーム（高さ40mm・外周: Type A専用）
   hasTopWideFrame: false,      // 上側幅広フレーム（高さ40mm・外周: Type A専用）
+  hasSgTable: false,           // フクモモ用テーブル
+  sgTableCount: 2,             // テーブル個数 (デフォルト: 2個)
+  hasSgWaterBracket: false,    // フクモモ用給水器ブラケット
+  sgWaterBracketCount: 1,      // 給水器ブラケット個数 (デフォルト: 1個)
+  hasSgHook: false,            // フクモモ用フック (4個/セット)
+  sgHookCount: 1,              // フックセット数 (デフォルト: 1セット)
   ledType: 'none',             // 'none' | 'usb' | 'high_cri_white' | 'red' | 'white_and_red' | 'rgbw'
   ledPower: true,              // LED点灯状態 (true | false)
   ledBrightness: 1.0,          // LED調光 (0.1 ~ 1.0)
@@ -402,6 +421,7 @@ function syncUpdate() {
   // オプション選択可否の同期
   updateFrontWideFrameAvailability();
   updateSideVentCoverAvailability();
+  updateSugarGliderItemsAvailability();
   updateRubberPackingAvailability();
 
   // パネル設定UIの表示状態同期
@@ -511,6 +531,51 @@ function updateSideVentCoverAvailability() {
       ventCoverBadge.textContent = '要側面パンチング';
       ventCoverSub.textContent = '※側面パネルが塩ビパンチング時に選択できます';
     }
+  }
+}
+
+/**
+ * フクモモ向け装備品（テーブル・給水器ブラケット・フック）の選択可否判定と同期
+ * - 前提条件: 側面パネルに塩ビパンチングパネルが含まれていること
+ */
+function updateSugarGliderItemsAvailability() {
+  const isSideSplitPunching = state.hasSideReinforcement && (state.panelConfig.sideUpper === 'punching' || state.panelConfig.sideLower === 'punching');
+  const isSideFullPunching = !state.hasSideReinforcement && (state.panelConfig.side === 'punching');
+  const isAvailable = isSideSplitPunching || isSideFullPunching;
+
+  if (cardSgEquipment) {
+    cardSgEquipment.classList.toggle('disabled', !isAvailable);
+  }
+  if (sgEquipmentBadge) {
+    sgEquipmentBadge.classList.toggle('ready', isAvailable);
+    sgEquipmentBadge.textContent = isAvailable ? '選択可能' : '要側面パンチング';
+  }
+
+  const items = [
+    { toggle: toggleSgTable, select: selectSgTableCount, stateKey: 'hasSgTable' },
+    { toggle: toggleSgWaterBracket, select: selectSgWaterBracketCount, stateKey: 'hasSgWaterBracket' },
+    { toggle: toggleSgHook, select: selectSgHookCount, stateKey: 'hasSgHook' }
+  ];
+
+  for (const item of items) {
+    if (!item.toggle) continue;
+    if (isAvailable) {
+      item.toggle.disabled = false;
+      if (item.select) {
+        item.select.disabled = !item.toggle.checked;
+      }
+    } else {
+      item.toggle.checked = false;
+      state[item.stateKey] = false;
+      item.toggle.disabled = true;
+      if (item.select) {
+        item.select.disabled = true;
+      }
+    }
+  }
+
+  if (cardSgEquipment) {
+    cardSgEquipment.classList.toggle('active', isAvailable && !!(state.hasSgTable || state.hasSgWaterBracket || state.hasSgHook));
   }
 }
 
@@ -1861,8 +1926,10 @@ function calculateGrandTotals() {
   const floorHeaterSupportLabor = isFloorHeaterSupport ? (laborConfig.floorHeaterSupport?.price ?? 1000) : 0;
   const wideBottomLabor = isWideBottom ? (laborConfig.wideBottom?.price ?? 2000) : 0;
   const wideTopLabor = isWideTop ? (laborConfig.wideTop?.price ?? 2000) : 0;
+  const sgTableLabor = state.hasSgTable ? (laborConfig.sugarGliderTable?.price ?? 400) * (state.sgTableCount || 2) : 0;
+  const sgWaterBracketLabor = state.hasSgWaterBracket ? (laborConfig.sugarGliderWaterBracket?.price ?? 550) * (state.sgWaterBracketCount || 1) : 0;
 
-  const totalLaborFee = splitFloorLabor + splitTopLabor + typeCLabor + splitSideLabor + frontWide3xLabor + perchLabor + rubberPackingLabor + roomDividerLabor + frontOpenDoorLabor + frontFramedDoorLabor + floorHeaterSupportLabor + wideBottomLabor + wideTopLabor;
+  const totalLaborFee = splitFloorLabor + splitTopLabor + typeCLabor + splitSideLabor + frontWide3xLabor + perchLabor + rubberPackingLabor + roomDividerLabor + frontOpenDoorLabor + frontFramedDoorLabor + floorHeaterSupportLabor + wideBottomLabor + wideTopLabor + sgTableLabor + sgWaterBracketLabor;
 
   // 2. 特定オプション部材（販売価格加算額および内部原価）
   const casterPrice = isCaster ? (itemConfig.caster?.price ?? 1500) : 0;
@@ -1872,6 +1939,15 @@ function calculateGrandTotals() {
   const ventCoverPrice = isSideVentCover ? (itemConfig.sideVentCover?.price ?? 500) : 0;
   const baseVentCoverCost = isSideVentCover ? (itemConfig.sideVentCover?.cost ?? 200) : 0;
   const ventCoverCost = isSideVentCover ? baseVentCoverCost : 0;
+
+  // フクモモ向け装備品の資材原価
+  const sgTableCost = state.hasSgTable ? (itemConfig.sugarGliderTable?.cost ?? 500) * (state.sgTableCount || 2) : 0;
+  const sgWaterBracketCost = state.hasSgWaterBracket ? (itemConfig.sugarGliderWaterBracket?.cost ?? 350) * (state.sgWaterBracketCount || 1) : 0;
+  const sgHookCost = state.hasSgHook ? (itemConfig.sugarGliderHook?.cost ?? 500) * (state.sgHookCount || 1) : 0;
+  const sgTotalMaterialsCost = sgTableCost + sgWaterBracketCost + sgHookCost;
+  const sgWeight = (state.hasSgTable ? (state.sgTableCount || 2) * 0.15 : 0) +
+                   (state.hasSgWaterBracket ? (state.sgWaterBracketCount || 1) * 0.05 : 0) +
+                   (state.hasSgHook ? (state.sgHookCount || 1) * 0.04 : 0);
 
   // LED照明オプション部材
   let ledPrice = 0;
@@ -1898,13 +1974,13 @@ function calculateGrandTotals() {
   const markupRate = typeof pricingConfig.markupRate === 'number' ? pricingConfig.markupRate : 1.3;
   const roundingUnit = typeof pricingConfig.roundingUnit === 'number' ? pricingConfig.roundingUnit : 100;
 
-  const baseMaterialsCost = totalFrameCost + totalPanelCost;
+  const baseMaterialsCost = totalFrameCost + totalPanelCost + sgTotalMaterialsCost;
   const basePriceWithMarkup = Math.ceil((baseMaterialsCost * markupRate) / roundingUnit) * roundingUnit;
 
   // 4. 総合計の算出 (※内訳金額はDOM・UI上には表示せず、合計金額のみに反映)
   const grandTotalCost = baseMaterialsCost + totalOptionCost;
   const grandTotalPrice = basePriceWithMarkup + totalOptionPrice + totalLaborFee;
-  const grandTotalWeight = totalFrameWeight + totalPanelWeight + ledWeight;
+  const grandTotalWeight = totalFrameWeight + totalPanelWeight + ledWeight + sgWeight;
 
   return {
     rawCost: grandTotalCost,
@@ -2092,6 +2168,15 @@ function updateSpecSummary() {
   }
   if (state.hasSideVentCover) {
     optionsList.push('換気調整板');
+  }
+  if (state.hasSgTable) {
+    optionsList.push(`フクモモテーブル: ${state.sgTableCount}個`);
+  }
+  if (state.hasSgWaterBracket) {
+    optionsList.push(`給水器ブラケット: ${state.sgWaterBracketCount}個`);
+  }
+  if (state.hasSgHook) {
+    optionsList.push(`フック: ${state.sgHookCount}セット`);
   }
   if (state.hasPerch) {
     optionsList.push('止まり木');
@@ -2463,6 +2548,54 @@ toggleSideVentCover.addEventListener('change', (e) => {
   }
   syncUpdate();
 });
+
+// フクモモ向け装備品: テーブル
+if (toggleSgTable) {
+  toggleSgTable.addEventListener('change', (e) => {
+    state.hasSgTable = e.target.checked;
+    if (cardSgEquipment) cardSgEquipment.classList.toggle('active', !!(state.hasSgTable || state.hasSgWaterBracket || state.hasSgHook));
+    if (selectSgTableCount) selectSgTableCount.disabled = !e.target.checked;
+    syncUpdate();
+  });
+}
+if (selectSgTableCount) {
+  selectSgTableCount.addEventListener('change', (e) => {
+    state.sgTableCount = parseInt(e.target.value, 10) || 2;
+    syncUpdate();
+  });
+}
+
+// フクモモ向け装備品: 給水器ブラケット
+if (toggleSgWaterBracket) {
+  toggleSgWaterBracket.addEventListener('change', (e) => {
+    state.hasSgWaterBracket = e.target.checked;
+    if (cardSgEquipment) cardSgEquipment.classList.toggle('active', !!(state.hasSgTable || state.hasSgWaterBracket || state.hasSgHook));
+    if (selectSgWaterBracketCount) selectSgWaterBracketCount.disabled = !e.target.checked;
+    syncUpdate();
+  });
+}
+if (selectSgWaterBracketCount) {
+  selectSgWaterBracketCount.addEventListener('change', (e) => {
+    state.sgWaterBracketCount = parseInt(e.target.value, 10) || 1;
+    syncUpdate();
+  });
+}
+
+// フクモモ向け装備品: フック
+if (toggleSgHook) {
+  toggleSgHook.addEventListener('change', (e) => {
+    state.hasSgHook = e.target.checked;
+    if (cardSgEquipment) cardSgEquipment.classList.toggle('active', !!(state.hasSgTable || state.hasSgWaterBracket || state.hasSgHook));
+    if (selectSgHookCount) selectSgHookCount.disabled = !e.target.checked;
+    syncUpdate();
+  });
+}
+if (selectSgHookCount) {
+  selectSgHookCount.addEventListener('change', (e) => {
+    state.sgHookCount = parseInt(e.target.value, 10) || 1;
+    syncUpdate();
+  });
+}
 
 // 止まり木（天板吊り下げ式）のトグル
 if (togglePerch) {
@@ -3180,17 +3313,21 @@ selectPanelBack.addEventListener('change', (e) => {
 
 selectPanelSide.addEventListener('change', (e) => {
   state.panelConfig.side = e.target.value;
+  updateSideVentCoverAvailability();
+  updateSugarGliderItemsAvailability();
   syncUpdate();
 });
 
 selectPanelSideUpper.addEventListener('change', (e) => {
   state.panelConfig.sideUpper = e.target.value;
   updateSideVentCoverAvailability();
+  updateSugarGliderItemsAvailability();
   syncUpdate();
 });
 
 selectPanelSideLower.addEventListener('change', (e) => {
   state.panelConfig.sideLower = e.target.value;
+  updateSugarGliderItemsAvailability();
   syncUpdate();
 });
 
@@ -3291,6 +3428,10 @@ if (inputSideH) {
   inputSideH.value = state.sideOpeningH;
 }
 
+// 初期オプション可用性の判定
+updateSideVentCoverAvailability();
+updateSugarGliderItemsAvailability();
+
 // 初回レンダリング
 syncUpdate();
 viewer.setViewPreset('iso', state);
@@ -3371,6 +3512,12 @@ function resetAllOptionsAndUI() {
   state.hasRoomDivider = false;
   state.hasBottomWideFrame = false;
   state.hasTopWideFrame = false;
+  state.hasSgTable = false;
+  state.sgTableCount = 2;
+  state.hasSgWaterBracket = false;
+  state.sgWaterBracketCount = 1;
+  state.hasSgHook = false;
+  state.sgHookCount = 1;
   state.hasSideReinforcement = false;
   state.sideOpeningH = 120;
   state.ledType = 'none';
@@ -3424,6 +3571,25 @@ function resetAllOptionsAndUI() {
 
   if (toggleSideVentCover) toggleSideVentCover.checked = false;
   if (cardSideVentCover) cardSideVentCover.classList.remove('active');
+
+  if (toggleSgTable) toggleSgTable.checked = false;
+  if (selectSgTableCount) {
+    selectSgTableCount.value = '2';
+    selectSgTableCount.disabled = true;
+  }
+
+  if (toggleSgWaterBracket) toggleSgWaterBracket.checked = false;
+  if (selectSgWaterBracketCount) {
+    selectSgWaterBracketCount.value = '1';
+    selectSgWaterBracketCount.disabled = true;
+  }
+
+  if (toggleSgHook) toggleSgHook.checked = false;
+  if (selectSgHookCount) {
+    selectSgHookCount.value = '1';
+    selectSgHookCount.disabled = true;
+  }
+  if (cardSgEquipment) cardSgEquipment.classList.remove('active');
 
   if (togglePerch) {
     togglePerch.checked = false;
@@ -3646,9 +3812,37 @@ function applyCreaturePreset(preset) {
   }
   if (cardTopReinforce) cardTopReinforce.classList.toggle('active', state.hasTopReinforcement);
 
+  // 12-2. フクモモ向け装備品（フクロモモンガプリセット時またはpreset指定時にON）
+  const isSugarGlider = (preset.id === 'sugar_glider') || !!preset.hasSgTable;
+  state.hasSgTable = preset.hasSgTable != null ? !!preset.hasSgTable : isSugarGlider;
+  state.sgTableCount = preset.sgTableCount || 2;
+  if (toggleSgTable) toggleSgTable.checked = state.hasSgTable;
+  if (selectSgTableCount) {
+    selectSgTableCount.value = String(state.sgTableCount);
+    selectSgTableCount.disabled = !state.hasSgTable;
+  }
+
+  state.hasSgWaterBracket = preset.hasSgWaterBracket != null ? !!preset.hasSgWaterBracket : isSugarGlider;
+  state.sgWaterBracketCount = preset.sgWaterBracketCount || 1;
+  if (toggleSgWaterBracket) toggleSgWaterBracket.checked = state.hasSgWaterBracket;
+  if (selectSgWaterBracketCount) {
+    selectSgWaterBracketCount.value = String(state.sgWaterBracketCount);
+    selectSgWaterBracketCount.disabled = !state.hasSgWaterBracket;
+  }
+
+  state.hasSgHook = preset.hasSgHook != null ? !!preset.hasSgHook : isSugarGlider;
+  state.sgHookCount = preset.sgHookCount || 1;
+  if (toggleSgHook) toggleSgHook.checked = state.hasSgHook;
+  if (selectSgHookCount) {
+    selectSgHookCount.value = String(state.sgHookCount);
+    selectSgHookCount.disabled = !state.hasSgHook;
+  }
+  if (cardSgEquipment) cardSgEquipment.classList.toggle('active', !!(state.hasSgTable || state.hasSgWaterBracket || state.hasSgHook));
+
   // 13. 幅広フレームおよび換気量調整板の排他・利用可否状態を更新
   updateFrontWideFrameAvailability();
   updateSideVentCoverAvailability();
+  updateSugarGliderItemsAvailability();
 
   // 14. プリセットカードのアクティブ表示更新
   const allCards = creaturePresetGrid.querySelectorAll('.creature-card');
@@ -3905,10 +4099,41 @@ function applyFullCageSpec(targetSpec, options = {}) {
     allCards.forEach(c => c.classList.remove('active'));
   }
 
+  // フクモモ向け装備品の復元
+  if (typeof targetSpec.hasSgTable === 'boolean') {
+    state.hasSgTable = targetSpec.hasSgTable;
+    state.sgTableCount = targetSpec.sgTableCount || 2;
+    if (toggleSgTable) toggleSgTable.checked = state.hasSgTable;
+    if (selectSgTableCount) {
+      selectSgTableCount.value = String(state.sgTableCount);
+      selectSgTableCount.disabled = !state.hasSgTable;
+    }
+  }
+  if (typeof targetSpec.hasSgWaterBracket === 'boolean') {
+    state.hasSgWaterBracket = targetSpec.hasSgWaterBracket;
+    state.sgWaterBracketCount = targetSpec.sgWaterBracketCount || 1;
+    if (toggleSgWaterBracket) toggleSgWaterBracket.checked = state.hasSgWaterBracket;
+    if (selectSgWaterBracketCount) {
+      selectSgWaterBracketCount.value = String(state.sgWaterBracketCount);
+      selectSgWaterBracketCount.disabled = !state.hasSgWaterBracket;
+    }
+  }
+  if (typeof targetSpec.hasSgHook === 'boolean') {
+    state.hasSgHook = targetSpec.hasSgHook;
+    state.sgHookCount = targetSpec.sgHookCount || 1;
+    if (toggleSgHook) toggleSgHook.checked = state.hasSgHook;
+    if (selectSgHookCount) {
+      selectSgHookCount.value = String(state.sgHookCount);
+      selectSgHookCount.disabled = !state.hasSgHook;
+    }
+  }
+  if (cardSgEquipment) cardSgEquipment.classList.toggle('active', !!(state.hasSgTable || state.hasSgWaterBracket || state.hasSgHook));
+
   // 22. 各種排他・利用可能性状態および3Dビュー・積算の同期
   updateFrontWideFrameAvailability();
   updateOuterWideFrameAvailability();
   updateSideVentCoverAvailability();
+  updateSugarGliderItemsAvailability();
   updateRubberPackingAvailability();
   syncUpdate();
   viewer.setViewPreset('iso', state);
@@ -4233,6 +4458,15 @@ function finalizeEstimateCalculation(totals) {
     if (state.hasSideVentCover !== lastEstimatedState.hasSideVentCover) {
       diffs.push(state.hasSideVentCover ? '換気調整板追加' : '換気調整板解除');
     }
+    if (state.hasSgTable !== lastEstimatedState.hasSgTable || (state.hasSgTable && state.sgTableCount !== lastEstimatedState.sgTableCount)) {
+      diffs.push(state.hasSgTable ? `フクモモテーブル(${state.sgTableCount}個)` : 'フクモモテーブル解除');
+    }
+    if (state.hasSgWaterBracket !== lastEstimatedState.hasSgWaterBracket || (state.hasSgWaterBracket && state.sgWaterBracketCount !== lastEstimatedState.sgWaterBracketCount)) {
+      diffs.push(state.hasSgWaterBracket ? `給水器ブラケット(${state.sgWaterBracketCount}個)` : '給水器ブラケット解除');
+    }
+    if (state.hasSgHook !== lastEstimatedState.hasSgHook || (state.hasSgHook && state.sgHookCount !== lastEstimatedState.sgHookCount)) {
+      diffs.push(state.hasSgHook ? `フック(${state.sgHookCount}セット)` : 'フック解除');
+    }
     if (state.hasPerch !== lastEstimatedState.hasPerch) {
       diffs.push(state.hasPerch ? '止まり木追加' : '止まり木解除');
     }
@@ -4501,6 +4735,17 @@ function getSelectedOptionsList() {
     } else {
       options.push('側面換気量調整板 (左右ペア・外張りt1.5アクリル板・化粧つまみネジ付)');
     }
+  }
+
+  // 4-2. フクモモ向け装備品（詳細注釈なしのシンプル表記）
+  if (state.hasSgTable) {
+    options.push(`フクモモ用テーブル (${state.sgTableCount}個)`);
+  }
+  if (state.hasSgWaterBracket) {
+    options.push(`フクモモ用給水器取付ブラケット (${state.sgWaterBracketCount}個)`);
+  }
+  if (state.hasSgHook) {
+    options.push(`フクモモ用フック (${state.sgHookCount}セット)`);
   }
 
   // 5. 床面補強フレーム
@@ -5535,6 +5780,12 @@ function checkInitialStateFromStorageOrUrl() {
       if (urlParams.has('floorHeater')) incomingState.hasFloorHeaterSupport = urlParams.get('floorHeater') === '1' || urlParams.get('floorHeater') === 'true';
       if (urlParams.has('wideBottom')) incomingState.hasBottomWideFrame = urlParams.get('wideBottom') === '1' || urlParams.get('wideBottom') === 'true';
       if (urlParams.has('wideTop')) incomingState.hasTopWideFrame = urlParams.get('wideTop') === '1' || urlParams.get('wideTop') === 'true';
+      if (urlParams.has('sgTable')) incomingState.hasSgTable = urlParams.get('sgTable') === '1' || urlParams.get('sgTable') === 'true';
+      if (urlParams.has('sgTableCount')) incomingState.sgTableCount = parseInt(urlParams.get('sgTableCount'), 10);
+      if (urlParams.has('sgWaterBracket')) incomingState.hasSgWaterBracket = urlParams.get('sgWaterBracket') === '1' || urlParams.get('sgWaterBracket') === 'true';
+      if (urlParams.has('sgWaterBracketCount')) incomingState.sgWaterBracketCount = parseInt(urlParams.get('sgWaterBracketCount'), 10);
+      if (urlParams.has('sgHook')) incomingState.hasSgHook = urlParams.get('sgHook') === '1' || urlParams.get('sgHook') === 'true';
+      if (urlParams.has('sgHookCount')) incomingState.sgHookCount = parseInt(urlParams.get('sgHookCount'), 10);
 
       // アドレスバーから引数を消去（お客さんに見えないようにする）
       if (window.history && window.history.replaceState) {
@@ -5674,10 +5925,40 @@ function checkInitialStateFromStorageOrUrl() {
     if (toggleWideTop) toggleWideTop.checked = state.hasTopWideFrame;
     if (cardWideTop) cardWideTop.classList.toggle('active', state.hasTopWideFrame);
 
+    if (typeof incomingState.hasSgTable === 'boolean') {
+      state.hasSgTable = incomingState.hasSgTable;
+      state.sgTableCount = incomingState.sgTableCount || 2;
+      if (toggleSgTable) toggleSgTable.checked = state.hasSgTable;
+      if (selectSgTableCount) {
+        selectSgTableCount.value = String(state.sgTableCount);
+        selectSgTableCount.disabled = !state.hasSgTable;
+      }
+    }
+    if (typeof incomingState.hasSgWaterBracket === 'boolean') {
+      state.hasSgWaterBracket = incomingState.hasSgWaterBracket;
+      state.sgWaterBracketCount = incomingState.sgWaterBracketCount || 1;
+      if (toggleSgWaterBracket) toggleSgWaterBracket.checked = state.hasSgWaterBracket;
+      if (selectSgWaterBracketCount) {
+        selectSgWaterBracketCount.value = String(state.sgWaterBracketCount);
+        selectSgWaterBracketCount.disabled = !state.hasSgWaterBracket;
+      }
+    }
+    if (typeof incomingState.hasSgHook === 'boolean') {
+      state.hasSgHook = incomingState.hasSgHook;
+      state.sgHookCount = incomingState.sgHookCount || 1;
+      if (toggleSgHook) toggleSgHook.checked = state.hasSgHook;
+      if (selectSgHookCount) {
+        selectSgHookCount.value = String(state.sgHookCount);
+        selectSgHookCount.disabled = !state.hasSgHook;
+      }
+    }
+    if (cardSgEquipment) cardSgEquipment.classList.toggle('active', !!(state.hasSgTable || state.hasSgWaterBracket || state.hasSgHook));
+
     // 各種状態・3Dビュー・見積もりを同期
     updateFrontWideFrameAvailability();
     updateOuterWideFrameAvailability();
     updateSideVentCoverAvailability();
+    updateSugarGliderItemsAvailability();
     updateRubberPackingAvailability();
     syncUpdate();
     viewer.setViewPreset('iso', state);

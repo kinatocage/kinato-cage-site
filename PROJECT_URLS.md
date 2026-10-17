@@ -22,7 +22,7 @@
   - `C:\Users\owner\OneDrive\Desktop\Web` にて `npm run admin` で一発起動できます。
   - （内部的には `.\admin-tools\venv\Scripts\python.exe -m streamlit run .\admin-tools\app.py` を実行しています）
 - **両方を一気に起動する場合**
-  - `npm run dev:all` を実行すると、Webサイト開発と管理者ツールの両方が同時に立ち上がります。
+  - `npm run dev:allnpm run dev:all` を実行すると、Webサイト開発と管理者ツールの両方が同時に立ち上がります。
 
 ## ⚙️ 各種管理ダッシュボード（設定やデータ入力用）
 - **Cloudflare 管理画面**

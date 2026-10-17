@@ -271,6 +271,9 @@ export class CageViewer {
   setPanelsVisible(visible) {
     this.cageModel.panelGroup.visible = visible;
     this.cageModel.doorGroup.visible = visible;
+    if (this.cageModel.sugarGliderGroup) {
+      this.cageModel.sugarGliderGroup.visible = visible;
+    }
   }
 
   /**

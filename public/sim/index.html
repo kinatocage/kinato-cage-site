@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="./assets/index-B3b-91WD.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-CibM354P.css">
+  <script type="module" crossorigin src="./assets/index-DPWexLIr.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-sZ07j8Hg.css">
 </head>
 <body>
   <div id="app" class="app-layout">
@@ -666,6 +666,7 @@
                 </label>
               </div>
 
+
               <!-- 床面中央補強フレーム -->
               <div class="option-inline-card" id="card-floor-reinforce" style="margin-top: 8px;">
                 <label class="option-checkbox-label">
@@ -811,6 +812,58 @@
 
                   <div class="led-hint-text">
                     ※点灯時は自動で部屋が暗室モードになり、ケージ内の光をリアルに体感できます。
+                  </div>
+                </div>
+              </div>
+
+              <!-- フクモモ向け装備品（1枠コンパクト集約・オプション最下部） -->
+              <div class="option-equipment-card disabled" id="card-sg-equipment" style="margin-top: 8px;">
+                <div class="equipment-header-row">
+                  <div class="equipment-title-col">
+                    <div class="equipment-title-wrap">
+                      <span class="option-title" style="font-weight: 600;">🐿️ フクモモ向け装備品</span>
+                      <span class="option-cond-badge" id="sg-equipment-badge">要側面パンチング</span>
+                    </div>
+                    <span class="equipment-desc-sub">塩ビパンチングパネルの側面につけるフクロモモンガ向けの部材です</span>
+                  </div>
+                </div>
+                <div class="equipment-items-table">
+                  <!-- テーブル -->
+                  <div class="equipment-item-row">
+                    <label class="equipment-item-label">
+                      <input type="checkbox" id="toggle-sg-table" class="custom-checkbox" disabled />
+                      <span>テーブル</span>
+                    </label>
+                    <select id="select-sg-table-count" class="split-select compact-select" title="テーブル個数" disabled>
+                      <option value="1">1個</option>
+                      <option value="2" selected>2個</option>
+                      <option value="3">3個</option>
+                      <option value="4">4個</option>
+                    </select>
+                  </div>
+                  <!-- 給水器ブラケット -->
+                  <div class="equipment-item-row">
+                    <label class="equipment-item-label">
+                      <input type="checkbox" id="toggle-sg-water-bracket" class="custom-checkbox" disabled />
+                      <span>給水器ブラケット</span>
+                    </label>
+                    <select id="select-sg-water-bracket-count" class="split-select compact-select" title="給水器ブラケット個数" disabled>
+                      <option value="1" selected>1個</option>
+                      <option value="2">2個</option>
+                      <option value="3">3個</option>
+                      <option value="4">4個</option>
+                    </select>
+                  </div>
+                  <!-- フック -->
+                  <div class="equipment-item-row">
+                    <label class="equipment-item-label">
+                      <input type="checkbox" id="toggle-sg-hook" class="custom-checkbox" disabled />
+                      <span>フック (4個/組)</span>
+                    </label>
+                    <select id="select-sg-hook-count" class="split-select compact-select" title="フックセット数" disabled>
+                      <option value="1" selected>1セット(4個)</option>
+                      <option value="2">2セット(8個)</option>
+                    </select>
                   </div>
                 </div>
               </div>

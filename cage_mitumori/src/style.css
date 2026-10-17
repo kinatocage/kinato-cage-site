@@ -1077,6 +1077,98 @@ input[type="range"]::-webkit-slider-thumb:hover {
   border-color: rgba(16, 185, 129, 0.3);
 }
 
+/* フクモモ向け装備品 コンパクト集約カード */
+.option-equipment-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 10px 14px;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.option-equipment-card:hover {
+  border-color: var(--color-primary-light);
+}
+
+.option-equipment-card.active {
+  border-color: var(--color-primary);
+  background: rgba(138, 154, 134, 0.10);
+}
+
+.option-equipment-card.disabled {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+  cursor: not-allowed;
+}
+
+.option-equipment-card.disabled label,
+.option-equipment-card.disabled .split-select {
+  cursor: not-allowed;
+}
+
+.equipment-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.equipment-title-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+}
+
+.equipment-title-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.equipment-desc-sub {
+  font-size: 0.73rem;
+  color: #94a3b8;
+  line-height: 1.35;
+  font-weight: 400;
+}
+
+.equipment-items-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.equipment-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 1px 0;
+}
+
+.equipment-item-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #f1f5f9;
+  user-select: none;
+}
+
+.equipment-item-row .compact-select {
+  padding: 3px 24px 3px 8px;
+  font-size: 12px;
+  height: 28px;
+  min-width: 90px;
+}
+
 .option-checkbox-wrap {
   display: flex;
   align-items: center;

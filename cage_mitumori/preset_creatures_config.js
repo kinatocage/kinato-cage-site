@@ -303,7 +303,13 @@ export const creaturePresets = [
       topRight: 'punching'
     },
     doorHingeSide: 'left',
-    tags: ['Type A (前開き)', 'シルバー', '側面パンチング', '換気量調整板'],
-    desc: 'W350×D350×H500mm前開き仕様。側面全面パンチング＆外張り側面換気量調整板で通気・保温を両立'
+    hasSgTable: true,
+    sgTableCount: 2,
+    hasSgWaterBracket: true,
+    sgWaterBracketCount: 1,
+    hasSgHook: true,
+    sgHookCount: 1,
+    tags: ['Type A (前開き)', 'シルバー', '側面パンチング', '換気調整板', 'フクモモ装備'],
+    desc: 'W350×D350×H500mm前開き仕様。側面パンチング＋テーブル2個・給水器ブラケット・フック標準装備'
   }
 ];

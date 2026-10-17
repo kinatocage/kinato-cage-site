@@ -521,6 +521,16 @@ export const materialsConfig = {
         name: '上側幅広フレーム 加工工賃',
         price: 2000,    // 販売価格への加算額 (円)
         note: '上側幅広フレーム（高さ40mm・外周）加工・組立工賃（上下両方で計4000円）'
+      },
+      sugarGliderTable: {
+        name: 'フクモモ用テーブル 加工工賃',
+        price: 400,     // 1個あたりの加工工賃 (円)
+        note: '15cm角 直角曲げ・角R10・取付穴あけ加工工賃'
+      },
+      sugarGliderWaterBracket: {
+        name: 'フクモモ用給水器ブラケット 加工工賃',
+        price: 550,     // 1個あたりの加工工賃 (円)
+        note: '25x150mmアクリル 5面曲げ・φ10穴あけ・取付穴加工工賃'
       }
     },
 
@@ -568,6 +578,22 @@ export const materialsConfig = {
         cornerCutCost: 587,       // 角落とし単価 (円/箇所・配線逃がし切欠き)
         screwCostPerPiece: 25,    // No.1化粧つまみネジ原価 (円/個)
         note: '透明アクリル2mm＋緩衝プラダン4mm＋穴加工＋斜めカット＋切欠き＋化粧ネジ'
+      },
+      // フクモモ向け装備品
+      sugarGliderTable: {
+        name: 'フクモモ用テーブル (15cm角アクリル・化粧ネジ付)',
+        cost: 500,                // 1個あたりの資材原価 (円)
+        note: 't3.0透明アクリル 150x170mm曲げ板＋M3化粧ネジ2本'
+      },
+      sugarGliderWaterBracket: {
+        name: 'フクモモ用給水器ブラケット (化粧ネジ付)',
+        cost: 350,                // 1個あたりの資材原価 (円)
+        note: 't3.0透明アクリル 25x150mm曲げ板＋M3化粧ネジ2本'
+      },
+      sugarGliderHook: {
+        name: 'フクモモ用フック (4個/セット)',
+        cost: 500,                // 1セット(4個)あたりの資材原価 (円)
+        note: 'M3ネジ式？型洋灯吊フック＋固定ナット 4個/セット'
       }
     }
   },
